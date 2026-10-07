@@ -1,31 +1,23 @@
-# ROADMAP HF
+# ROADMAP HF (PRD B2B 1.0)
 
-## 10 etapas (gates)
+## Status
 
-1. Auditoria da base — **FEITO (GATE 01)**
-2. Cópia / limpeza / foundation — **EM ANDAMENTO**
-3. Supabase HF + banco + RLS
-4. Identidade + feature flags — **parcial** (flags/config OK; tokens visuais pendentes)
-5. Motor do catálogo
-6. Administrativo HF
-7. Importação e cadastro
-8. Catálogo público + busca
-9. Testes / segurança
-10. Homologação → cadastro real
+| Fase | Nome | Status |
+|------|------|--------|
+| 1 | Foundation (GitHub, Supabase, Auth, Storage, RLS, flags) | **Schema + buckets + RLS OK** |
+| 2 | Catálogo (CRUD produtos/taxonomia) | Próxima (UI sobre schema) |
+| 3 | Admin (dashboard, permissões, auditoria) | Parcial |
+| 4 | Clientes (cadastro, login, grupos, aprovação) | Schema pronto; UI pendente |
+| 5 | Catálogo personalizado (UI + regras) | Engine SQL pronta |
+| 6 | Importação homologada | Motor FAL adaptado; validar no HF |
+| 7 | Experiência B2B (busca/WhatsApp) | Parcial |
+| 8–12 | Preços → Cotação → Pedidos → Estoque → Integrações | Flags off |
 
-## Blocos
+## GATE F1
 
-| Bloco | Status |
-|-------|--------|
-| 1 Auditoria + base | Em andamento |
-| 2 Supabase | Próximo |
-| 3 Identidade | Parcial |
-| 4 Modelo catálogo | Pendente |
-| 5 Admin | Parcial (rotas/menu) |
-| 6 Importador | Pendente validação |
-| 7 Público | Parcial (rotas sem e-commerce) |
-| 8 Homologação | Pendente |
-
-## Fora do MVP
-
-Pedidos, checkout, pagamento, frete, estoque físico, preço público, API de placa.
+- [x] Projeto Supabase HF com tabelas núcleo + B2B
+- [x] RLS + `customer_can_see_product` + `search_products`
+- [x] Buckets `product-images`, `logos`, `imports`
+- [x] Feature flags PRD em `src/config/features.ts`
+- [ ] UI admin clientes/catálogos (Fase 4–5)
+- [ ] Staff user seed operacional
