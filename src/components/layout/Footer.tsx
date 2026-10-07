@@ -14,7 +14,7 @@ export function Footer() {
           <img
             src={logoHf}
             alt={businessConfig.companyName}
-            className="mb-3 block h-[72px] w-auto max-w-[140px] object-contain object-left"
+            className="mb-3 block h-[80px] w-auto max-w-[160px] object-contain object-left"
           />
           <p className="m-0 max-w-sm text-sm text-hf-muted">{businessConfig.tagline}</p>
           <p className="mt-2 m-0 text-xs text-hf-muted">{businessConfig.address}</p>

@@ -15,7 +15,8 @@ export function Logo({ className = '' }: { className?: string }) {
       <img
         src={logoHf}
         alt={businessConfig.companyName}
-        className="h-full w-auto max-w-[120px] object-contain object-left sm:max-w-[140px]"
+        className="h-full w-auto max-w-[132px] object-contain object-left sm:max-w-[156px]"
+        decoding="async"
       />
     </Link>
   )
