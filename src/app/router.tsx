@@ -99,6 +99,21 @@ const AdminOperatorsPage = lazy(() =>
     default: m.AdminOperatorsPage,
   })),
 )
+const AdminCustomersPage = lazy(() =>
+  import('@/pages/admin/customers/AdminCustomersPage').then((m) => ({
+    default: m.AdminCustomersPage,
+  })),
+)
+const AdminCustomerGroupsPage = lazy(() =>
+  import('@/pages/admin/customers/AdminCustomerGroupsPage').then((m) => ({
+    default: m.AdminCustomerGroupsPage,
+  })),
+)
+const AdminCatalogsPage = lazy(() =>
+  import('@/pages/admin/catalogs/AdminCatalogsPage').then((m) => ({
+    default: m.AdminCatalogsPage,
+  })),
+)
 
 function Suspend({ children }: { children: ReactNode }) {
   return <Suspense fallback={<Loading />}>{children}</Suspense>
@@ -125,6 +140,9 @@ const adminChildren = [
   { path: 'veiculos', element: <AdminVehiclesPage /> },
   { path: 'fabricantes', element: <AdminBrandsPage /> },
   { path: 'fornecedores', element: <AdminSuppliersPage /> },
+  { path: 'listas', element: <AdminCatalogsPage /> },
+  { path: 'clientes', element: <AdminCustomersPage /> },
+  { path: 'grupos', element: <AdminCustomerGroupsPage /> },
   { path: 'operadores', element: <AdminOperatorsPage /> },
 ]
 

@@ -1,10 +1,6 @@
 import { getSupabase } from '@/lib/supabase'
 import { toSlug } from '@/lib/slug'
-import { adminGetActivePriceOverride } from '@/services/admin/adminPriceOverrideService'
-import {
-  adminEnsureBaseAndPromoPrices,
-  adminListProductListPrices,
-} from '@/services/admin/adminPriceListService'
+import { features } from '@/config/features'
 import type { Product, ProductReference } from '@/types'
 
 type ProductRow = {
@@ -26,10 +22,6 @@ type ProductRow = {
   posicao?: string | null
   lado?: string | null
   attrs: Record<string, unknown> | null
-  weight_kg?: number | null
-  height_cm?: number | null
-  width_cm?: number | null
-  length_cm?: number | null
   product_brands?: { name: string } | { name: string }[] | null
   product_categories?: { id: string; name: string } | { id: string; name: string }[] | null
 }
@@ -63,17 +55,13 @@ function mapProduct(row: ProductRow): Product {
     posicao: (row.posicao as Product['posicao']) ?? null,
     lado: (row.lado as Product['lado']) ?? null,
     attrs: row.attrs ?? {},
-    weightKg: row.weight_kg == null ? null : Number(row.weight_kg),
-    heightCm: row.height_cm == null ? null : Number(row.height_cm),
-    widthCm: row.width_cm == null ? null : Number(row.width_cm),
-    lengthCm: row.length_cm == null ? null : Number(row.length_cm),
   }
 }
 
 const SELECT = `
   id, sku, name, slug, description, short_description, brand_id, supplier_id,
   category_id, price, promo_price, status, manufacturer_code, is_incomplete,
-  is_available, posicao, lado, attrs, weight_kg, height_cm, width_cm, length_cm,
+  is_available, posicao, lado, attrs,
   product_brands ( name ),
   product_categories ( id, name )
 `
@@ -150,13 +138,18 @@ export async function adminUpsertProduct(input: {
   lado?: Product['lado']
   attrs?: Record<string, unknown>
   isAvailable?: boolean
+  /** Dimensões não existem no schema HF F1 — aceitas e ignoradas (compat UI). */
   weightKg?: number | null
   heightCm?: number | null
   widthCm?: number | null
   lengthCm?: number | null
-  /** Quando false, o caller sincroniza as listas (modo listas no formulário). */
+  /** Mantido por compatibilidade; listas de preço desligadas no MVP B2B. */
   syncBasePromoLists?: boolean
 }): Promise<Product> {
+  void input.weightKg
+  void input.heightCm
+  void input.widthCm
+  void input.lengthCm
   const payload = {
     name: input.name.trim(),
     sku: input.sku.trim(),
@@ -164,8 +157,8 @@ export async function adminUpsertProduct(input: {
     category_id: input.categoryId || null,
     brand_id: input.brandId || null,
     supplier_id: input.supplierId || null,
-    price: input.price,
-    promo_price: input.promoPrice ?? null,
+    price: features.price_enabled ? input.price : (input.price ?? 0),
+    promo_price: features.price_enabled ? (input.promoPrice ?? null) : null,
     status: input.status ?? 'draft',
     short_description: input.shortDescription?.trim() || null,
     description: input.description?.trim() || null,
@@ -173,10 +166,6 @@ export async function adminUpsertProduct(input: {
     lado: input.lado || null,
     attrs: input.attrs ?? {},
     is_available: input.isAvailable ?? false,
-    weight_kg: input.weightKg ?? null,
-    height_cm: input.heightCm ?? null,
-    width_cm: input.widthCm ?? null,
-    length_cm: input.lengthCm ?? null,
     search_document: [
       input.name,
       input.sku,
@@ -197,9 +186,6 @@ export async function adminUpsertProduct(input: {
   if (error) throw error
 
   const product = mapProduct(data as ProductRow)
-  if (input.syncBasePromoLists !== false) {
-    await adminEnsureBaseAndPromoPrices(product.id, input.price, input.promoPrice ?? null)
-  }
   await refreshIncompleteFlag(product.id)
   return (await adminGetProduct(product.id)) ?? product
 }
@@ -214,8 +200,7 @@ export type ReleaseToStoreResult =
   | { ok: false; productId: string; reason: string }
 
 /**
- * Liberar na loja: published + preço > 0 (override ativo, lista padrão/ativa ou espelho) + is_available.
- * Não publica automaticamente em imports — só via esta ação explícita.
+ * Publicar no catálogo (status=published). Preço NÃO é requisito no MVP B2B.
  */
 export async function adminReleaseProductToStore(input: {
   productId: string
@@ -240,35 +225,9 @@ export async function adminReleaseProductToStore(input: {
     publishedNow = true
   }
 
-  const override = await adminGetActivePriceOverride(product.id)
-  const listRows = await adminListProductListPrices(product.id)
-  const defaultOrActive = listRows.find(
-    (r) =>
-      r.isDefault &&
-      r.status === 'active' &&
-      r.price != null &&
-      Number(r.price) > 0,
-  )
-  const anyActivePriced = listRows.find(
-    (r) => r.status === 'active' && r.price != null && Number(r.price) > 0,
-  )
-  const resolved =
-    (override && override.amount > 0 ? override.amount : null) ??
-    (defaultOrActive?.price != null ? Number(defaultOrActive.price) : null) ??
-    (anyActivePriced?.price != null ? Number(anyActivePriced.price) : null) ??
-    (product.price > 0 ? product.price : null)
-
-  if (resolved == null || resolved <= 0) {
-    return {
-      ok: false,
-      productId: product.id,
-      reason: 'Sem preço > 0 na lista padrão/ativa (nem preço avulso)',
-    }
-  }
-
   const { error } = await getSupabase()
     .from('products')
-    .update({ is_available: true, status: 'published' })
+    .update({ status: 'published' })
     .eq('id', product.id)
   if (error) throw error
 
@@ -300,7 +259,7 @@ export async function adminDeleteProduct(id: string) {
 export async function adminListReferences(productId: string): Promise<ProductReference[]> {
   const { data, error } = await getSupabase()
     .from('product_references')
-    .select('id, code, ref_type, brand_id, brand_label, status')
+    .select('id, code, ref_type, brand_label')
     .eq('product_id', productId)
     .order('code')
   if (error) throw error
@@ -308,9 +267,9 @@ export async function adminListReferences(productId: string): Promise<ProductRef
     id: String(r.id),
     code: String(r.code),
     type: String(r.ref_type),
-    brandId: (r.brand_id as string | null) ?? null,
+    brandId: null,
     brandLabel: (r.brand_label as string | null) ?? undefined,
-    status: (r.status as ProductReference['status']) ?? 'active',
+    status: 'active' as ProductReference['status'],
   }))
 }
 
@@ -327,9 +286,7 @@ export async function adminUpsertReference(input: {
     product_id: input.productId,
     code: input.code.trim(),
     ref_type: input.type,
-    brand_id: input.brandId || null,
     brand_label: input.brandLabel?.trim() || null,
-    status: input.status ?? 'active',
   }
   const q = getSupabase().from('product_references')
   const { error } = input.id

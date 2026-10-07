@@ -12,6 +12,12 @@ const catalogLinks = [
   { to: '/admin/montadoras', label: 'Montadoras' },
   { to: '/admin/veiculos', label: 'Aplicações / veículos' },
   { to: '/admin/fornecedores', label: 'Fornecedores / códigos' },
+  { to: '/admin/listas', label: 'Listas de catálogo' },
+]
+
+const clientsLinks = [
+  { to: '/admin/clientes', label: 'Clientes B2B' },
+  { to: '/admin/grupos', label: 'Grupos' },
 ]
 
 const opsLinks = [{ to: '/admin/operadores', label: 'Usuários / operadores' }]
@@ -105,6 +111,7 @@ export function AdminLayout() {
             </NavLink>
           </div>
           <NavSection title="Catálogo" links={catalogLinks} onNavigate={closeNav} />
+          <NavSection title="Clientes" links={clientsLinks} onNavigate={closeNav} />
           <NavSection title="Sistema" links={opsLinks} onNavigate={closeNav} />
         </div>
 

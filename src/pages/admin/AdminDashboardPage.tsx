@@ -3,6 +3,9 @@ import { businessConfig } from '@/config/business'
 
 const shortcuts = [
   { to: '/admin/produtos', title: 'Produtos', desc: 'Cadastrar, editar e publicar' },
+  { to: '/admin/listas', title: 'Listas de catálogo', desc: 'Conjuntos de produtos B2B' },
+  { to: '/admin/clientes', title: 'Clientes B2B', desc: 'Cadastro, status e catálogos' },
+  { to: '/admin/grupos', title: 'Grupos', desc: 'Herança de catálogo por grupo' },
   { to: '/admin/produtos/importar', title: 'Importações', desc: 'CSV / XLSX de catálogo' },
   { to: '/admin/categorias', title: 'Categorias', desc: 'Taxonomia do catálogo' },
   { to: '/admin/fabricantes', title: 'Marcas', desc: 'Marcas de peça' },

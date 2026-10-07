@@ -5,10 +5,10 @@
 | Fase | Nome | Status |
 |------|------|--------|
 | 1 | Foundation (GitHub, Supabase, Auth, Storage, RLS, flags) | **Schema + buckets + RLS OK** |
-| 2 | Catálogo (CRUD produtos/taxonomia) | Próxima (UI sobre schema) |
-| 3 | Admin (dashboard, permissões, auditoria) | Parcial |
-| 4 | Clientes (cadastro, login, grupos, aprovação) | Schema pronto; UI pendente |
-| 5 | Catálogo personalizado (UI + regras) | Engine SQL pronta |
+| 2 | Catálogo (CRUD produtos/taxonomia) | **UI admin OK** (publicação sem preço) |
+| 3 | Admin (dashboard, permissões) | **Parcial+** operadores RPC + dashboard B2B |
+| 4 | Clientes (cadastro, grupos, aprovação) | **UI admin OK** |
+| 5 | Catálogo personalizado (listas) | **UI listas + associação** |
 | 6 | Importação homologada | Motor FAL adaptado; validar no HF |
 | 7 | Experiência B2B (busca/WhatsApp) | Parcial |
 | 8–12 | Preços → Cotação → Pedidos → Estoque → Integrações | Flags off |
