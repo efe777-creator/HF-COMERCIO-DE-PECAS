@@ -12,23 +12,23 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[FAL] UI crash', error, info.componentStack)
+    console.error('[HF] UI crash', error, info.componentStack)
   }
 
   render() {
     if (this.state.error) {
       return (
         <div className="mx-auto max-w-lg px-4 py-16 text-center">
-          <h1 className="text-xl font-extrabold text-fal-navy">Algo deu errado</h1>
-          <p className="mt-2 text-sm text-fal-muted">
+          <h1 className="text-xl font-extrabold text-hf-ink">Algo deu errado</h1>
+          <p className="mt-2 text-sm text-hf-muted">
             A página falhou ao carregar. Tente recarregar.
           </p>
-          <p className="mt-3 break-all rounded-[10px] border border-fal-line bg-fal-bg p-3 text-left text-xs text-fal-danger">
+          <p className="mt-3 break-all rounded-[10px] border border-hf-line bg-hf-bg p-3 text-left text-xs text-hf-danger">
             {this.state.error.message}
           </p>
           <button
             type="button"
-            className="mt-4 rounded-[10px] bg-fal-yellow px-4 py-2.5 text-sm font-extrabold text-fal-navy"
+            className="mt-4 rounded-[10px] bg-hf-red px-4 py-2.5 text-sm font-extrabold text-hf-ink"
             onClick={() => window.location.reload()}
           >
             Recarregar

@@ -8,7 +8,7 @@ export function CategoryCard({ category }: { category: Category }) {
   return (
     <Link
       to={`/catalogo?cat=${encodeURIComponent(category.slug)}`}
-      className="min-w-0 overflow-hidden rounded-fal border border-fal-line bg-white p-[15px] transition hover:-translate-y-1 hover:shadow-fal sm:p-[22px]"
+      className="min-w-0 overflow-hidden rounded-hf border border-hf-line bg-hf-surface p-[15px] transition hover:-translate-y-1 hover:shadow-hf sm:p-[22px]"
     >
       <div className="flex h-[38px] items-center sm:h-[46px]" aria-hidden>
         {icon.type === 'image' ? (
@@ -26,7 +26,7 @@ export function CategoryCard({ category }: { category: Category }) {
         {category.name}
       </h3>
       {category.description ? (
-        <small className="line-clamp-2 break-words text-[11px] text-fal-muted sm:text-sm">
+        <small className="line-clamp-2 break-words text-[11px] text-hf-muted sm:text-sm">
           {category.description}
         </small>
       ) : null}

@@ -122,7 +122,7 @@ export function AdminOperatorsPage() {
       <div className="space-y-4">
         <form onSubmit={search} className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="min-w-0 flex-1 text-sm">
-            <span className="mb-1 block font-semibold text-fal-navy">
+            <span className="mb-1 block font-semibold text-hf-ink">
               Buscar e-mail ou nome (vazio = equipe)
             </span>
             <input
@@ -130,13 +130,13 @@ export function AdminOperatorsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ex: lucas@… ou deixe vazio"
-              className="w-full rounded-[10px] border border-fal-line bg-white px-3 py-2 text-fal-navy outline-none focus:border-fal-yellow"
+              className="w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2 text-hf-ink outline-none focus:border-hf-red"
             />
           </label>
           <button
             type="submit"
             disabled={loading}
-            className="rounded-[10px] bg-fal-navy px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+            className="rounded-[10px] bg-hf-surface-2 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
           >
             {loading ? 'Carregando…' : 'Atualizar'}
           </button>
@@ -148,15 +148,15 @@ export function AdminOperatorsPage() {
         {loading ? <Loading label="Carregando…" /> : null}
 
         {!loading && rows.length === 0 ? (
-          <p className="text-sm text-fal-muted">
+          <p className="text-sm text-hf-muted">
             Nenhum operador listado. Busque pelo e-mail de quem já se cadastrou na loja.
           </p>
         ) : null}
 
         {!loading && rows.length > 0 ? (
-          <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+          <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-fal-line bg-fal-bg text-xs uppercase text-fal-muted">
+              <thead className="border-b border-hf-line bg-hf-bg text-xs uppercase text-hf-muted">
                 <tr>
                   <th className="px-3 py-2">E-mail</th>
                   <th className="px-3 py-2">Nome</th>
@@ -168,11 +168,11 @@ export function AdminOperatorsPage() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-b border-fal-line last:border-0">
-                    <td className="px-3 py-2 font-medium text-fal-navy">{r.email ?? '—'}</td>
-                    <td className="px-3 py-2 text-fal-muted">{r.fullName ?? r.username ?? '—'}</td>
-                    <td className="px-3 py-2 text-fal-muted">{formatDateTime(r.createdAt)}</td>
-                    <td className="px-3 py-2 text-fal-muted">
+                  <tr key={r.id} className="border-b border-hf-line last:border-0">
+                    <td className="px-3 py-2 font-medium text-hf-ink">{r.email ?? '—'}</td>
+                    <td className="px-3 py-2 text-hf-muted">{r.fullName ?? r.username ?? '—'}</td>
+                    <td className="px-3 py-2 text-hf-muted">{formatDateTime(r.createdAt)}</td>
+                    <td className="px-3 py-2 text-hf-muted">
                       {r.lastSignInAt ? formatDateTime(r.lastSignInAt) : '—'}
                     </td>
                     <td className="px-3 py-2">
@@ -180,7 +180,7 @@ export function AdminOperatorsPage() {
                         value={r.role}
                         disabled={savingId === r.id || Boolean(r.deactivatedAt)}
                         onChange={(e) => void onRoleChange(r, e.target.value as AssignableRole)}
-                        className="w-full max-w-[220px] rounded-[8px] border border-fal-line bg-white px-2 py-1.5 text-sm font-semibold text-fal-navy disabled:opacity-50"
+                        className="w-full max-w-[220px] rounded-[8px] border border-hf-line bg-hf-surface px-2 py-1.5 text-sm font-semibold text-hf-ink disabled:opacity-50"
                       >
                         {ASSIGNABLE_ROLES.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -189,7 +189,7 @@ export function AdminOperatorsPage() {
                         ))}
                       </select>
                       {r.deactivatedAt ? (
-                        <span className="mt-1 block text-xs text-fal-danger">Desativado</span>
+                        <span className="mt-1 block text-xs text-hf-danger">Desativado</span>
                       ) : null}
                     </td>
                     <td className="px-3 py-2">
@@ -198,12 +198,12 @@ export function AdminOperatorsPage() {
                           type="button"
                           disabled={savingId === r.id}
                           onClick={() => void onDeactivate(r)}
-                          className="text-xs font-semibold text-fal-danger hover:underline disabled:opacity-50"
+                          className="text-xs font-semibold text-hf-danger hover:underline disabled:opacity-50"
                         >
                           Desativar
                         </button>
                       ) : (
-                        <span className="text-xs text-fal-muted">—</span>
+                        <span className="text-xs text-hf-muted">—</span>
                       )}
                     </td>
                   </tr>

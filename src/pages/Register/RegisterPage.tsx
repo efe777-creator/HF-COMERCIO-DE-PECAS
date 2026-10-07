@@ -71,25 +71,25 @@ export function RegisterPage() {
       <div className="mx-auto grid max-w-[1050px] grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="py-4 lg:py-10">
           <h1 className="mt-0 text-[36px] leading-tight font-black lg:text-[44px]">
-            Crie sua conta FAL
+            Crie sua conta HF
           </h1>
-          <p className="text-[17px] text-fal-muted">
-            Crie sua conta com nome, e-mail, CPF e senha. Você já pode navegar na loja; confirme o
-            e-mail quando receber a mensagem.
+          <p className="text-[17px] text-hf-muted">
+            Cadastre-se para solicitar vínculo B2B com a HF. Após aprovação, o catálogo autorizado
+            fica disponível.
           </p>
           {!isConfigured ? (
-            <p className="mt-4 rounded-[10px] border border-[#f0d979] bg-[#fff8db] p-3 text-sm">
+            <p className="mt-4 rounded-[10px] border border-hf-red/40 bg-hf-surface p-3 text-sm text-hf-muted">
               Cadastro indisponível no momento. Tente novamente mais tarde.
             </p>
           ) : null}
         </div>
 
-        <div className="overflow-hidden rounded-fal border border-fal-line bg-white">
-          <div className="grid grid-cols-2 border-b border-fal-line">
-            <Link to="/login" className="px-4 py-4 text-center font-extrabold hover:bg-[#fafbfc]">
+        <div className="overflow-hidden rounded-hf border border-hf-line bg-hf-surface">
+          <div className="grid grid-cols-2 border-b border-hf-line">
+            <Link to="/login" className="px-4 py-4 text-center font-extrabold hover:bg-hf-surface-2">
               Entrar
             </Link>
-            <span className="bg-[#fafbfc] px-4 py-4 text-center font-extrabold shadow-[inset_0_-3px_var(--fal-yellow)]">
+            <span className="bg-hf-surface-2 px-4 py-4 text-center font-extrabold shadow-[inset_0_-3px_var(--hf-red)]">
               Criar conta grátis
             </span>
           </div>
@@ -171,7 +171,7 @@ export function RegisterPage() {
               />
               Li e aceito os termos de uso e a política de privacidade.
             </label>
-            {error ? <p className="mt-3 text-sm text-fal-danger">{error}</p> : null}
+            {error ? <p className="mt-3 text-sm text-hf-danger">{error}</p> : null}
             <Button type="submit" variant="primary" fullWidth className="mt-4" disabled={submitting}>
               {submitting ? 'Criando…' : 'Criar conta'}
             </Button>

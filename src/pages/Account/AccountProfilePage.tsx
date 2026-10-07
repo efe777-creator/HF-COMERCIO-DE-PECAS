@@ -68,25 +68,25 @@ export function AccountProfilePage() {
   if (loading) return <Loading label="Carregando perfil…" />
 
   return (
-    <div className="rounded-fal border border-fal-line bg-white p-5">
+    <div className="rounded-hf border border-hf-line bg-hf-surface p-5">
       <h2 className="mt-0 text-xl font-extrabold">Perfil</h2>
-      <p className="text-sm text-fal-muted">
+      <p className="text-sm text-hf-muted">
         Dados do usuário. A empresa B2B é vinculada pela HF (não editável aqui).
       </p>
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
-      {message ? <p className="text-sm font-semibold text-fal-navy">{message}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
+      {message ? <p className="text-sm font-semibold text-hf-ink">{message}</p> : null}
 
-      <div className="mt-4 rounded-[10px] border border-fal-line bg-fal-bg p-3 text-sm">
-        <p className="m-0 font-semibold text-fal-navy">Empresa vinculada</p>
+      <div className="mt-4 rounded-[10px] border border-hf-line bg-hf-bg p-3 text-sm">
+        <p className="m-0 font-semibold text-hf-ink">Empresa vinculada</p>
         {companyName ? (
           <>
             <p className="mb-0 mt-1">{companyName}</p>
-            <p className="mb-0 mt-0.5 text-xs text-fal-muted">
+            <p className="mb-0 mt-0.5 text-xs text-hf-muted">
               {companyCnpj ?? 'CNPJ não informado'} · status: {companyStatus ?? '—'}
             </p>
           </>
         ) : (
-          <p className="mb-0 mt-1 text-fal-muted">
+          <p className="mb-0 mt-1 text-hf-muted">
             Nenhuma empresa ativa vinculada. Solicite o vínculo à HF após o cadastro.
           </p>
         )}

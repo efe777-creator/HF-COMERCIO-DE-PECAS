@@ -92,7 +92,7 @@ export function AdminHfBundleImportPage() {
       title="Importar arquivo HF (produto + aplicações)"
       description="Uma planilha completa: o sistema separa 1 cadastro por código referência e uma aplicação por linha. Produtos são gravados antes das aplicações."
       actions={
-        <Link to="/admin/produtos/importar" className="text-sm font-semibold text-fal-navy">
+        <Link to="/admin/produtos/importar" className="text-sm font-semibold text-hf-ink">
           Só produtos →
         </Link>
       }
@@ -102,8 +102,8 @@ export function AdminHfBundleImportPage() {
       ) : (
         <div className="space-y-4">
           {phase !== 'done' ? (
-            <label className="block rounded-[12px] border border-dashed border-fal-line bg-white p-4 text-sm">
-              <span className="mb-2 block font-semibold text-fal-navy">Arquivo CSV ou Excel</span>
+            <label className="block rounded-[12px] border border-dashed border-hf-line bg-hf-surface p-4 text-sm">
+              <span className="mb-2 block font-semibold text-hf-ink">Arquivo CSV ou Excel</span>
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls,text/csv"
@@ -113,15 +113,15 @@ export function AdminHfBundleImportPage() {
                   if (f) void onFile(f)
                 }}
               />
-              {fileName ? <p className="mt-2 text-fal-muted">{fileName}</p> : null}
+              {fileName ? <p className="mt-2 text-hf-muted">{fileName}</p> : null}
             </label>
           ) : null}
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
           {phase === 'preview' || phase === 'confirm' ? (
-            <div className="rounded-[12px] border border-fal-line bg-white p-4 text-sm">
-              <p className="m-0 font-semibold text-fal-navy">Resumo da prévia</p>
+            <div className="rounded-[12px] border border-hf-line bg-hf-surface p-4 text-sm">
+              <p className="m-0 font-semibold text-hf-ink">Resumo da prévia</p>
               <ul className="mt-2 list-disc pl-5">
                 <li>Produtos (únicos): {products?.length ?? 0} — aplicáveis: {prodOk}</li>
                 <li>Aplicações (linhas): {applications?.length ?? 0} — aplicáveis: {appOk}</li>
@@ -134,7 +134,7 @@ export function AdminHfBundleImportPage() {
                 <div className="mt-4 overflow-x-auto">
                   <p className="mb-2 font-semibold">Produtos (amostra)</p>
                   <table className="min-w-full text-left text-xs">
-                    <thead className="border-b border-fal-line text-fal-muted uppercase">
+                    <thead className="border-b border-hf-line text-hf-muted uppercase">
                       <tr>
                         <th className="px-2 py-1">SKU</th>
                         <th className="px-2 py-1">Nome</th>
@@ -145,7 +145,7 @@ export function AdminHfBundleImportPage() {
                     </thead>
                     <tbody>
                       {products.slice(0, 20).map((r) => (
-                        <tr key={r.sku} className="border-b border-fal-line">
+                        <tr key={r.sku} className="border-b border-hf-line">
                           <td className="px-2 py-1 font-medium">{r.sku}</td>
                           <td className="px-2 py-1">{r.name}</td>
                           <td className="px-2 py-1">{r.posicao ?? '—'}</td>
@@ -161,7 +161,7 @@ export function AdminHfBundleImportPage() {
           ) : null}
 
           {phase === 'done' && result ? (
-            <div className="space-y-2 rounded-[14px] border border-fal-line bg-white p-4 text-sm">
+            <div className="space-y-2 rounded-[14px] border border-hf-line bg-hf-surface p-4 text-sm">
               <h2 className="m-0 text-lg font-extrabold">Importação concluída</h2>
               <p>
                 Produtos — criados: {result.products.created}, atualizados:{' '}
@@ -174,7 +174,7 @@ export function AdminHfBundleImportPage() {
                   {result.applications.already_covered}
                 </p>
               ) : (
-                <p className="text-fal-danger">
+                <p className="text-hf-danger">
                   Cadastro gravado; aplicações não aplicadas. Corrija e use “Importar aplicações”.
                 </p>
               )}
@@ -194,7 +194,7 @@ export function AdminHfBundleImportPage() {
             </div>
           ) : null}
 
-          {busy ? <p className="text-sm text-fal-muted">Processando…</p> : null}
+          {busy ? <p className="text-sm text-hf-muted">Processando…</p> : null}
 
           {phase === 'preview' ? (
             <Button
@@ -207,9 +207,9 @@ export function AdminHfBundleImportPage() {
           ) : null}
 
           {phase === 'confirm' ? (
-            <div className="rounded-[14px] border border-fal-navy/20 bg-white p-4">
+            <div className="rounded-[14px] border border-hf-line/20 bg-hf-surface p-4">
               <h2 className="m-0 text-lg font-extrabold">Confirmar importação?</h2>
-              <p className="mt-2 text-sm text-fal-muted">
+              <p className="mt-2 text-sm text-hf-muted">
                 Produtos ({prodOk}) serão gravados primeiro; depois as aplicações ({appOk}).
               </p>
               <div className="mt-4 flex gap-2">

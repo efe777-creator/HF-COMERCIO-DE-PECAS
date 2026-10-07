@@ -227,9 +227,9 @@ export function AddressForm({
           <p
             className={[
               'mt-1 text-xs',
-              cepStatus === 'error' ? 'text-fal-danger' : '',
-              cepStatus === 'ok' ? 'text-fal-success' : '',
-              cepStatus === 'loading' || cepStatus === 'idle' ? 'text-fal-muted' : '',
+              cepStatus === 'error' ? 'text-hf-danger' : '',
+              cepStatus === 'ok' ? 'text-hf-success' : '',
+              cepStatus === 'loading' || cepStatus === 'idle' ? 'text-hf-muted' : '',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -288,9 +288,9 @@ export function AddressForm({
       />
 
       <label className="block text-sm sm:col-span-2">
-        <span className="mb-1 block text-xs font-extrabold text-fal-muted">Estado</span>
+        <span className="mb-1 block text-xs font-extrabold text-hf-muted">Estado</span>
         <select
-          className="w-full rounded-[9px] border border-fal-line bg-white px-3 py-3 outline-none focus:border-fal-yellow-dark focus:shadow-[0_0_0_3px_rgba(242,200,75,0.2)]"
+          className="w-full rounded-[9px] border border-hf-line bg-hf-surface px-3 py-3 outline-none focus:border-hf-red focus:shadow-[0_0_0_3px_rgba(197,23,31,0.25)]"
           name="state"
           autoComplete="address-level1"
           value={form.state}
@@ -341,7 +341,7 @@ export function AddressForm({
         Usar como endereço padrão
       </label>
 
-      {error ? <p className="text-sm text-fal-danger sm:col-span-2">{error}</p> : null}
+      {error ? <p className="text-sm text-hf-danger sm:col-span-2">{error}</p> : null}
 
       <div className="flex flex-wrap gap-2 sm:col-span-2">
         <Button type="submit" disabled={saving}>

@@ -29,8 +29,8 @@ export function SavedVehiclesQuickPick({
 
   if (!user) {
     return (
-      <p className="m-0 text-xs text-fal-muted">
-        <Link to="/login" state={{ from: '/catalogo' }} className="font-semibold text-fal-navy underline-offset-2 hover:underline">
+      <p className="m-0 text-xs text-hf-muted">
+        <Link to="/login" state={{ from: '/catalogo' }} className="font-semibold text-hf-ink underline-offset-2 hover:underline">
           Entrar
         </Link>{' '}
         para usar Meus veículos
@@ -40,8 +40,8 @@ export function SavedVehiclesQuickPick({
 
   if (!items.length) {
     return (
-      <p className="m-0 text-xs text-fal-muted">
-        <Link to="/conta/veiculos" className="font-semibold text-fal-navy underline-offset-2 hover:underline">
+      <p className="m-0 text-xs text-hf-muted">
+        <Link to="/conta/veiculos" className="font-semibold text-hf-ink underline-offset-2 hover:underline">
           Meus veículos
         </Link>
         {' — '}
@@ -66,7 +66,7 @@ export function SavedVehiclesQuickPick({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold text-fal-muted">Meus veículos:</span>
+      <span className="text-xs font-semibold text-hf-muted">Meus veículos:</span>
       {items.map((v) => {
         const label =
           v.nickname ||
@@ -79,8 +79,8 @@ export function SavedVehiclesQuickPick({
             className={[
               'rounded-full border px-2.5 py-1 text-xs font-semibold transition',
               v.isPrimary
-                ? 'border-fal-navy bg-fal-navy text-white'
-                : 'border-[#d8dee3] bg-[#f7f9fa] text-fal-navy hover:border-fal-navy',
+                ? 'border-hf-line bg-hf-surface-2 text-white'
+                : 'border-[#d8dee3] bg-[#f7f9fa] text-hf-ink hover:border-hf-line',
             ].join(' ')}
             onClick={() => apply(v)}
             title="Filtrar peças deste veículo"
@@ -92,7 +92,7 @@ export function SavedVehiclesQuickPick({
       })}
       <Link
         to="/conta/veiculos"
-        className="text-xs font-semibold text-fal-muted underline-offset-2 hover:underline"
+        className="text-xs font-semibold text-hf-muted underline-offset-2 hover:underline"
       >
         Gerenciar
       </Link>

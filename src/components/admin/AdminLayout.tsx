@@ -25,7 +25,7 @@ const opsLinks = [{ to: '/admin/operadores', label: 'Usuários / operadores' }]
 function linkClass({ isActive }: { isActive: boolean }) {
   return [
     'block rounded-lg px-3 py-2 text-sm font-semibold transition',
-    isActive ? 'bg-fal-yellow text-fal-navy-dark' : 'text-white/85 hover:bg-white/10',
+    isActive ? 'bg-hf-red text-white' : 'text-white/85 hover:bg-hf-surface/10',
   ].join(' ')
 }
 
@@ -78,7 +78,7 @@ export function AdminLayout() {
   const aside = (
     <aside
       className={[
-        'flex w-[min(288px,88vw)] flex-col bg-fal-navy text-white lg:w-[260px] lg:shrink-0',
+        'flex w-[min(288px,88vw)] flex-col bg-hf-surface-2 text-white lg:w-[260px] lg:shrink-0',
         'fixed inset-y-0 left-0 z-40 h-screen transition-transform duration-200 ease-out',
         'lg:sticky lg:top-0 lg:z-0 lg:translate-x-0 lg:transition-none',
         navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
@@ -87,12 +87,12 @@ export function AdminLayout() {
       <div className="shrink-0 border-b border-white/10 px-4 py-4 lg:py-5">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-fal-yellow">HF ADMIN</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-hf-red-bright">HF ADMIN</p>
             <p className="mt-1 truncate text-sm text-white/65">Catálogo e cadastros</p>
           </div>
           <button
             type="button"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/80 hover:bg-white/10 lg:hidden"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/80 hover:bg-hf-surface/10 lg:hidden"
             aria-label="Fechar menu"
             onClick={closeNav}
           >
@@ -123,7 +123,7 @@ export function AdminLayout() {
             type="button"
             onClick={() => void signOut()}
             title={userLabel}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white/70 hover:bg-white/10"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white/70 hover:bg-hf-surface/10"
           >
             <span className="shrink-0">Sair</span>
             <span className="min-w-0 truncate text-white/45">({userLabel})</span>
@@ -134,7 +134,7 @@ export function AdminLayout() {
   )
 
   return (
-    <div className="min-h-screen bg-fal-bg lg:flex">
+    <div className="min-h-screen bg-hf-bg lg:flex">
       <ScrollToTop />
       {navOpen ? (
         <button
@@ -148,23 +148,23 @@ export function AdminLayout() {
       {aside}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-fal-line bg-white px-4 py-3 lg:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-hf-line bg-hf-surface px-4 py-3 lg:hidden">
           <button
             type="button"
-            className="grid h-10 w-10 place-items-center rounded-lg border border-fal-line bg-fal-bg text-fal-navy"
+            className="grid h-10 w-10 place-items-center rounded-lg border border-hf-line bg-hf-bg text-hf-ink"
             aria-label="Abrir menu"
             aria-expanded={navOpen}
             onClick={() => setNavOpen(true)}
           >
             <span className="flex flex-col gap-1" aria-hidden>
-              <span className="block h-0.5 w-4 rounded bg-fal-navy" />
-              <span className="block h-0.5 w-4 rounded bg-fal-navy" />
-              <span className="block h-0.5 w-4 rounded bg-fal-navy" />
+              <span className="block h-0.5 w-4 rounded bg-hf-surface-2" />
+              <span className="block h-0.5 w-4 rounded bg-hf-surface-2" />
+              <span className="block h-0.5 w-4 rounded bg-hf-surface-2" />
             </span>
           </button>
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-fal-navy">HF ADMIN</p>
-            <p className="truncate text-sm text-fal-muted">Menu</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-hf-ink">HF ADMIN</p>
+            <p className="truncate text-sm text-hf-muted">Menu</p>
           </div>
         </header>
 

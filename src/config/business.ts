@@ -1,6 +1,6 @@
 /**
  * Configuração comercial / institucional HF.
- * WhatsApp e dados da empresa — única fonte no frontend.
+ * Fonte: SITE HF HTML (contato / identidade).
  */
 
 function digitsOnly(value: string | undefined): string {
@@ -9,7 +9,25 @@ function digitsOnly(value: string | undefined): string {
 
 export const businessConfig = {
   companyName: 'HF Comércio de Peças',
-  whatsappNumber: digitsOnly(import.meta.env.VITE_WHATSAPP_NUMBER as string | undefined),
+  shortName: 'HF',
+  tagline: 'Distribuidora automotiva especializada em suspensão, direção e freios.',
+  eyebrow: 'Distribuição automotiva • Guarulhos/SP',
+  heroHeadline: 'A peça certa.',
+  heroHighlight: 'Com mais rapidez e precisão.',
+  heroSupport:
+    'Consulte o catálogo por código, categoria, montadora e aplicação. Ambiente B2B para oficinas, autopeças e profissionais do setor.',
+  address: 'Av. Rosa Molina Pannochia, 424 — Guarulhos/SP',
+  city: 'Guarulhos/SP',
+  email: 'marketing@hfcomerciodepecas.com',
+  phoneFixed: '1143724582',
+  phoneAdmin: '11985491746',
+  phoneWhatsAppDefault: '11994370003',
+  instagramUrl: 'https://www.instagram.com/hfsuspensao/',
+  hoursWeek: 'Seg–Sex 08h–18h',
+  hoursSat: 'Sáb 09h–14h',
+  whatsappNumber: digitsOnly(
+    (import.meta.env.VITE_WHATSAPP_NUMBER as string | undefined) || '11994370003',
+  ),
 } as const
 
 /** Número E.164 só dígitos, ou null se inválido. */

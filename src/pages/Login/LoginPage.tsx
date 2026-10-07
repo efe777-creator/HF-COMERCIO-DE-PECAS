@@ -43,25 +43,25 @@ export function LoginPage() {
       <div className="mx-auto grid max-w-[1050px] grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10">
         <div className="py-4 lg:py-10">
           <h1 className="mt-0 text-[36px] leading-tight font-black lg:text-[44px]">
-            Bem-vindo à FAL
+            Bem-vindo à HF
           </h1>
-          <p className="text-[17px] text-fal-muted">
-            Acesse sua conta para acompanhar pedidos, endereços e favoritos.
+          <p className="text-[17px] text-hf-muted">
+            Acesse o catálogo B2B autorizado da sua empresa.
           </p>
           {!isConfigured ? (
-            <p className="mt-4 rounded-[10px] border border-[#f0d979] bg-[#fff8db] p-3 text-sm">
+            <p className="mt-4 rounded-[10px] border border-hf-red/40 bg-hf-surface p-3 text-sm text-hf-muted">
               Supabase ainda não configurado. Copie <code>.env.example</code> para{' '}
               <code>.env</code> e preencha URL + anon key.
             </p>
           ) : null}
         </div>
 
-        <div className="overflow-hidden rounded-fal border border-fal-line bg-white">
-          <div className="grid grid-cols-2 border-b border-fal-line">
-            <span className="bg-[#fafbfc] px-4 py-4 text-center font-extrabold shadow-[inset_0_-3px_var(--fal-yellow)]">
+        <div className="overflow-hidden rounded-hf border border-hf-line bg-hf-surface">
+          <div className="grid grid-cols-2 border-b border-hf-line">
+            <span className="bg-hf-surface-2 px-4 py-4 text-center font-extrabold shadow-[inset_0_-3px_var(--hf-red)]">
               Entrar
             </span>
-            <Link to="/cadastro" className="px-4 py-4 text-center font-extrabold hover:bg-[#fafbfc]">
+            <Link to="/cadastro" className="px-4 py-4 text-center font-extrabold hover:bg-hf-surface-2">
               Criar conta grátis
             </Link>
           </div>
@@ -91,11 +91,11 @@ export function LoginPage() {
               <label className="flex items-center gap-2">
                 <input type="checkbox" /> Manter conectado
               </label>
-              <Link to="/recuperar-senha" className="font-bold text-fal-auth-link">
+              <Link to="/recuperar-senha" className="font-bold text-hf-auth-link">
                 Esqueci minha senha
               </Link>
             </div>
-            {error ? <p className="mt-3 text-sm text-fal-danger">{error}</p> : null}
+            {error ? <p className="mt-3 text-sm text-hf-danger">{error}</p> : null}
             <Button type="submit" variant="primary" fullWidth className="mt-4" disabled={submitting}>
               {submitting ? 'Entrando…' : 'Entrar'}
             </Button>

@@ -119,10 +119,10 @@ export function AdminApplicationsImportPage() {
       description="Código referência, montadora, modelo, versão e anos. O produto precisa existir — esta importação não cria cadastro de produto."
       actions={
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
-          <Link to="/admin/produtos/importar" className="text-fal-navy">
+          <Link to="/admin/produtos/importar" className="text-hf-ink">
             Cadastro de produtos →
           </Link>
-          <Link to="/admin/produtos/importar-hf" className="text-fal-navy">
+          <Link to="/admin/produtos/importar-hf" className="text-hf-ink">
             Arquivo HF completo →
           </Link>
         </div>
@@ -135,8 +135,8 @@ export function AdminApplicationsImportPage() {
       ) : (
         <div className="space-y-4">
           {phase !== 'done' ? (
-            <label className="block rounded-[12px] border border-dashed border-fal-line bg-white p-4 text-sm">
-              <span className="mb-2 block font-semibold text-fal-navy">Arquivo CSV ou Excel</span>
+            <label className="block rounded-[12px] border border-dashed border-hf-line bg-hf-surface p-4 text-sm">
+              <span className="mb-2 block font-semibold text-hf-ink">Arquivo CSV ou Excel</span>
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls,text/csv"
@@ -147,7 +147,7 @@ export function AdminApplicationsImportPage() {
                 }}
               />
               {fileName ? (
-                <p className="mt-2 text-fal-muted">
+                <p className="mt-2 text-hf-muted">
                   {fileName}
                   {delimiter ? ` · separador ${delimiterLabel(delimiter as ';' | ',' | '\t')}` : null}
                 </p>
@@ -158,32 +158,32 @@ export function AdminApplicationsImportPage() {
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
           {phase === 'done' && report ? (
-            <div className="space-y-3 rounded-[14px] border border-fal-line bg-white p-4">
-              <h2 className="m-0 text-lg font-extrabold text-fal-navy">Importação concluída</h2>
-              <p className="m-0 text-sm text-fal-muted">
+            <div className="space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
+              <h2 className="m-0 text-lg font-extrabold text-hf-ink">Importação concluída</h2>
+              <p className="m-0 text-sm text-hf-muted">
                 Arquivo: {fileName ?? '—'}
                 {appliedAt ? ` · ${formatDateTime(appliedAt)}` : null}
                 {user?.email ? ` · ${user.email}` : null}
               </p>
               <div className="grid gap-2 text-sm sm:grid-cols-2">
                 <div>
-                  <p className="m-0 font-semibold text-fal-navy">Produtos</p>
-                  <ul className="mt-1 list-disc pl-5 text-fal-muted">
+                  <p className="m-0 font-semibold text-hf-ink">Produtos</p>
+                  <ul className="mt-1 list-disc pl-5 text-hf-muted">
                     <li>Criados: {report.created_products}</li>
                     <li>Já cadastrados: {report.existing_products}</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="m-0 font-semibold text-fal-navy">Aplicações</p>
-                  <ul className="mt-1 list-disc pl-5 text-fal-muted">
+                  <p className="m-0 font-semibold text-hf-ink">Aplicações</p>
+                  <ul className="mt-1 list-disc pl-5 text-hf-muted">
                     <li>Criadas: {report.created_applications}</li>
                     <li>Atualizadas: {report.updated_applications}</li>
                     <li>Já contempladas: {report.already_covered}</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="m-0 font-semibold text-fal-navy">Veículos</p>
-                  <ul className="mt-1 list-disc pl-5 text-fal-muted">
+                  <p className="m-0 font-semibold text-hf-ink">Veículos</p>
+                  <ul className="mt-1 list-disc pl-5 text-hf-muted">
                     <li>
                       Montadoras novas / existentes: {report.created_manufacturers} /{' '}
                       {report.existing_manufacturers}
@@ -198,8 +198,8 @@ export function AdminApplicationsImportPage() {
                   </ul>
                 </div>
                 <div>
-                  <p className="m-0 font-semibold text-fal-navy">Não aplicados</p>
-                  <ul className="mt-1 list-disc pl-5 text-fal-muted">
+                  <p className="m-0 font-semibold text-hf-ink">Não aplicados</p>
+                  <ul className="mt-1 list-disc pl-5 text-hf-muted">
                     <li>Revisão: {report.skipped_review}</li>
                     <li>Erros: {report.skipped_error}</li>
                     <li>Total processado: {report.total_processed}</li>
@@ -207,7 +207,7 @@ export function AdminApplicationsImportPage() {
                 </div>
               </div>
               {(report.skipped_review > 0 || report.skipped_error > 0) && (
-                <p className="m-0 text-sm text-fal-muted">
+                <p className="m-0 text-sm text-hf-muted">
                   Itens em revisão ou com erro não foram gravados. Corrija o arquivo ou o cadastro
                   de veículos e importe novamente.
                 </p>
@@ -229,18 +229,18 @@ export function AdminApplicationsImportPage() {
           ) : null}
 
           {summary && phase !== 'done' ? (
-            <div className="rounded-[12px] border border-fal-line bg-white p-4 text-sm">
-              <p className="m-0 font-semibold text-fal-navy">Resumo da prévia</p>
+            <div className="rounded-[12px] border border-hf-line bg-hf-surface p-4 text-sm">
+              <p className="m-0 font-semibold text-hf-ink">Resumo da prévia</p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <div>
-                  <p className="m-0 text-fal-muted">Produtos (referência)</p>
+                  <p className="m-0 text-hf-muted">Produtos (referência)</p>
                   <ul className="mt-1 list-disc pl-5">
                     <li>Já cadastrados (ok): {summary.productExisting}</li>
                     <li>Não cadastrados (erro): {summary.productMissing}</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="m-0 text-fal-muted">Aplicações</p>
+                  <p className="m-0 text-hf-muted">Aplicações</p>
                   <ul className="mt-1 list-disc pl-5">
                     <li>Novas: {summary.appNew}</li>
                     <li>Atualizadas: {summary.appUpdate}</li>
@@ -268,9 +268,9 @@ export function AdminApplicationsImportPage() {
           ) : null}
 
           {visible.length > 0 && phase !== 'done' ? (
-            <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+            <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-fal-line bg-fal-bg text-xs uppercase text-fal-muted">
+                <thead className="border-b border-hf-line bg-hf-bg text-xs uppercase text-hf-muted">
                   <tr>
                     <th className="px-2 py-2">Linha</th>
                     <th className="px-2 py-2">Código referência</th>
@@ -286,7 +286,7 @@ export function AdminApplicationsImportPage() {
                   {visible.map((r, idx) => (
                     <tr
                       key={`${r.lineNumber}-${r.versao}-${idx}`}
-                      className="border-b border-fal-line last:border-0"
+                      className="border-b border-hf-line last:border-0"
                     >
                       <td className="px-2 py-1.5">{r.lineNumber}</td>
                       <td className="px-2 py-1.5 font-medium">{r.sku}</td>
@@ -299,7 +299,7 @@ export function AdminApplicationsImportPage() {
                         {r.yearEnd ?? 'vigente'}
                       </td>
                       <td className="px-2 py-1.5">{ACTION_LABEL[r.action]}</td>
-                      <td className="px-2 py-1.5 text-fal-muted">{r.message}</td>
+                      <td className="px-2 py-1.5 text-hf-muted">{r.message}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -307,7 +307,7 @@ export function AdminApplicationsImportPage() {
             </div>
           ) : null}
 
-          {busy ? <p className="text-sm text-fal-muted">Processando…</p> : null}
+          {busy ? <p className="text-sm text-hf-muted">Processando…</p> : null}
 
           {phase === 'preview' && summary ? (
             <div className="flex flex-wrap gap-2">
@@ -322,9 +322,9 @@ export function AdminApplicationsImportPage() {
           ) : null}
 
           {phase === 'confirm' ? (
-            <div className="rounded-[14px] border border-fal-navy/20 bg-white p-4 shadow-sm">
-              <h2 className="m-0 text-lg font-extrabold text-fal-navy">Confirmar importação?</h2>
-              <p className="mt-2 text-sm text-fal-muted">
+            <div className="rounded-[14px] border border-hf-line/20 bg-hf-surface p-4 shadow-sm">
+              <h2 className="m-0 text-lg font-extrabold text-hf-ink">Confirmar importação?</h2>
+              <p className="mt-2 text-sm text-hf-muted">
                 Esta ação irá aplicar as alterações aprovadas ao catálogo (
                 {summary?.applyable ?? 0} item(ns)). Itens em revisão ou com erro não serão
                 gravados.

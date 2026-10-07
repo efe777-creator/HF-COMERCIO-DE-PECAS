@@ -40,10 +40,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             className={[
-              'rounded-[10px] px-4 py-3 text-sm font-semibold shadow-fal',
-              t.tone === 'success' && 'bg-fal-success text-white',
-              t.tone === 'error' && 'bg-fal-danger text-white',
-              t.tone === 'info' && 'bg-fal-navy text-white',
+              'rounded-[10px] px-4 py-3 text-sm font-semibold shadow-hf',
+              t.tone === 'success' && 'bg-hf-success text-white',
+              t.tone === 'error' && 'bg-hf-danger text-white',
+              t.tone === 'info' && 'bg-hf-surface-2 text-white',
             ]
               .filter(Boolean)
               .join(' ')}

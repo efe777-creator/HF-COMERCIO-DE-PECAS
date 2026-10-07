@@ -1,48 +1,48 @@
 @import 'tailwindcss';
 
 /**
- * Design tokens — identidade visual FAL Peças Automotivas
- * Não alterar cores/tipografia/espaçamentos arbitrariamente.
+ * Design tokens — HF Comércio de Peças
+ * Fonte: SITE HF HTML (tema escuro + vermelho marca).
  */
 :root {
-  --fal-navy: #303846;
-  --fal-navy-dark: #252c36;
-  --fal-navy-2: #46515e;
-  --fal-yellow: #f2c84b;
-  --fal-yellow-dark: #dcae27;
-  --fal-yellow-hover: #ffd75c;
-  --fal-bg: #f4f6f7;
-  --fal-surface: #ffffff;
-  --fal-line: #dfe4e8;
-  --fal-muted: #6f7a85;
-  --fal-success: #168a55;
-  --fal-danger: #c0392b;
-  --fal-auth-link: #7c5b00;
-  --fal-radius: 14px;
-  --fal-shadow: 0 10px 30px rgba(33, 42, 52, 0.1);
-  --fal-container: 1240px;
-  --fal-header-logo-h: 72px;
+  --hf-bg: #070707;
+  --hf-bg-2: #101012;
+  --hf-surface: #151518;
+  --hf-surface-2: #1d1d22;
+  --hf-red: #c5171f;
+  --hf-red-bright: #ff303c;
+  --hf-ink: #f5f5f5;
+  --hf-muted: #a5a8ad;
+  --hf-line: rgba(255, 255, 255, 0.1);
+  --hf-whatsapp: #25d366;
+  --hf-success: #25d366;
+  --hf-danger: #ff6b6b;
+  --hf-auth-link: #ff303c;
+  --hf-radius: 14px;
+  --hf-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+  --hf-container: 1320px;
+  --hf-header-logo-h: 56px;
 }
 
 @theme {
-  --font-sans: Inter, Arial, sans-serif;
-  --color-fal-navy: #303846;
-  --color-fal-navy-dark: #252c36;
-  --color-fal-navy-2: #46515e;
-  --color-fal-yellow: #f2c84b;
-  --color-fal-yellow-dark: #dcae27;
-  --color-fal-yellow-hover: #ffd75c;
-  --color-fal-bg: #f4f6f7;
-  --color-fal-surface: #ffffff;
-  --color-fal-line: #dfe4e8;
-  --color-fal-muted: #6f7a85;
-  --color-fal-success: #168a55;
-  --color-fal-danger: #c0392b;
-  --color-fal-auth-link: #7c5b00;
+  --font-sans: Inter, Arial, Helvetica, sans-serif;
+  --color-hf-bg: #070707;
+  --color-hf-bg-2: #101012;
+  --color-hf-surface: #151518;
+  --color-hf-surface-2: #1d1d22;
+  --color-hf-red: #c5171f;
+  --color-hf-red-bright: #ff303c;
+  --color-hf-ink: #f5f5f5;
+  --color-hf-muted: #a5a8ad;
+  --color-hf-line: rgba(255, 255, 255, 0.1);
+  --color-hf-whatsapp: #25d366;
+  --color-hf-success: #25d366;
+  --color-hf-danger: #ff6b6b;
+  --color-hf-auth-link: #ff303c;
   --breakpoint-sm: 620px;
   --breakpoint-lg: 900px;
-  --radius-fal: 14px;
-  --shadow-fal: 0 10px 30px rgba(33, 42, 52, 0.1);
+  --radius-hf: 14px;
+  --shadow-hf: 0 15px 40px rgba(0, 0, 0, 0.35);
 }
 
 *,
@@ -57,9 +57,9 @@ html {
 
 body {
   margin: 0;
-  font-family: Inter, Arial, sans-serif;
-  color: var(--fal-navy-dark);
-  background: var(--fal-bg);
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  color: var(--hf-ink);
+  background: linear-gradient(to bottom, #050505, #101010);
   line-height: 1.45;
 }
 
@@ -70,7 +70,8 @@ a {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 

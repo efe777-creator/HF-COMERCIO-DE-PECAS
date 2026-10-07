@@ -15,7 +15,7 @@ export type SavedImportProfile = {
   updatedAt: string
 }
 
-const STORAGE_PREFIX = 'fal-import-profiles:'
+const STORAGE_PREFIX = 'hf-import-profiles:'
 
 function storageKey(kind: ImportProfileKind): string {
   return `${STORAGE_PREFIX}${kind}`

@@ -35,28 +35,28 @@ export function SearchBar() {
             navigate(`/catalogo?q=${encodeURIComponent(query.trim())}`)
           }
         }}
-        placeholder="Busque por peça, código, aplicação ou veículo"
-        className="min-h-11 w-full rounded-xl border border-fal-line bg-[#fafbfc] py-2.5 pr-10 pl-3 text-sm outline-none focus:border-fal-yellow-dark focus:shadow-[0_0_0_3px_rgba(242,200,75,0.2)] sm:min-h-[46px] sm:py-[13px] sm:pr-11 sm:pl-4 lg:py-[15px] lg:pl-[18px]"
+        placeholder="Pesquisar por código, peça, veículo ou aplicação"
+        className="min-h-11 w-full rounded-[10px] border border-hf-line bg-hf-surface py-2.5 pr-10 pl-3 text-sm text-hf-ink outline-none placeholder:text-hf-muted focus:border-hf-red focus:shadow-[0_0_0_3px_rgba(197,23,31,0.25)] sm:min-h-[46px] sm:py-[13px] sm:pr-11 sm:pl-4 lg:py-[15px] lg:pl-[18px]"
         aria-label="Busca de produtos"
       />
-      <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-lg text-fal-muted sm:right-4 sm:text-xl">
+      <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-lg text-hf-muted sm:right-4 sm:text-xl">
         ⌕
       </span>
 
       {open && query.trim() ? (
-        <div className="absolute top-[calc(100%+6px)] z-[120] w-full overflow-hidden rounded-xl border border-fal-line bg-white shadow-fal">
+        <div className="absolute top-[calc(100%+6px)] z-[120] w-full overflow-hidden rounded-xl border border-hf-line bg-hf-surface shadow-hf">
           {loading ? (
-            <div className="px-4 py-3 text-sm text-fal-muted">Buscando…</div>
+            <div className="px-4 py-3 text-sm text-hf-muted">Buscando…</div>
           ) : suggestions.length ? (
             suggestions.map((p) => (
               <Link
                 key={p.id}
                 to={`/produto/${p.id}`}
-                className="block border-b border-fal-line px-4 py-3 text-sm hover:bg-[#f8f9fa]"
+                className="block border-b border-hf-line px-4 py-3 text-sm text-hf-ink hover:bg-hf-surface-2"
                 onClick={() => setOpen(false)}
               >
                 <strong>{p.name}</strong>
-                <span className="mt-0.5 block text-xs text-fal-muted">
+                <span className="mt-0.5 block text-xs text-hf-muted">
                   {p.brand} · {p.sku}
                 </span>
               </Link>
@@ -64,7 +64,7 @@ export function SearchBar() {
           ) : (
             <Link
               to={`/catalogo?q=${encodeURIComponent(query.trim())}`}
-              className="block px-4 py-3 text-sm hover:bg-[#f8f9fa]"
+              className="block px-4 py-3 text-sm text-hf-ink hover:bg-hf-surface-2"
               onClick={() => setOpen(false)}
             >
               Ver resultados para “{query.trim()}” no catálogo

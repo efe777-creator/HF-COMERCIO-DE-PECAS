@@ -96,10 +96,10 @@ export function AdminProductImportPage() {
       description="Código referência, nome, categoria, grupo, subgrupo, posição, lado e descrições. Sem montadora — aplicações são outra importação. Novos entram como rascunho e indisponíveis."
       actions={
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
-          <Link to="/admin/produtos/importar-aplicacoes" className="text-fal-navy">
+          <Link to="/admin/produtos/importar-aplicacoes" className="text-hf-ink">
             Aplicações →
           </Link>
-          <Link to="/admin/produtos/importar-hf" className="text-fal-navy">
+          <Link to="/admin/produtos/importar-hf" className="text-hf-ink">
             Arquivo HF completo →
           </Link>
         </div>
@@ -112,9 +112,9 @@ export function AdminProductImportPage() {
       ) : (
         <div className="space-y-4">
           {phase !== 'done' ? (
-            <div className="rounded-[14px] border border-fal-line bg-white p-4">
-              <h2 className="m-0 text-lg font-extrabold text-fal-navy">Arquivo de cadastro</h2>
-              <p className="mt-1 text-sm text-fal-muted">
+            <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
+              <h2 className="m-0 text-lg font-extrabold text-hf-ink">Arquivo de cadastro</h2>
+              <p className="mt-1 text-sm text-hf-muted">
                 Envie CSV ou Excel com código referência, nome, categoria, grupo (e opcionalmente
                 subgrupo, posição, lado e descrições). SKUs repetidos no arquivo são consolidados
                 em um produto. Produtos novos entram como rascunho e indisponíveis; a reimportação
@@ -142,14 +142,14 @@ export function AdminProductImportPage() {
                   {busy ? 'Lendo arquivo…' : 'Escolher arquivo e importar'}
                 </Button>
                 {fileName ? (
-                  <p className="m-0 text-sm text-fal-muted">
+                  <p className="m-0 text-sm text-hf-muted">
                     {fileName}
                     {delimiter
                       ? ` · separador ${delimiterLabel(delimiter as ';' | ',' | '\t')}`
                       : null}
                   </p>
                 ) : (
-                  <p className="m-0 text-sm text-fal-muted">Nenhum arquivo selecionado</p>
+                  <p className="m-0 text-sm text-hf-muted">Nenhum arquivo selecionado</p>
                 )}
               </div>
             </div>
@@ -158,8 +158,8 @@ export function AdminProductImportPage() {
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
           {phase === 'done' && report ? (
-            <div className="rounded-[14px] border border-fal-line bg-white p-4">
-              <h2 className="m-0 text-lg font-extrabold text-fal-navy">Importação concluída</h2>
+            <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
+              <h2 className="m-0 text-lg font-extrabold text-hf-ink">Importação concluída</h2>
               <p className="mt-2 text-sm">{report}</p>
               <Button
                 className="mt-3"
@@ -190,9 +190,9 @@ export function AdminProductImportPage() {
                 />
                 Mostrar só erros
               </label>
-              <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+              <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-fal-line bg-fal-bg text-xs uppercase text-fal-muted">
+                  <thead className="border-b border-hf-line bg-hf-bg text-xs uppercase text-hf-muted">
                     <tr>
                       <th className="px-2 py-2">Linha</th>
                       <th className="px-2 py-2">Código referência</th>
@@ -206,7 +206,7 @@ export function AdminProductImportPage() {
                   </thead>
                   <tbody>
                     {visible.map((r) => (
-                      <tr key={r.sku} className="border-b border-fal-line last:border-0">
+                      <tr key={r.sku} className="border-b border-hf-line last:border-0">
                         <td className="px-2 py-1.5">{r.lineNumber}</td>
                         <td className="px-2 py-1.5 font-medium">{r.sku}</td>
                         <td className="px-2 py-1.5">{r.name}</td>
@@ -234,7 +234,7 @@ export function AdminProductImportPage() {
             </>
           ) : null}
 
-          {busy ? <p className="text-sm text-fal-muted">Processando…</p> : null}
+          {busy ? <p className="text-sm text-hf-muted">Processando…</p> : null}
 
           {phase === 'preview' ? (
             <Button
@@ -247,9 +247,9 @@ export function AdminProductImportPage() {
           ) : null}
 
           {phase === 'confirm' ? (
-            <div className="rounded-[14px] border border-fal-navy/20 bg-white p-4">
+            <div className="rounded-[14px] border border-hf-line/20 bg-hf-surface p-4">
               <h2 className="m-0 text-lg font-extrabold">Confirmar importação?</h2>
-              <p className="mt-2 text-sm text-fal-muted">
+              <p className="mt-2 text-sm text-hf-muted">
                 Esta ação grava {validCount} produto(s) no catálogo (rascunho se novos).
               </p>
               <div className="mt-4 flex gap-2">

@@ -168,14 +168,14 @@ export function AdminCustomersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-fal-navy">Clientes B2B</h1>
-      <p className="text-sm text-fal-muted">
+      <h1 className="text-2xl font-extrabold text-hf-ink">Clientes B2B</h1>
+      <p className="text-sm text-hf-muted">
         Cadastro de empresas. Status controla acesso. Associe grupo, catálogos e usuários de login.
       </p>
 
       <form
         onSubmit={onSubmit}
-        className="grid gap-3 rounded-[14px] border border-fal-line bg-white p-4 md:grid-cols-2"
+        className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-2"
       >
         <Input label="Razão social" value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
         <Input label="Nome fantasia" value={tradeName} onChange={(e) => setTradeName(e.target.value)} />
@@ -184,9 +184,9 @@ export function AdminCustomersPage() {
         <Input label="Telefone" value={phone} onChange={(e) => setPhone(e.target.value)} />
         <Input label="WhatsApp" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
         <label className="block text-sm">
-          <span className="mb-1 block font-semibold text-fal-navy">Status</span>
+          <span className="mb-1 block font-semibold text-hf-ink">Status</span>
           <select
-            className="w-full rounded-[10px] border border-fal-line px-3 py-2"
+            className="w-full rounded-[10px] border border-hf-line px-3 py-2"
             value={status}
             onChange={(e) => setStatus(e.target.value as CustomerStatus)}
           >
@@ -198,9 +198,9 @@ export function AdminCustomersPage() {
           </select>
         </label>
         <label className="block text-sm">
-          <span className="mb-1 block font-semibold text-fal-navy">Grupo</span>
+          <span className="mb-1 block font-semibold text-hf-ink">Grupo</span>
           <select
-            className="w-full rounded-[10px] border border-fal-line px-3 py-2"
+            className="w-full rounded-[10px] border border-hf-line px-3 py-2"
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
           >
@@ -222,14 +222,14 @@ export function AdminCustomersPage() {
         </div>
         {editing ? (
           <>
-            <div className="md:col-span-2 rounded-[10px] border border-fal-line bg-fal-bg p-3">
-              <p className="m-0 text-sm font-semibold text-fal-navy">Catálogos do cliente</p>
-              <p className="mt-1 text-xs text-fal-muted">
+            <div className="md:col-span-2 rounded-[10px] border border-hf-line bg-hf-bg p-3">
+              <p className="m-0 text-sm font-semibold text-hf-ink">Catálogos do cliente</p>
+              <p className="mt-1 text-xs text-hf-muted">
                 Atuais: {assignedCatalogs.length ? assignedCatalogs.length : 'nenhum'}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <select
-                  className="rounded-[10px] border border-fal-line px-3 py-2 text-sm"
+                  className="rounded-[10px] border border-hf-line px-3 py-2 text-sm"
                   value={catalogId}
                   onChange={(e) => setCatalogId(e.target.value)}
                 >
@@ -258,9 +258,9 @@ export function AdminCustomersPage() {
               </div>
             </div>
 
-            <div className="md:col-span-2 rounded-[10px] border border-fal-line bg-fal-bg p-3">
-              <p className="m-0 text-sm font-semibold text-fal-navy">Usuários vinculados (login)</p>
-              <p className="mt-1 text-xs text-fal-muted">
+            <div className="md:col-span-2 rounded-[10px] border border-hf-line bg-hf-bg p-3">
+              <p className="m-0 text-sm font-semibold text-hf-ink">Usuários vinculados (login)</p>
+              <p className="mt-1 text-xs text-hf-muted">
                 Conta Auth ↔ empresa via customer_users. Só usuários ACTIVE + cliente ACTIVE veem o
                 catálogo.
               </p>
@@ -269,16 +269,16 @@ export function AdminCustomersPage() {
                   {linkedUsers.map((u) => (
                     <li
                       key={u.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-fal-line bg-white px-3 py-2 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
                     >
                       <div>
-                        <div className="font-semibold text-fal-navy">
+                        <div className="font-semibold text-hf-ink">
                           {u.fullName || u.username || u.profileId.slice(0, 8)}
                           {u.isPrimary ? (
-                            <span className="ml-2 text-xs font-bold text-fal-success">principal</span>
+                            <span className="ml-2 text-xs font-bold text-hf-success">principal</span>
                           ) : null}
                         </div>
-                        <div className="text-xs text-fal-muted">
+                        <div className="text-xs text-hf-muted">
                           {u.email ?? '—'} · {u.username ?? 'sem username'} · {u.status}
                         </div>
                       </div>
@@ -318,7 +318,7 @@ export function AdminCustomersPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-xs text-fal-muted">Nenhum usuário vinculado.</p>
+                <p className="mt-2 text-xs text-hf-muted">Nenhum usuário vinculado.</p>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
                 <Input
@@ -340,7 +340,7 @@ export function AdminCustomersPage() {
                     return (
                       <li
                         key={hit.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-fal-line bg-white px-3 py-2 text-sm"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
                       >
                         <span>
                           {hit.email ?? hit.username ?? hit.id.slice(0, 8)}
@@ -376,12 +376,12 @@ export function AdminCustomersPage() {
       </form>
 
       <Input label="Buscar" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Razão, CNPJ, e-mail…" />
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
       {loading ? <Loading /> : null}
 
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">Cliente</th>
               <th className="px-3 py-2">CNPJ</th>
@@ -392,10 +392,10 @@ export function AdminCustomersPage() {
           </thead>
           <tbody>
             {filtered.map((c) => (
-              <tr key={c.id} className="border-t border-fal-line">
+              <tr key={c.id} className="border-t border-hf-line">
                 <td className="px-3 py-2">
-                  <div className="font-semibold text-fal-navy">{c.legalName}</div>
-                  <div className="text-xs text-fal-muted">{c.email}</div>
+                  <div className="font-semibold text-hf-ink">{c.legalName}</div>
+                  <div className="text-xs text-hf-muted">{c.email}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{c.cnpj}</td>
                 <td className="px-3 py-2">{c.groupName ?? '—'}</td>

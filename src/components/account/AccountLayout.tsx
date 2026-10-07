@@ -12,10 +12,10 @@ const links = [
 
 function navClass({ isActive }: { isActive: boolean }) {
   return [
-    'whitespace-nowrap rounded-full border px-3 py-2 text-sm transition lg:block lg:rounded-none lg:border-0 lg:border-b lg:border-fal-line lg:px-3 lg:py-3',
+    'whitespace-nowrap rounded-full border px-3 py-2 text-sm transition lg:block lg:rounded-none lg:border-0 lg:border-b lg:border-hf-line lg:px-3 lg:py-3',
     isActive
-      ? 'border-fal-navy bg-fal-navy font-extrabold text-white lg:bg-[#f7f8f9] lg:text-fal-navy'
-      : 'border-fal-line bg-white text-fal-navy hover:bg-[#f7f8f9] lg:font-normal',
+      ? 'border-hf-line bg-hf-surface-2 font-extrabold text-white lg:bg-[#f7f8f9] lg:text-hf-ink'
+      : 'border-hf-line bg-hf-surface text-hf-ink hover:bg-[#f7f8f9] lg:font-normal',
   ].join(' ')
 }
 
@@ -27,7 +27,7 @@ export function AccountLayout() {
   return (
     <Container className="py-6 sm:py-8">
       <h1 className="mt-0 mb-1 text-[24px] font-extrabold sm:mb-2 sm:text-[34px]">Minha conta</h1>
-      <p className="mb-4 text-fal-muted sm:mb-6">Olá, {firstName}.</p>
+      <p className="mb-4 text-hf-muted sm:mb-6">Olá, {firstName}.</p>
 
       {/* Mobile: nav compacta horizontal antes do conteúdo */}
       <nav
@@ -42,7 +42,7 @@ export function AccountLayout() {
         {isStaff ? (
           <Link
             to="/admin"
-            className="whitespace-nowrap rounded-full border border-fal-yellow bg-fal-yellow px-3 py-2 text-sm font-extrabold text-fal-navy-dark"
+            className="whitespace-nowrap rounded-full border border-hf-red bg-hf-red px-3 py-2 text-sm font-extrabold text-hf-ink"
           >
             Admin
           </Link>
@@ -50,7 +50,7 @@ export function AccountLayout() {
       </nav>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="hidden rounded-fal border border-fal-line bg-white lg:block">
+        <aside className="hidden rounded-hf border border-hf-line bg-hf-surface lg:block">
           <nav className="lg:block">
             {links.map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
@@ -60,7 +60,7 @@ export function AccountLayout() {
             {isStaff ? (
               <Link
                 to="/admin"
-                className="block border-b border-fal-line px-3 py-3 text-sm font-extrabold text-fal-navy hover:bg-[#f7f8f9]"
+                className="block border-b border-hf-line px-3 py-3 text-sm font-extrabold text-hf-ink hover:bg-[#f7f8f9]"
               >
                 Painel Administrativo
               </Link>

@@ -6,6 +6,7 @@ import { Container } from '@/components/layout/Container'
 import { Loading } from '@/components/common/Loading'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
+import { businessConfig } from '@/config/business'
 import { useCategories, useFeaturedProducts } from '@/hooks/useCatalog'
 import { Link } from 'react-router-dom'
 
@@ -16,42 +17,71 @@ export function HomePage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-fal-navy-dark to-[#4a5562] py-6 text-white sm:py-8">
-        <Container>
+      <section className="relative overflow-hidden py-10 text-white sm:py-14">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,rgba(197,23,31,0.22),transparent_55%)]"
+          aria-hidden
+        />
+        <Container className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div className="max-w-3xl">
-            <p className="text-xs font-extrabold tracking-[0.08em] text-fal-yellow uppercase">
-              HF Comércio de Peças
+            <p className="text-xs font-extrabold tracking-[0.16em] text-hf-red-bright uppercase">
+              {businessConfig.eyebrow}
             </p>
-            <h1 className="mt-2 text-[28px] font-black leading-tight sm:text-[40px]">
-              Catálogo B2B personalizado
+            <h1 className="mt-3 text-[32px] font-black leading-[1.05] sm:text-[48px]">
+              {businessConfig.heroHeadline}{' '}
+              <span className="text-hf-red-bright">{businessConfig.heroHighlight}</span>
             </h1>
-            <p className="mt-2 max-w-xl text-sm text-[#e3e7eb] sm:text-base">
-              Acesse com o login da sua empresa para ver as peças autorizadas. Sem preço público —
-              disponibilidade sob consulta.
+            <p className="mt-4 max-w-xl text-sm text-[#d7d7d7] sm:text-base">
+              {businessConfig.heroSupport}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Link to="/catalogo">
+                <Button variant="dark">Consultar catálogo</Button>
+              </Link>
               <Link to="/login">
-                <Button variant="primary">Entrar no catálogo</Button>
+                <Button variant="primary">Entrar</Button>
               </Link>
               <Link to="/cadastro">
                 <Button variant="outline">Criar conta</Button>
               </Link>
-              <Link to="/catalogo">
-                <Button variant="outline">Abrir catálogo</Button>
-              </Link>
+            </div>
+          </div>
+          <div className="rounded-[14px] border border-hf-line bg-hf-surface/90 p-5 shadow-hf backdrop-blur">
+            <p className="m-0 text-xs font-extrabold tracking-[0.14em] text-hf-red-bright uppercase">
+              Catálogo B2B
+            </p>
+            <h2 className="mt-2 mb-2 text-2xl font-black text-hf-ink">Acesso personalizado</h2>
+            <p className="m-0 text-sm text-hf-muted">
+              Login da empresa + listas autorizadas. Sem preço público — disponibilidade sob
+              consulta via WhatsApp.
+            </p>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {[
+                { v: 'B2B', l: 'clientes' },
+                { v: 'Listas', l: 'catálogo' },
+                { v: 'WA', l: 'consulta' },
+              ].map((s) => (
+                <div
+                  key={s.l}
+                  className="rounded-[10px] border border-hf-line bg-hf-surface-2 px-2 py-3 text-center"
+                >
+                  <div className="text-lg font-black text-hf-ink">{s.v}</div>
+                  <div className="text-[11px] text-hf-muted">{s.l}</div>
+                </div>
+              ))}
             </div>
           </div>
         </Container>
       </section>
 
-      <section className="bg-white py-8 sm:py-10">
+      <section className="border-t border-hf-line bg-hf-bg-2 py-8 sm:py-10">
         <Container>
           <div className="mb-4 flex flex-col gap-1 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="m-0 text-[22px] font-extrabold sm:text-[26px]">Destaques</h2>
-              <p className="mt-1 text-sm text-fal-muted">Produtos publicados no catálogo</p>
+              <h2 className="m-0 text-[22px] font-extrabold text-hf-ink sm:text-[26px]">Destaques</h2>
+              <p className="mt-1 text-sm text-hf-muted">Produtos publicados no catálogo autorizado</p>
             </div>
-            <Link to="/catalogo" className="text-sm font-semibold text-fal-navy">
+            <Link to="/catalogo" className="text-sm font-semibold text-hf-red-bright">
               Ver catálogo →
             </Link>
           </div>
@@ -60,9 +90,9 @@ export function HomePage() {
           {!featured.loading && !featured.error && featured.data.length === 0 ? (
             <EmptyState
               title="Ainda não há produtos em destaque"
-              description="Explore o catálogo completo."
-              actionLabel="Ver catálogo"
-              actionTo="/catalogo"
+              description="Entre com a conta B2B para ver o catálogo autorizado."
+              actionLabel="Entrar"
+              actionTo="/login"
             />
           ) : null}
           {!featured.loading && featured.data.length > 0 ? (
@@ -79,10 +109,10 @@ export function HomePage() {
         <Container>
           <div className="mb-4 flex flex-col gap-1 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="m-0 text-[22px] font-extrabold sm:text-[26px]">Categorias</h2>
-              <p className="mt-1 text-sm text-fal-muted">Navegue por departamento</p>
+              <h2 className="m-0 text-[22px] font-extrabold text-hf-ink sm:text-[26px]">Categorias</h2>
+              <p className="mt-1 text-sm text-hf-muted">Navegue por departamento</p>
             </div>
-            <Link to="/catalogo" className="text-sm font-semibold text-fal-navy">
+            <Link to="/catalogo" className="text-sm font-semibold text-hf-red-bright">
               Ver todas →
             </Link>
           </div>
@@ -101,21 +131,16 @@ export function HomePage() {
         </Container>
       </section>
 
-      <section className="bg-white py-8 sm:py-10">
+      <section className="border-t border-hf-line bg-hf-bg-2 py-8 sm:py-10">
         <Container>
           <div className="mb-4 flex flex-col gap-1 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="m-0 text-[22px] font-extrabold sm:text-[26px]">
+              <h2 className="m-0 text-[22px] font-extrabold text-hf-ink sm:text-[26px]">
                 Suspensão e direção
               </h2>
-              <p className="mt-1 text-sm text-fal-muted">
-                Posicionamento FAL — peça certa para o conjunto
-              </p>
+              <p className="mt-1 text-sm text-hf-muted">Foco HF — peça certa para o conjunto</p>
             </div>
-            <Link
-              to="/catalogo?q=suspensao"
-              className="text-sm font-semibold text-fal-navy"
-            >
+            <Link to="/catalogo?q=suspensao" className="text-sm font-semibold text-hf-red-bright">
               Ver mais →
             </Link>
           </div>
@@ -137,15 +162,15 @@ export function HomePage() {
         </Container>
       </section>
 
-      <section id="veiculo" className="scroll-mt-20 border-t border-fal-line bg-fal-bg py-6 sm:py-8">
+      <section id="veiculo" className="scroll-mt-20 border-t border-hf-line py-6 sm:py-8">
         <Container>
           <div className="mb-3">
-            <h2 className="m-0 text-lg font-extrabold sm:text-xl">Buscar pelo carro</h2>
-            <p className="mt-1 text-sm text-fal-muted">
+            <h2 className="m-0 text-lg font-extrabold text-hf-ink sm:text-xl">Buscar pelo carro</h2>
+            <p className="mt-1 text-sm text-hf-muted">
               Informe só o que souber — montadora, modelo, ano ou motor.
             </p>
           </div>
-          <div className="max-w-3xl rounded-[12px] border border-fal-line bg-white p-3 shadow-sm sm:p-4">
+          <div className="max-w-3xl rounded-[12px] border border-hf-line bg-hf-surface p-3 sm:p-4">
             <VehicleSelector />
           </div>
         </Container>

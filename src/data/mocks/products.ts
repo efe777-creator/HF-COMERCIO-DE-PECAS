@@ -7,7 +7,7 @@ export { MOCK_DISCLAIMER }
 export const mockProducts: Product[] = [
   {
     id: 'p-001',
-    sku: 'FAL-PV-001',
+    sku: 'HF-PV-001',
     name: 'Pivô de Suspensão Dianteiro',
     slug: 'pivo-suspensao-dianteiro',
     brand: 'AutoMax',
@@ -21,7 +21,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'p-002',
-    sku: 'FAL-BD-014',
+    sku: 'HF-BD-014',
     name: 'Bandeja Inferior Lado Direito',
     slug: 'bandeja-inferior-direita',
     brand: 'DrivePro',
@@ -34,7 +34,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'p-003',
-    sku: 'FAL-BT-022',
+    sku: 'HF-BT-022',
     name: 'Bieleta Estabilizadora',
     slug: 'bieleta-estabilizadora',
     brand: 'Nortech',
@@ -47,10 +47,10 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'p-004',
-    sku: 'FAL-TM-031',
+    sku: 'HF-TM-031',
     name: 'Terminal de Direção Externo',
     slug: 'terminal-direcao-externo',
-    brand: 'FAL Premium',
+    brand: 'HF',
     categoryName: 'Direção',
     price: 64.5,
     promoPrice: 54.9,
@@ -61,7 +61,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'p-005',
-    sku: 'FAL-AX-040',
+    sku: 'HF-AX-040',
     name: 'Axial de Direção',
     slug: 'axial-de-direcao',
     brand: 'MecParts',
@@ -74,7 +74,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'p-006',
-    sku: 'FAL-OL-055',
+    sku: 'HF-OL-055',
     name: 'Óleo Motor 5W30 Sintético 1L',
     slug: 'oleo-motor-5w30',
     brand: 'Prime Auto',
@@ -87,7 +87,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'p-007',
-    sku: 'FAL-FL-061',
+    sku: 'HF-FL-061',
     name: 'Fluido de Freio DOT 4 500ml',
     slug: 'fluido-freio-dot4',
     brand: 'AutoMax',
@@ -100,7 +100,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'p-008',
-    sku: 'FAL-BC-070',
+    sku: 'HF-BC-070',
     name: 'Buchas de Bandeja Kit',
     slug: 'buchas-bandeja-kit',
     brand: 'DrivePro',

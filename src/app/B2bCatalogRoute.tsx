@@ -29,8 +29,8 @@ export function B2bCatalogRoute({ children }: { children: ReactNode }) {
   if (!user.customerId || user.customerStatus !== 'active') {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <h1 className="text-2xl font-extrabold text-fal-navy">Catálogo restrito</h1>
-        <p className="mt-3 text-sm text-fal-muted">
+        <h1 className="text-2xl font-extrabold text-hf-ink">Catálogo restrito</h1>
+        <p className="mt-3 text-sm text-hf-muted">
           {user.customerStatus === 'pending'
             ? 'Sua empresa está pendente de aprovação. Assim que for ativada, o catálogo autorizado aparece aqui.'
             : user.customerStatus === 'suspended'
@@ -38,18 +38,18 @@ export function B2bCatalogRoute({ children }: { children: ReactNode }) {
               : 'Sua conta ainda não está vinculada a um cliente B2B ativo. Solicite o vínculo à HF.'}
         </p>
         {user.customerLegalName ? (
-          <p className="mt-2 text-sm font-semibold text-fal-navy">{user.customerLegalName}</p>
+          <p className="mt-2 text-sm font-semibold text-hf-ink">{user.customerLegalName}</p>
         ) : null}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Link
             to="/conta"
-            className="inline-flex rounded-[10px] bg-fal-navy px-4 py-2.5 text-sm font-extrabold text-white"
+            className="inline-flex rounded-[10px] bg-hf-surface-2 px-4 py-2.5 text-sm font-extrabold text-white"
           >
             Minha conta
           </Link>
           <Link
             to="/"
-            className="inline-flex rounded-[10px] border border-fal-line px-4 py-2.5 text-sm font-semibold text-fal-navy"
+            className="inline-flex rounded-[10px] border border-hf-line px-4 py-2.5 text-sm font-semibold text-hf-ink"
           >
             Início
           </Link>

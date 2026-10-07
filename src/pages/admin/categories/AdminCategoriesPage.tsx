@@ -187,33 +187,33 @@ export function AdminCategoriesPage() {
     return (
       <tr
         key={cat.id}
-        className={`border-t border-fal-line ${
-          editing?.id === cat.id ? 'bg-fal-yellow/20' : depth > 1 ? 'bg-fal-bg/40' : ''
+        className={`border-t border-hf-line ${
+          editing?.id === cat.id ? 'bg-hf-red/20' : depth > 1 ? 'bg-hf-bg/40' : ''
         }`}
       >
         <td className={`px-3 py-2 ${indentClass}`}>
-          {depth > 1 ? <span className="text-fal-muted">{'↳ '.repeat(depth - 1)}</span> : null}
+          {depth > 1 ? <span className="text-hf-muted">{'↳ '.repeat(depth - 1)}</span> : null}
           <span className={depth === 1 ? 'font-bold' : ''}>{cat.name}</span>
-          <div className="text-xs text-fal-muted">
+          <div className="text-xs text-hf-muted">
             {level}
             {cat.description ? ` · ${cat.description}` : ''}
           </div>
         </td>
-        <td className="px-3 py-2 text-xs text-fal-muted">{categoryPath(activeItems, cat.id)}</td>
+        <td className="px-3 py-2 text-xs text-hf-muted">{categoryPath(activeItems, cat.id)}</td>
         <td className="px-3 py-2">{cat.sortOrder}</td>
-        <td className="px-3 py-2 text-fal-muted">{cat.slug}</td>
+        <td className="px-3 py-2 text-hf-muted">{cat.slug}</td>
         <td className="px-3 py-2">{statusLabel(cat.status)}</td>
         <td className="space-x-2 px-3 py-2">
           <button
             type="button"
-            className="font-semibold text-fal-auth-link"
+            className="font-semibold text-hf-auth-link"
             onClick={() => startEdit(cat)}
           >
             Editar
           </button>
           <button
             type="button"
-            className="font-semibold text-fal-muted"
+            className="font-semibold text-hf-muted"
             onClick={() => void onArchiveToggle(cat)}
           >
             {cat.status === 'archived' ? 'Publicar' : 'Arquivar'}
@@ -225,8 +225,8 @@ export function AdminCategoriesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-fal-navy">Classificação</h1>
-      <p className="text-sm text-fal-muted">
+      <h1 className="text-2xl font-extrabold text-hf-ink">Classificação</h1>
+      <p className="text-sm text-hf-muted">
         Hierarquia de {CATEGORY_MAX_DEPTH} níveis: <strong>Grupo</strong> →{' '}
         <strong>Categoria</strong> → <strong>Subcategoria</strong>. Quarto nível bloqueado.
         Categorias arquivadas não aparecem aqui nem no cadastro de produto.
@@ -234,8 +234,8 @@ export function AdminCategoriesPage() {
       <form
         ref={formRef}
         onSubmit={onSubmit}
-        className={`grid gap-3 rounded-[14px] border bg-white p-4 md:grid-cols-2 ${
-          editing ? 'border-fal-yellow-dark ring-2 ring-fal-yellow/40' : 'border-fal-line'
+        className={`grid gap-3 rounded-[14px] border bg-hf-surface p-4 md:grid-cols-2 ${
+          editing ? 'border-hf-red ring-2 ring-hf-red/40' : 'border-hf-line'
         }`}
       >
         <Input
@@ -255,9 +255,9 @@ export function AdminCategoriesPage() {
           onChange={(e) => setDescription(e.target.value)}
         />
         <label className="block text-sm">
-          <span className="mb-1 block font-semibold text-fal-navy">Pai (opcional)</span>
+          <span className="mb-1 block font-semibold text-hf-ink">Pai (opcional)</span>
           <select
-            className="w-full rounded-[10px] border border-fal-line bg-white px-3 py-2"
+            className="w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2"
             value={parentId}
             onChange={(e) => setParentId(e.target.value)}
           >
@@ -271,7 +271,7 @@ export function AdminCategoriesPage() {
               )
             })}
           </select>
-          <span className="mt-1 block text-[13px] text-fal-muted">
+          <span className="mt-1 block text-[13px] text-hf-muted">
             Resultado: {categoryLevelLabel(resultingDepth)}
             {resultingDepth > CATEGORY_MAX_DEPTH
               ? ' — inválido (4º nível)'
@@ -306,13 +306,13 @@ export function AdminCategoriesPage() {
         placeholder="Nome, path, slug ou descrição…"
       />
 
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
       {info ? <p className="text-sm text-green-700">{info}</p> : null}
       {loading ? <Loading /> : null}
 
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">Nome</th>
               <th className="px-3 py-2">Path</th>
@@ -325,7 +325,7 @@ export function AdminCategoriesPage() {
           <tbody>
             {visibleRoots.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-fal-muted">
+                <td colSpan={6} className="px-3 py-6 text-center text-hf-muted">
                   Nenhuma classificação encontrada.
                 </td>
               </tr>

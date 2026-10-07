@@ -35,7 +35,7 @@ export function MobileDrawer({
         aria-label="Fechar painel"
         onClick={onClose}
       />
-      <aside className="absolute top-0 right-0 flex h-full w-[min(390px,92vw)] flex-col overflow-auto bg-white p-4 shadow-[-15px_0_40px_rgba(0,0,0,0.18)]">
+      <aside className="absolute top-0 right-0 flex h-full w-[min(390px,92vw)] flex-col overflow-auto bg-hf-surface p-4 shadow-[-15px_0_40px_rgba(0,0,0,0.18)]">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="m-0 text-lg font-extrabold">{title}</h2>
           <button

@@ -249,21 +249,21 @@ export function CatalogPage() {
 
   return (
     <Container className="py-8">
-      <p className="mb-2 text-[13px] text-fal-muted">
+      <p className="mb-2 text-[13px] text-hf-muted">
         <Link to="/" className="hover:underline">
           Início
         </Link>{' '}
         / Catálogo
       </p>
       <h1 className="mt-0 mb-2 text-[28px] font-extrabold sm:text-[34px]">Catálogo</h1>
-      <p className="text-fal-muted">
+      <p className="text-hf-muted">
         Busque por texto ou refine por categoria e veículo. Filtros podem ser usados sozinhos ou
         combinados.
       </p>
 
       <form
         onSubmit={applySearch}
-        className="mt-5 grid grid-cols-1 gap-3 rounded-fal border border-fal-line bg-white p-3.5 sm:p-4 lg:grid-cols-[1fr_auto]"
+        className="mt-5 grid grid-cols-1 gap-3 rounded-hf border border-hf-line bg-hf-surface p-3.5 sm:p-4 lg:grid-cols-[1fr_auto]"
       >
         <Input
           label="Busca"
@@ -377,7 +377,7 @@ export function CatalogPage() {
         />
       </div>
 
-      <div className="mt-3 rounded-fal border border-dashed border-[#d8dee3] bg-[#fafbfc] px-3 py-2.5">
+      <div className="mt-3 rounded-hf border border-dashed border-[#d8dee3] bg-hf-surface-2 px-3 py-2.5">
         <SavedVehiclesQuickPick
           onPick={(v) =>
             patchParams({
@@ -397,7 +397,7 @@ export function CatalogPage() {
             <button
               key={chip.key}
               type="button"
-              className="rounded-full border border-[#d8dee3] bg-[#f7f9fa] px-2.5 py-1.5 text-xs hover:border-fal-navy"
+              className="rounded-full border border-[#d8dee3] bg-[#f7f9fa] px-2.5 py-1.5 text-xs hover:border-hf-line"
               onClick={() => {
                 if (chip.key === 'maker') {
                   patchParams({ maker: null, model: null, year: null, engine: null, version: null })
@@ -432,7 +432,7 @@ export function CatalogPage() {
         ) : null}
         {!loading && !error && products.length > 0 ? (
           <>
-            <p className="mb-3 text-sm text-fal-muted">
+            <p className="mb-3 text-sm text-hf-muted">
               {total} produto{total === 1 ? '' : 's'}
               {products.length < total ? ` · mostrando ${products.length}` : ''}
             </p>

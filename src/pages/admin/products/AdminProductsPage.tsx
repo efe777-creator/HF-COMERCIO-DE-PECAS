@@ -192,8 +192,8 @@ export function AdminProductsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-fal-navy">Produtos</h1>
-          <p className="mt-1 text-sm text-fal-muted">
+          <h1 className="text-2xl font-extrabold text-hf-ink">Produtos</h1>
+          <p className="mt-1 text-sm text-hf-muted">
             Arquivar = remoção comercial da loja. Exclusão permanente não é usada (integridade).
           </p>
         </div>
@@ -213,14 +213,14 @@ export function AdminProductsPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-[14px] border border-fal-line bg-white p-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
         <div className="min-w-[180px] flex-1">
           <Input label="Buscar (nome/SKU)" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <label className="block min-w-[140px] text-sm">
-          <span className="mb-1 block font-semibold text-fal-navy">Status</span>
+          <span className="mb-1 block font-semibold text-hf-ink">Status</span>
           <select
-            className="w-full rounded-[10px] border border-fal-line px-3 py-2"
+            className="w-full rounded-[10px] border border-hf-line px-3 py-2"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
@@ -231,9 +231,9 @@ export function AdminProductsPage() {
           </select>
         </label>
         <label className="block min-w-[160px] flex-1 text-sm">
-          <span className="mb-1 block font-semibold text-fal-navy">Montadora</span>
+          <span className="mb-1 block font-semibold text-hf-ink">Montadora</span>
           <select
-            className="w-full rounded-[10px] border border-fal-line px-3 py-2"
+            className="w-full rounded-[10px] border border-hf-line px-3 py-2"
             value={manufacturerId}
             onChange={(e) => setManufacturerId(e.target.value)}
           >
@@ -246,9 +246,9 @@ export function AdminProductsPage() {
           </select>
         </label>
         <label className="block min-w-[200px] flex-[1.4] text-sm">
-          <span className="mb-1 block font-semibold text-fal-navy">Classificação</span>
+          <span className="mb-1 block font-semibold text-hf-ink">Classificação</span>
           <select
-            className="w-full rounded-[10px] border border-fal-line px-3 py-2"
+            className="w-full rounded-[10px] border border-hf-line px-3 py-2"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
           >
@@ -260,7 +260,7 @@ export function AdminProductsPage() {
             ))}
           </select>
         </label>
-        <label className="flex items-center gap-2 pb-2 text-sm font-semibold text-fal-navy">
+        <label className="flex items-center gap-2 pb-2 text-sm font-semibold text-hf-ink">
           <input type="checkbox" checked={withoutImage} onChange={(e) => setWithoutImage(e.target.checked)} />
           Sem imagem / incompletos
         </label>
@@ -270,8 +270,8 @@ export function AdminProductsPage() {
       </div>
 
       {selected.size > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-fal-yellow-dark/40 bg-fal-yellow/15 px-4 py-3">
-          <span className="text-sm font-semibold text-fal-navy">{selected.size} selecionado(s)</span>
+        <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-hf-red/40 bg-hf-red/15 px-4 py-3">
+          <span className="text-sm font-semibold text-hf-ink">{selected.size} selecionado(s)</span>
           <Button
             type="button"
             variant="primary"
@@ -298,7 +298,7 @@ export function AdminProductsPage() {
           </Button>
           <button
             type="button"
-            className="text-sm font-semibold text-fal-muted underline"
+            className="text-sm font-semibold text-hf-muted underline"
             onClick={() => setSelected(new Set())}
           >
             Limpar seleção
@@ -306,13 +306,13 @@ export function AdminProductsPage() {
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
-      {message ? <p className="text-sm font-semibold text-fal-navy">{message}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
+      {message ? <p className="text-sm font-semibold text-hf-ink">{message}</p> : null}
       {loading ? <Loading /> : null}
 
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">
                 <input
@@ -336,13 +336,13 @@ export function AdminProductsPage() {
           <tbody>
             {items.length === 0 && !loading ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-fal-muted">
+                <td colSpan={6} className="px-3 py-6 text-hf-muted">
                   Nenhum produto encontrado.
                 </td>
               </tr>
             ) : null}
             {items.map((p) => (
-              <tr key={p.id} className="border-t border-fal-line">
+              <tr key={p.id} className="border-t border-hf-line">
                 <td className="px-3 py-2">
                   <input
                     type="checkbox"
@@ -355,7 +355,7 @@ export function AdminProductsPage() {
                 <td className="px-3 py-2 font-semibold">
                   {p.name}
                   {p.isIncomplete ? (
-                    <span className="ml-2 text-xs font-bold text-fal-yellow-dark">INCOMPLETO</span>
+                    <span className="ml-2 text-xs font-bold text-hf-red-bright-dark">INCOMPLETO</span>
                   ) : null}
                 </td>
                 <td className="px-3 py-2">{productStatusLabel(p.status)}</td>
@@ -363,10 +363,10 @@ export function AdminProductsPage() {
                   {p.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </td>
                 <td className="px-3 py-2 space-x-2">
-                  <Link className="font-semibold text-fal-auth-link" to={`/admin/produtos/${p.id}`}>
+                  <Link className="font-semibold text-hf-auth-link" to={`/admin/produtos/${p.id}`}>
                     Editar
                   </Link>
-                  <button type="button" className="font-semibold text-fal-muted" onClick={() => void toggleArchive(p)}>
+                  <button type="button" className="font-semibold text-hf-muted" onClick={() => void toggleArchive(p)}>
                     {p.status === 'archived' ? 'Publicar' : 'Arquivar (remover da loja)'}
                   </button>
                 </td>

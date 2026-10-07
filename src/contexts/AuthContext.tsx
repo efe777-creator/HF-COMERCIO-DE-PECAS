@@ -66,7 +66,7 @@ async function enrichUser(authUser: User | null): Promise<UserProfile | null> {
       cnpj: profile.cnpj,
     }
   } catch (err) {
-    console.error('[FAL] Erro ao carregar perfil', err)
+    console.error('[HF] Erro ao carregar perfil', err)
     try {
       const role = await fetchProfileRole(base.id)
       if (role) return { ...base, role }
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfileLoading(true)
         setUser(await enrichUser(current?.user ?? null))
       } catch (err) {
-        console.error('[FAL] Erro ao carregar sessão', err)
+        console.error('[HF] Erro ao carregar sessão', err)
       } finally {
         if (active) {
           setLoading(false)
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (active) setUser(profile)
         })
         .catch((err) => {
-          console.error('[FAL] Erro ao enriquecer perfil', err)
+          console.error('[HF] Erro ao enriquecer perfil', err)
           if (active) setUser(mapUser(next?.user ?? null))
         })
         .finally(() => {

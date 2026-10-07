@@ -110,14 +110,14 @@ export function AccountVehiclesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-fal border border-fal-line bg-white p-5">
+      <div className="rounded-hf border border-hf-line bg-hf-surface p-5">
         <h2 className="mt-0 text-xl font-extrabold">Meus veículos</h2>
-        <p className="text-sm text-fal-muted">
+        <p className="text-sm text-hf-muted">
           Referencia o cadastro mestre (não cria montadora/modelo novos). Use na busca pelo
           catálogo.
         </p>
-        {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
-        {message ? <p className="text-sm font-semibold text-fal-navy">{message}</p> : null}
+        {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
+        {message ? <p className="text-sm font-semibold text-hf-ink">{message}</p> : null}
 
         <form onSubmit={onSubmit} className="mt-4 grid gap-3 sm:grid-cols-2">
           <Select
@@ -191,18 +191,18 @@ export function AccountVehiclesPage() {
 
       <div className="space-y-3">
         {items.map((v) => (
-          <div key={v.id} className="rounded-fal border border-fal-line bg-white p-4">
+          <div key={v.id} className="rounded-hf border border-hf-line bg-hf-surface p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="m-0 font-extrabold">
                   {v.nickname || `${v.makerName ?? ''} ${v.modelName ?? ''}`.trim() || 'Veículo'}
-                  {v.isPrimary ? <span className="text-xs text-fal-success"> · Principal</span> : null}
+                  {v.isPrimary ? <span className="text-xs text-hf-success"> · Principal</span> : null}
                 </p>
-                <p className="mb-0 mt-1 text-sm text-fal-muted">
+                <p className="mb-0 mt-1 text-sm text-hf-muted">
                   {[v.makerName, v.modelName, v.year, v.engine, v.versionName].filter(Boolean).join(' · ')}
                 </p>
                 <Link
-                  className="mt-2 inline-block text-sm font-semibold text-fal-auth-link"
+                  className="mt-2 inline-block text-sm font-semibold text-hf-auth-link"
                   to={`/catalogo?maker=${encodeURIComponent(v.makerName ?? '')}&model=${encodeURIComponent(v.modelName ?? '')}${v.year ? `&year=${v.year}` : ''}${v.engine ? `&engine=${encodeURIComponent(v.engine)}` : ''}${v.versionName ? `&version=${encodeURIComponent(v.versionName)}` : ''}`}
                 >
                   Ver peças compatíveis

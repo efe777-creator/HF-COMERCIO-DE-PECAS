@@ -5,7 +5,7 @@ export function OrdersPage() {
   return (
     <Container className="py-8">
       <h1 className="mt-0 text-[28px] font-extrabold sm:text-[34px]">Meus pedidos</h1>
-      <p className="text-fal-muted">
+      <p className="text-hf-muted">
         Consulta restrita ao próprio cliente (RLS futuro). Nesta fase, apenas estrutura.
       </p>
       <div className="mt-6">

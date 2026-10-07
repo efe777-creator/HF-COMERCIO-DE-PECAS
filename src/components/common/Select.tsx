@@ -18,15 +18,15 @@ export function Select({
   return (
     <div className="flex flex-col gap-1.5">
       {label ? (
-        <label htmlFor={selectId} className="text-xs font-extrabold text-fal-muted">
+        <label htmlFor={selectId} className="text-xs font-extrabold text-hf-muted">
           {label}
         </label>
       ) : null}
       <select
         id={selectId}
         className={[
-          'w-full rounded-[9px] border border-fal-line bg-white px-3 py-3 outline-none',
-          'focus:border-fal-yellow-dark focus:shadow-[0_0_0_3px_rgba(242,200,75,0.2)]',
+          'w-full rounded-[9px] border border-hf-line bg-hf-surface-2 px-3 py-3 text-hf-ink outline-none',
+          'focus:border-hf-red focus:shadow-[0_0_0_3px_rgba(197,23,31,0.25)]',
           className,
         ]
           .filter(Boolean)

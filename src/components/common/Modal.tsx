@@ -29,11 +29,11 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-[620px] overflow-auto rounded-2xl bg-white p-6 shadow-fal"
+        className="max-h-[90vh] w-full max-w-[620px] overflow-auto rounded-2xl bg-hf-surface p-6 shadow-hf"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="m-0 text-xl font-extrabold text-fal-navy-dark">{title}</h2>
+          <h2 className="m-0 text-xl font-extrabold text-hf-ink">{title}</h2>
           <button
             type="button"
             className="flex h-[34px] w-[34px] items-center justify-center rounded-full border-0 bg-[#eef1f3] text-lg"

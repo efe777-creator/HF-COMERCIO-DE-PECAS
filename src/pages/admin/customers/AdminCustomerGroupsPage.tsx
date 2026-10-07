@@ -79,12 +79,12 @@ export function AdminCustomerGroupsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-fal-navy">Grupos de clientes</h1>
-      <p className="text-sm text-fal-muted">
+      <h1 className="text-2xl font-extrabold text-hf-ink">Grupos de clientes</h1>
+      <p className="text-sm text-hf-muted">
         Herança comercial: grupo → catálogo. Clientes do grupo herdam a lista.
       </p>
 
-      <form onSubmit={onSubmit} className="grid gap-3 rounded-[14px] border border-fal-line bg-white p-4 md:grid-cols-2">
+      <form onSubmit={onSubmit} className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-2">
         <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} required />
         <Input label="Código" value={code} onChange={(e) => setCode(e.target.value)} required />
         <div className="md:col-span-2">
@@ -99,11 +99,11 @@ export function AdminCustomerGroupsPage() {
           ) : null}
         </div>
         {editing ? (
-          <div className="md:col-span-2 rounded-[10px] border border-fal-line bg-fal-bg p-3">
+          <div className="md:col-span-2 rounded-[10px] border border-hf-line bg-hf-bg p-3">
             <p className="m-0 text-sm font-semibold">Catálogos do grupo ({assigned.length})</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <select
-                className="rounded-[10px] border border-fal-line px-3 py-2 text-sm"
+                className="rounded-[10px] border border-hf-line px-3 py-2 text-sm"
                 value={catalogId}
                 onChange={(e) => setCatalogId(e.target.value)}
               >
@@ -134,12 +134,12 @@ export function AdminCustomerGroupsPage() {
         ) : null}
       </form>
 
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
       {loading ? <Loading /> : null}
 
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">Nome</th>
               <th className="px-3 py-2">Código</th>
@@ -149,7 +149,7 @@ export function AdminCustomerGroupsPage() {
           </thead>
           <tbody>
             {items.map((g) => (
-              <tr key={g.id} className="border-t border-fal-line">
+              <tr key={g.id} className="border-t border-hf-line">
                 <td className="px-3 py-2 font-semibold">{g.name}</td>
                 <td className="px-3 py-2 font-mono text-xs">{g.code}</td>
                 <td className="px-3 py-2">{g.status}</td>

@@ -31,9 +31,9 @@ export function ForgotPasswordPage() {
 
   return (
     <Container className="py-8">
-      <div className="mx-auto max-w-md rounded-fal border border-fal-line bg-white p-6">
+      <div className="mx-auto max-w-md rounded-hf border border-hf-line bg-hf-surface p-6">
         <h1 className="mt-0 text-[28px] font-extrabold">Recuperar senha</h1>
-        <p className="text-fal-muted">
+        <p className="text-hf-muted">
           Enviaremos um link de redefinição para o e-mail cadastrado (Supabase Auth).
         </p>
         {!isConfigured ? (
@@ -50,9 +50,9 @@ export function ForgotPasswordPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
+          {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
           {success ? (
-            <p className="text-sm text-fal-success">
+            <p className="text-sm text-hf-success">
               Se o e-mail existir, você receberá as instruções em breve.
             </p>
           ) : null}
@@ -61,7 +61,7 @@ export function ForgotPasswordPage() {
           </Button>
         </form>
         <p className="mt-4 text-sm">
-          <Link to="/login" className="font-bold text-fal-auth-link">
+          <Link to="/login" className="font-bold text-hf-auth-link">
             Voltar ao login
           </Link>
         </p>

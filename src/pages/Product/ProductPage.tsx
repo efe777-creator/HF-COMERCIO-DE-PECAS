@@ -81,12 +81,12 @@ export function ProductPage() {
       <button
         type="button"
         onClick={goBack}
-        className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-fal-navy hover:underline md:hidden"
+        className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-hf-ink hover:underline md:hidden"
         aria-label="Voltar"
       >
         ← Voltar
       </button>
-      <p className="mb-2 text-[13px] text-fal-muted">
+      <p className="mb-2 text-[13px] text-hf-muted">
         <Link to="/" className="hover:underline">
           Início
         </Link>
@@ -105,46 +105,46 @@ export function ProductPage() {
           </Link>
         )}
         {' / '}
-        <span className="text-fal-ink">{current.name}</span>
+        <span className="text-hf-ink">{current.name}</span>
       </p>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div className="grid h-[280px] place-items-center rounded-2xl bg-gradient-to-br from-[#e8ecef] to-[#d7dde1] text-7xl lg:h-[420px]">
           🧩
         </div>
-        <div className="relative rounded-fal border border-fal-line bg-white p-5">
+        <div className="relative rounded-hf border border-hf-line bg-hf-surface p-5">
           <h1 className="mt-0 text-[26px] font-extrabold leading-tight sm:text-[32px]">
             {current.name}
           </h1>
-          <p className="mt-1 text-sm text-fal-muted">{formatCodigoReferencia(current.sku)}</p>
-          <div className="mt-2 space-y-1 text-sm text-fal-ink">
+          <p className="mt-1 text-sm text-hf-muted">{formatCodigoReferencia(current.sku)}</p>
+          <div className="mt-2 space-y-1 text-sm text-hf-ink">
             {current.brand ? (
               <p className="m-0">
-                <span className="font-semibold text-fal-navy">Marca:</span> {current.brand}
+                <span className="font-semibold text-hf-ink">Marca:</span> {current.brand}
               </p>
             ) : null}
             {current.manufacturerCode ? (
               <p className="m-0">
-                <span className="font-semibold text-fal-navy">Cód. fabricante:</span>{' '}
+                <span className="font-semibold text-hf-ink">Cód. fabricante:</span>{' '}
                 <span className="font-mono">{current.manufacturerCode}</span>
               </p>
             ) : null}
             {current.categoryName ? (
               <p className="m-0">
-                <span className="font-semibold text-fal-navy">Categoria:</span> {current.categoryName}
+                <span className="font-semibold text-hf-ink">Categoria:</span> {current.categoryName}
               </p>
             ) : null}
             {current.posicao || current.lado ? (
               <p className="m-0">
                 {current.posicao ? (
                   <span>
-                    <span className="font-semibold text-fal-navy">Posição:</span>{' '}
+                    <span className="font-semibold text-hf-ink">Posição:</span>{' '}
                     {formatPosicaoLabel(current.posicao)}
                   </span>
                 ) : null}
                 {current.posicao && current.lado ? ' · ' : null}
                 {current.lado ? (
                   <span>
-                    <span className="font-semibold text-fal-navy">Lado:</span>{' '}
+                    <span className="font-semibold text-hf-ink">Lado:</span>{' '}
                     {formatLadoLabel(current.lado)}
                   </span>
                 ) : null}
@@ -153,25 +153,25 @@ export function ProductPage() {
           </div>
 
           {current.description ? (
-            <p className="mt-4 text-sm text-fal-ink whitespace-pre-wrap">{current.description}</p>
+            <p className="mt-4 text-sm text-hf-ink whitespace-pre-wrap">{current.description}</p>
           ) : null}
 
           {current.compatibilitySummary ? (
-            <div className="mt-4 rounded-[10px] border border-fal-line bg-fal-bg p-3 text-sm">
-              <p className="m-0 font-semibold text-fal-navy">Aplicações</p>
-              <ul className="mb-0 mt-1 list-none space-y-0.5 p-0 text-fal-ink">
+            <div className="mt-4 rounded-[10px] border border-hf-line bg-hf-bg p-3 text-sm">
+              <p className="m-0 font-semibold text-hf-ink">Aplicações</p>
+              <ul className="mb-0 mt-1 list-none space-y-0.5 p-0 text-hf-ink">
                 {current.compatibilitySummary.split(' · ').map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-fal-muted">Aplicações sob consulta</p>
+            <p className="mt-4 text-sm text-hf-muted">Aplicações sob consulta</p>
           )}
 
           {current.references?.length ? (
-            <div className="mt-3 text-sm text-fal-muted">
-              <p className="m-0 font-semibold text-fal-ink">Códigos / referências</p>
+            <div className="mt-3 text-sm text-hf-muted">
+              <p className="m-0 font-semibold text-hf-ink">Códigos / referências</p>
               <ul className="mt-1 list-disc pl-5">
                 {current.references.map((ref) => (
                   <li key={`${ref.type}-${ref.code}`}>
@@ -194,7 +194,7 @@ export function ProductPage() {
                 Consultar pelo WhatsApp
               </a>
             ) : (
-              <p className="text-sm text-fal-muted">
+              <p className="text-sm text-hf-muted">
                 WhatsApp não configurado. Defina VITE_WHATSAPP_NUMBER no .env.local.
               </p>
             )}

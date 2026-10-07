@@ -56,19 +56,19 @@ export function VehicleSelector({ compact = false }: { compact?: boolean }) {
     <div
       id="veiculo"
       className={[
-        'rounded-[18px] bg-white text-fal-navy-dark shadow-[0_20px_50px_rgba(0,0,0,0.2)]',
+        'rounded-[18px] bg-hf-surface text-hf-ink shadow-[0_20px_50px_rgba(0,0,0,0.2)]',
         compact ? 'p-4' : 'p-6',
       ].join(' ')}
     >
       <h2 className={['mt-0 font-extrabold', compact ? 'text-xl' : 'text-[23px]'].join(' ')}>
         🚗 Encontre peças para seu veículo
       </h2>
-      <p className="text-sm text-fal-muted">
+      <p className="text-sm text-hf-muted">
         Você pode informar apenas um critério ou combinar Montadora, Modelo, Ano e Motor para
         refinar a busca. Nenhum campo é obrigatório.
       </p>
 
-      <div className="mt-3 border-t border-fal-line/60 pt-3">
+      <div className="mt-3 border-t border-hf-line/60 pt-3">
         <SavedVehiclesQuickPick />
       </div>
 

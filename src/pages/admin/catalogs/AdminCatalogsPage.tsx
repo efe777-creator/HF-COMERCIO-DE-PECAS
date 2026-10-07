@@ -80,13 +80,13 @@ export function AdminCatalogsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-fal-navy">Listas de catálogo</h1>
-      <p className="text-sm text-fal-muted">
+      <h1 className="text-2xl font-extrabold text-hf-ink">Listas de catálogo</h1>
+      <p className="text-sm text-hf-muted">
         Um produto único pode pertencer a várias listas. Clientes/grupos enxergam só o que for
         associado.
       </p>
 
-      <form onSubmit={onSubmit} className="grid gap-3 rounded-[14px] border border-fal-line bg-white p-4 md:grid-cols-2">
+      <form onSubmit={onSubmit} className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-2">
         <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} required />
         <Input label="Código" value={code} onChange={(e) => setCode(e.target.value)} required />
         <div className="md:col-span-2">
@@ -103,13 +103,13 @@ export function AdminCatalogsPage() {
       </form>
 
       {editing ? (
-        <div className="rounded-[14px] border border-fal-line bg-white p-4">
-          <h2 className="m-0 text-lg font-extrabold text-fal-navy">
+        <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
+          <h2 className="m-0 text-lg font-extrabold text-hf-ink">
             Produtos em {editing.name} ({memberIds.length})
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             <select
-              className="min-w-[240px] flex-1 rounded-[10px] border border-fal-line px-3 py-2 text-sm"
+              className="min-w-[240px] flex-1 rounded-[10px] border border-hf-line px-3 py-2 text-sm"
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
             >
@@ -140,7 +140,7 @@ export function AdminCatalogsPage() {
             {members.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-2 rounded-[10px] border border-fal-line px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-[10px] border border-hf-line px-3 py-2"
               >
                 <span>
                   <span className="font-mono text-xs">{p.sku}</span> — {p.name}
@@ -162,18 +162,18 @@ export function AdminCatalogsPage() {
               </li>
             ))}
             {members.length === 0 ? (
-              <li className="text-fal-muted">Nenhum produto nesta lista ainda.</li>
+              <li className="text-hf-muted">Nenhum produto nesta lista ainda.</li>
             ) : null}
           </ul>
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
       {loading ? <Loading /> : null}
 
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">Nome</th>
               <th className="px-3 py-2">Código</th>
@@ -184,7 +184,7 @@ export function AdminCatalogsPage() {
           </thead>
           <tbody>
             {items.map((c) => (
-              <tr key={c.id} className="border-t border-fal-line">
+              <tr key={c.id} className="border-t border-hf-line">
                 <td className="px-3 py-2 font-semibold">{c.name}</td>
                 <td className="px-3 py-2 font-mono text-xs">{c.code}</td>
                 <td className="px-3 py-2">{c.productCount}</td>

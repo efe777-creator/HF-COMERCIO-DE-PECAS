@@ -125,18 +125,18 @@ export function AdminVehiclesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-fal-navy">Veículos</h1>
-      <p className="text-sm text-fal-muted">
+      <h1 className="text-2xl font-extrabold text-hf-ink">Veículos</h1>
+      <p className="text-sm text-hf-muted">
         Hierarquia: Montadora → Modelo → Ano / Motor / Versão. Campos vazios ficam NULL (não inventar).
       </p>
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
-      {message ? <p className="text-sm font-semibold text-fal-navy">{message}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
+      {message ? <p className="text-sm font-semibold text-hf-ink">{message}</p> : null}
       {loading ? <Loading /> : null}
 
       <label className="block max-w-md text-sm">
         <span className="mb-1 block font-semibold">Montadora</span>
         <select
-          className="w-full rounded-[10px] border border-fal-line px-3 py-2"
+          className="w-full rounded-[10px] border border-hf-line px-3 py-2"
           value={makerId}
           onChange={(e) => {
             setMakerId(e.target.value)
@@ -154,7 +154,7 @@ export function AdminVehiclesPage() {
         </select>
       </label>
 
-      <form onSubmit={saveModel} className="flex flex-wrap items-end gap-3 rounded-[14px] border border-fal-line bg-white p-4">
+      <form onSubmit={saveModel} className="flex flex-wrap items-end gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
         <div className="min-w-[200px] flex-1">
           <Input
             label={editingModelId ? 'Editar modelo' : 'Novo modelo'}
@@ -181,9 +181,9 @@ export function AdminVehiclesPage() {
         ) : null}
       </form>
 
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">Modelo</th>
               <th className="px-3 py-2">Status</th>
@@ -193,22 +193,22 @@ export function AdminVehiclesPage() {
           <tbody>
             {models.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-3 py-4 text-fal-muted">
+                <td colSpan={3} className="px-3 py-4 text-hf-muted">
                   {makerId ? 'Nenhum modelo nesta montadora.' : 'Selecione uma montadora.'}
                 </td>
               </tr>
             ) : (
               models.map((m) => (
-                <tr key={m.id} className="border-t border-fal-line">
+                <tr key={m.id} className="border-t border-hf-line">
                   <td className="px-3 py-2 font-semibold">{m.name}</td>
                   <td className="px-3 py-2">{entityStatusLabel(m.status)}</td>
                   <td className="px-3 py-2 space-x-2">
-                    <button type="button" className="font-semibold text-fal-auth-link" onClick={() => startEditModel(m)}>
+                    <button type="button" className="font-semibold text-hf-auth-link" onClick={() => startEditModel(m)}>
                       Editar
                     </button>
                     <button
                       type="button"
-                      className="font-semibold text-fal-muted"
+                      className="font-semibold text-hf-muted"
                       onClick={() =>
                         void adminSetModelStatus(m.id, m.status === 'active' ? 'inactive' : 'active')
                           .then(async () => {
@@ -222,7 +222,7 @@ export function AdminVehiclesPage() {
                     </button>
                     <button
                       type="button"
-                      className="font-semibold text-fal-navy"
+                      className="font-semibold text-hf-ink"
                       onClick={() => setModelId(m.id)}
                     >
                       Ver configs
@@ -238,7 +238,7 @@ export function AdminVehiclesPage() {
       <label className="block max-w-md text-sm">
         <span className="mb-1 block font-semibold">Modelo (configurações)</span>
         <select
-          className="w-full rounded-[10px] border border-fal-line px-3 py-2"
+          className="w-full rounded-[10px] border border-hf-line px-3 py-2"
           value={modelId}
           onChange={(e) => {
             setModelId(e.target.value)
@@ -257,7 +257,7 @@ export function AdminVehiclesPage() {
         </select>
       </label>
 
-      <form onSubmit={saveVersion} className="grid gap-3 rounded-[14px] border border-fal-line bg-white p-4 md:grid-cols-4">
+      <form onSubmit={saveVersion} className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-4">
         <Input label="Ano (opcional)" value={year} onChange={(e) => setYear(e.target.value)} disabled={!modelId} />
         <Input label="Motor (opcional)" value={engine} onChange={(e) => setEngine(e.target.value)} disabled={!modelId} />
         <Input
@@ -287,9 +287,9 @@ export function AdminVehiclesPage() {
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">Ano</th>
               <th className="px-3 py-2">Motor</th>
@@ -301,24 +301,24 @@ export function AdminVehiclesPage() {
           <tbody>
             {versions.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-fal-muted">
+                <td colSpan={5} className="px-3 py-4 text-hf-muted">
                   {modelId ? 'Nenhuma configuração neste modelo.' : 'Selecione um modelo.'}
                 </td>
               </tr>
             ) : (
               versions.map((v) => (
-                <tr key={v.id} className="border-t border-fal-line">
+                <tr key={v.id} className="border-t border-hf-line">
                   <td className="px-3 py-2">{v.year ?? '—'}</td>
                   <td className="px-3 py-2">{v.engine ?? '—'}</td>
                   <td className="px-3 py-2">{v.versionName ?? '—'}</td>
                   <td className="px-3 py-2">{entityStatusLabel(v.status)}</td>
                   <td className="px-3 py-2 space-x-2">
-                    <button type="button" className="font-semibold text-fal-auth-link" onClick={() => startEditVersion(v)}>
+                    <button type="button" className="font-semibold text-hf-auth-link" onClick={() => startEditVersion(v)}>
                       Editar
                     </button>
                     <button
                       type="button"
-                      className="font-semibold text-fal-muted"
+                      className="font-semibold text-hf-muted"
                       onClick={() =>
                         void adminSetVersionStatus(v.id, v.status === 'active' ? 'inactive' : 'active')
                           .then(async () => {

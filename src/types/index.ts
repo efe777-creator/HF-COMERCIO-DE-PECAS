@@ -1,5 +1,5 @@
 /**
- * Tipos centrais da FAL Peças Automotivas
+ * Tipos centrais da HF Comércio de Peças
  * Preparados para entidades futuras do PRD — sem inventar schema definitivo.
  */
 
@@ -151,7 +151,7 @@ export interface ShippingQuoteItem {
   lengthCm?: number | null
 }
 
-/** Cotação de frete — contrato interno FAL (F6 mock; F9 troca provider). */
+/** Cotação de frete — contrato interno HF (F6 mock; F9 troca provider). */
 export interface ShippingQuoteRequest {
   postalCode: string
   state: string

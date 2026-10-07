@@ -71,15 +71,15 @@ export function AdminManufacturersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-fal-navy">Montadoras</h1>
-      <p className="text-sm text-fal-muted">
+      <h1 className="text-2xl font-extrabold text-hf-ink">Montadoras</h1>
+      <p className="text-sm text-hf-muted">
         Cadastro de montadora (veículo). Não confundir com fabricante de peça.
       </p>
       <form
         ref={formRef}
         onSubmit={onSubmit}
-        className={`flex flex-wrap items-end gap-3 rounded-[14px] border bg-white p-4 ${
-          editing ? 'border-fal-yellow-dark ring-2 ring-fal-yellow/40' : 'border-fal-line'
+        className={`flex flex-wrap items-end gap-3 rounded-[14px] border bg-hf-surface p-4 ${
+          editing ? 'border-hf-red ring-2 ring-hf-red/40' : 'border-hf-line'
         }`}
       >
         <div className="min-w-[220px] flex-1">
@@ -106,11 +106,11 @@ export function AdminManufacturersPage() {
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Nome ou slug…"
       />
-      {error ? <p className="text-sm text-fal-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
       {loading ? <Loading /> : null}
-      <div className="overflow-x-auto rounded-[14px] border border-fal-line bg-white">
+      <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-fal-bg text-fal-muted">
+          <thead className="bg-hf-bg text-hf-muted">
             <tr>
               <th className="px-3 py-2">Nome</th>
               <th className="px-3 py-2">Slug</th>
@@ -121,7 +121,7 @@ export function AdminManufacturersPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-fal-muted">
+                <td colSpan={4} className="px-3 py-6 text-center text-hf-muted">
                   Nenhuma montadora encontrada.
                 </td>
               </tr>
@@ -129,24 +129,24 @@ export function AdminManufacturersPage() {
               filtered.map((m) => (
                 <tr
                   key={m.id}
-                  className={`border-t border-fal-line ${
-                    editing?.id === m.id ? 'bg-fal-yellow/20' : ''
+                  className={`border-t border-hf-line ${
+                    editing?.id === m.id ? 'bg-hf-red/20' : ''
                   }`}
                 >
                   <td className="px-3 py-2 font-semibold">{m.name}</td>
-                  <td className="px-3 py-2 text-fal-muted">{m.slug}</td>
+                  <td className="px-3 py-2 text-hf-muted">{m.slug}</td>
                   <td className="px-3 py-2">{entityStatusLabel(m.status)}</td>
                   <td className="px-3 py-2 space-x-2">
                     <button
                       type="button"
-                      className="font-semibold text-fal-auth-link"
+                      className="font-semibold text-hf-auth-link"
                       onClick={() => startEdit(m)}
                     >
                       Editar
                     </button>
                     <button
                       type="button"
-                      className="font-semibold text-fal-muted"
+                      className="font-semibold text-hf-muted"
                       onClick={() =>
                         void adminSetManufacturerStatus(
                           m.id,

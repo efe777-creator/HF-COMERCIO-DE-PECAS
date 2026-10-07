@@ -28,7 +28,7 @@ if (isSupabaseConfigured && url && anonKey) {
   })
 } else if (import.meta.env.DEV) {
   console.warn(
-    '[FAL] Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env',
+    '[HF] Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env',
   )
 }
 

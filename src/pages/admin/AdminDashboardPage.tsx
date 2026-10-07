@@ -19,8 +19,8 @@ export function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="m-0 text-2xl font-extrabold text-fal-navy">Dashboard</h1>
-        <p className="mt-1 text-sm text-fal-muted">
+        <h1 className="m-0 text-2xl font-extrabold text-hf-ink">Dashboard</h1>
+        <p className="mt-1 text-sm text-hf-muted">
           {businessConfig.companyName} — administração do catálogo digital.
         </p>
       </div>
@@ -29,10 +29,10 @@ export function AdminDashboardPage() {
           <Link
             key={item.to}
             to={item.to}
-            className="rounded-fal border border-fal-line bg-white p-4 transition hover:border-fal-yellow hover:shadow-fal"
+            className="rounded-hf border border-hf-line bg-hf-surface p-4 transition hover:border-hf-red hover:shadow-hf"
           >
-            <h2 className="m-0 text-base font-extrabold text-fal-navy">{item.title}</h2>
-            <p className="mb-0 mt-1 text-sm text-fal-muted">{item.desc}</p>
+            <h2 className="m-0 text-base font-extrabold text-hf-ink">{item.title}</h2>
+            <p className="mb-0 mt-1 text-sm text-hf-muted">{item.desc}</p>
           </Link>
         ))}
       </div>
