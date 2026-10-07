@@ -21,6 +21,9 @@ credentials/
 agent-tools-*.txt
 agent-tools-*.sql
 
+# Supabase CLI local link state (pode apontar projeto errado)
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
