@@ -1,0 +1,4 @@
+-- Staff policies must not use FOR ALL on catalog tables:
+-- Postgres evaluates all permissive policies, so FOR ALL + is_staff()
+-- broke anon SELECT with "permission denied for function is_staff".
+-- See applied migration fase2_staff_policies_write_only on Supabase.

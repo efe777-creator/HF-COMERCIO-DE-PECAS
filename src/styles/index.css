@@ -1,0 +1,90 @@
+@import 'tailwindcss';
+
+/**
+ * Design tokens — identidade visual FAL Peças Automotivas
+ * Não alterar cores/tipografia/espaçamentos arbitrariamente.
+ */
+:root {
+  --fal-navy: #303846;
+  --fal-navy-dark: #252c36;
+  --fal-navy-2: #46515e;
+  --fal-yellow: #f2c84b;
+  --fal-yellow-dark: #dcae27;
+  --fal-yellow-hover: #ffd75c;
+  --fal-bg: #f4f6f7;
+  --fal-surface: #ffffff;
+  --fal-line: #dfe4e8;
+  --fal-muted: #6f7a85;
+  --fal-success: #168a55;
+  --fal-danger: #c0392b;
+  --fal-auth-link: #7c5b00;
+  --fal-radius: 14px;
+  --fal-shadow: 0 10px 30px rgba(33, 42, 52, 0.1);
+  --fal-container: 1240px;
+  --fal-header-logo-h: 72px;
+}
+
+@theme {
+  --font-sans: Inter, Arial, sans-serif;
+  --color-fal-navy: #303846;
+  --color-fal-navy-dark: #252c36;
+  --color-fal-navy-2: #46515e;
+  --color-fal-yellow: #f2c84b;
+  --color-fal-yellow-dark: #dcae27;
+  --color-fal-yellow-hover: #ffd75c;
+  --color-fal-bg: #f4f6f7;
+  --color-fal-surface: #ffffff;
+  --color-fal-line: #dfe4e8;
+  --color-fal-muted: #6f7a85;
+  --color-fal-success: #168a55;
+  --color-fal-danger: #c0392b;
+  --color-fal-auth-link: #7c5b00;
+  --breakpoint-sm: 620px;
+  --breakpoint-lg: 900px;
+  --radius-fal: 14px;
+  --shadow-fal: 0 10px 30px rgba(33, 42, 52, 0.1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  color: var(--fal-navy-dark);
+  background: var(--fal-bg);
+  line-height: 1.45;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Espaço para bottom nav mobile (< md) */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 72px;
+  }
+}
