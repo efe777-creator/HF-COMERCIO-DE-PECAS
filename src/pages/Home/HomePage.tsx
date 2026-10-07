@@ -20,24 +20,25 @@ export function HomePage() {
         <Container>
           <div className="max-w-3xl">
             <p className="text-xs font-extrabold tracking-[0.08em] text-fal-yellow uppercase">
-              FAL Peças Automotivas
+              HF Comércio de Peças
             </p>
             <h1 className="mt-2 text-[28px] font-black leading-tight sm:text-[40px]">
-              Peças certas para o seu carro
+              Catálogo B2B personalizado
             </h1>
             <p className="mt-2 max-w-xl text-sm text-[#e3e7eb] sm:text-base">
-              Busque pela peça, pelo veículo ou navegue por categoria — você escolhe o caminho.
+              Acesse com o login da sua empresa para ver as peças autorizadas. Sem preço público —
+              disponibilidade sob consulta.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/catalogo">
-                <Button variant="primary">Buscar peça</Button>
+              <Link to="/login">
+                <Button variant="primary">Entrar no catálogo</Button>
               </Link>
-              <a href="#veiculo">
-                <Button variant="outline">Buscar pelo carro</Button>
-              </a>
-              <a href="#categorias">
-                <Button variant="outline">Ver categorias</Button>
-              </a>
+              <Link to="/cadastro">
+                <Button variant="outline">Criar conta</Button>
+              </Link>
+              <Link to="/catalogo">
+                <Button variant="outline">Abrir catálogo</Button>
+              </Link>
             </div>
           </div>
         </Container>

@@ -13,8 +13,10 @@ export interface UserProfile {
   fullName?: string | null
   phone?: string | null
   role?: UserRole
-  /** ID da linha em customers (quando existir). */
+  /** ID da empresa B2B vinculada via customer_users. */
   customerId?: string | null
+  customerLegalName?: string | null
+  customerStatus?: 'pending' | 'active' | 'suspended' | 'inactive' | null
   cpf?: string | null
   cnpj?: string | null
   /** Conta ativa com e-mail ainda não confirmado (navegação liberada). */

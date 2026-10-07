@@ -60,6 +60,8 @@ async function enrichUser(authUser: User | null): Promise<UserProfile | null> {
       username: profile.username ?? base.username,
       role: role ?? profile.role ?? base.role,
       customerId: profile.customerId,
+      customerLegalName: profile.customerLegalName,
+      customerStatus: profile.customerStatus,
       cpf: profile.cpf,
       cnpj: profile.cnpj,
     }

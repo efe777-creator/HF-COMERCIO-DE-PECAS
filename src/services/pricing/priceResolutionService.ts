@@ -1,3 +1,4 @@
+import { features } from '@/config/features'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
 import type { Product } from '@/types'
 
@@ -85,6 +86,16 @@ const BASE_LIST_ID = 'a1111111-1111-1111-1111-111111111101'
 /** Anexa resolvedPrice / listPrice / resolvedPriceListId aos produtos. */
 export async function attachResolvedPrices(products: Product[]): Promise<Product[]> {
   if (!products.length) return products
+  // MVP HF: sem módulo de preços — não chama RPCs/tabelas inexistentes
+  if (!features.price_enabled) {
+    return products.map((p) => ({
+      ...p,
+      listPrice: p.price,
+      resolvedPrice: p.promoPrice ?? p.price,
+      resolvedPriceListId: null,
+      priceSource: 'default' as const,
+    }))
+  }
   if (!isSupabaseConfigured || !supabase) {
     return products.map((p) => ({
       ...p,

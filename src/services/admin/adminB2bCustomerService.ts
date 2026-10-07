@@ -144,6 +144,54 @@ export async function adminSetCustomerStatus(id: string, status: CustomerStatus)
   if (error) throw error
 }
 
+export interface AdminCustomerUserLink {
+  id: string
+  profileId: string
+  email: string | null
+  fullName: string | null
+  username: string | null
+  isPrimary: boolean
+  status: 'active' | 'inactive'
+}
+
+export async function adminListCustomerUsers(customerId: string): Promise<AdminCustomerUserLink[]> {
+  const { data, error } = await getSupabase()
+    .from('customer_users')
+    .select('id, profile_id, is_primary, status, profiles(full_name, username)')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+
+  const rows = data ?? []
+  if (!rows.length) return []
+
+  const emailById = new Map<string, string | null>()
+  for (const r of rows) {
+    const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles
+    const hint = (profile?.username || profile?.full_name || '').trim()
+    if (!hint) continue
+    const { data: found } = await getSupabase().rpc('admin_search_users', { p_query: hint })
+    const match = (found ?? []).find((u: { id?: string }) => String(u.id) === String(r.profile_id)) as
+      | { email?: string | null }
+      | undefined
+    if (match) emailById.set(String(r.profile_id), match.email ?? null)
+  }
+
+  return rows.map((r) => {
+    const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles
+    const profileId = String(r.profile_id)
+    return {
+      id: String(r.id),
+      profileId,
+      email: emailById.get(profileId) ?? null,
+      fullName: profile?.full_name ? String(profile.full_name) : null,
+      username: profile?.username ? String(profile.username) : null,
+      isPrimary: Boolean(r.is_primary),
+      status: r.status as 'active' | 'inactive',
+    }
+  })
+}
+
 export async function adminLinkUserToCustomer(input: {
   customerId: string
   profileId: string
@@ -158,5 +206,21 @@ export async function adminLinkUserToCustomer(input: {
     },
     { onConflict: 'customer_id,profile_id' },
   )
+  if (error) throw error
+}
+
+export async function adminUnlinkUserFromCustomer(linkId: string) {
+  const { error } = await getSupabase().from('customer_users').delete().eq('id', linkId)
+  if (error) throw error
+}
+
+export async function adminSetCustomerUserPrimary(customerId: string, linkId: string) {
+  const sb = getSupabase()
+  const { error: clearErr } = await sb
+    .from('customer_users')
+    .update({ is_primary: false })
+    .eq('customer_id', customerId)
+  if (clearErr) throw clearErr
+  const { error } = await sb.from('customer_users').update({ is_primary: true }).eq('id', linkId)
   if (error) throw error
 }

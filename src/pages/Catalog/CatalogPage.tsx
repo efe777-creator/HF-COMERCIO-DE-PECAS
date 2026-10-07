@@ -7,6 +7,7 @@ import { Loading } from '@/components/common/Loading'
 import { Select } from '@/components/common/Select'
 import { ProductCard } from '@/components/product/ProductCard'
 import { SavedVehiclesQuickPick } from '@/components/vehicle/SavedVehiclesQuickPick'
+import { features } from '@/config/features'
 import { listActiveBrands } from '@/services/brands/brandService'
 import { listCategories } from '@/services/categories/categoryService'
 import { searchCatalog } from '@/services/search/searchService'
@@ -19,8 +20,12 @@ const PAGE_SIZE = 24
 
 const SORT_OPTIONS: Array<{ value: ProductSearchSort; label: string }> = [
   { value: 'relevance', label: 'Relevância' },
-  { value: 'price_asc', label: 'Menor preço' },
-  { value: 'price_desc', label: 'Maior preço' },
+  ...(features.price_enabled
+    ? ([
+        { value: 'price_asc', label: 'Menor preço' },
+        { value: 'price_desc', label: 'Maior preço' },
+      ] as const)
+    : []),
   { value: 'name_asc', label: 'Nome A–Z' },
   { value: 'name_desc', label: 'Nome Z–A' },
 ]

@@ -1,5 +1,6 @@
 import { MainLayout } from '@/components/layout/MainLayout'
 import { AdminLayout } from '@/components/admin/AdminLayout'
+import { B2bCatalogRoute } from '@/app/B2bCatalogRoute'
 import { ProtectedRoute } from '@/app/ProtectedRoute'
 import { StaffRoute } from '@/app/StaffRoute'
 import { features } from '@/config/features'
@@ -159,7 +160,9 @@ const publicChildren = [
     path: 'catalogo',
     element: (
       <Suspend>
-        <CatalogPage />
+        <B2bCatalogRoute>
+          <CatalogPage />
+        </B2bCatalogRoute>
       </Suspend>
     ),
   },
@@ -167,7 +170,9 @@ const publicChildren = [
     path: 'produto/:id',
     element: (
       <Suspend>
-        <ProductPage />
+        <B2bCatalogRoute>
+          <ProductPage />
+        </B2bCatalogRoute>
       </Suspend>
     ),
   },
