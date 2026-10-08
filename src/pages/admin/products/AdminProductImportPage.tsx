@@ -71,8 +71,8 @@ export function AdminProductImportPage() {
     try {
       const result = await adminApplyCatalogImport(importId)
       setReport(
-        `Criados: ${result.created}. Atualizados: ${result.updated}. ` +
-          `Ignorados: ${result.skipped}. Categorias novas: ${result.categories_created}.`,
+        `Criados: ${result.created}. Atualizados: ${result.updated}. Ignorados: ${result.skipped}. ` +
+          `(Categorias não são criadas na importação — cadastre em Admin → Categorias.)`,
       )
       setPhase('done')
     } catch (err) {
@@ -95,7 +95,13 @@ export function AdminProductImportPage() {
       title="Importar produtos (cadastro)"
       description="Código referência, nome, categoria, grupo, subgrupo, posição, lado e descrições. Sem montadora — aplicações são outra importação. Novos entram como rascunho e indisponíveis."
       actions={
-        <div className="flex flex-wrap gap-3 text-sm font-semibold">
+        <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+          <a href="/moldes-importacao/01_produtos.csv" download className="text-hf-red-bright">
+            Baixar molde
+          </a>
+          <Link to="/admin/produtos/importacoes" className="text-hf-ink">
+            Hub ←
+          </Link>
           <Link to="/admin/produtos/importar-aplicacoes" className="text-hf-ink">
             Aplicações →
           </Link>

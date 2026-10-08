@@ -14,6 +14,21 @@ const HomePage = lazy(() =>
 const CatalogPage = lazy(() =>
   import('@/pages/Catalog/CatalogPage').then((m) => ({ default: m.CatalogPage })),
 )
+const CategoryPage = lazy(() =>
+  import('@/pages/Catalog/CategoryPage').then((m) => ({ default: m.CategoryPage })),
+)
+const BrandPage = lazy(() =>
+  import('@/pages/Catalog/BrandPage').then((m) => ({ default: m.BrandPage })),
+)
+const CategoriesIndexPage = lazy(() =>
+  import('@/pages/Catalog/CategoriesIndexPage').then((m) => ({ default: m.CategoriesIndexPage })),
+)
+const BrandsIndexPage = lazy(() =>
+  import('@/pages/Catalog/BrandsIndexPage').then((m) => ({ default: m.BrandsIndexPage })),
+)
+const AtendimentoPage = lazy(() =>
+  import('@/pages/Support/AtendimentoPage').then((m) => ({ default: m.AtendimentoPage })),
+)
 const ProductPage = lazy(() =>
   import('@/pages/Product/ProductPage').then((m) => ({ default: m.ProductPage })),
 )
@@ -95,6 +110,31 @@ const AdminHfBundleImportPage = lazy(() =>
     default: m.AdminHfBundleImportPage,
   })),
 )
+const AdminImportsHubPage = lazy(() =>
+  import('@/pages/admin/products/AdminImportsHubPage').then((m) => ({
+    default: m.AdminImportsHubPage,
+  })),
+)
+const AdminSupplierConversionImportPage = lazy(() =>
+  import('@/pages/admin/suppliers/AdminSupplierConversionImportPage').then((m) => ({
+    default: m.AdminSupplierConversionImportPage,
+  })),
+)
+const AdminSupplierCostImportPage = lazy(() =>
+  import('@/pages/admin/suppliers/AdminSupplierCostImportPage').then((m) => ({
+    default: m.AdminSupplierCostImportPage,
+  })),
+)
+const AdminPriceListsPage = lazy(() =>
+  import('@/pages/admin/prices/AdminPriceListsPage').then((m) => ({
+    default: m.AdminPriceListsPage,
+  })),
+)
+const AdminPriceListDetailPage = lazy(() =>
+  import('@/pages/admin/prices/AdminPriceListDetailPage').then((m) => ({
+    default: m.AdminPriceListDetailPage,
+  })),
+)
 const AdminOperatorsPage = lazy(() =>
   import('@/pages/admin/operators/AdminOperatorsPage').then((m) => ({
     default: m.AdminOperatorsPage,
@@ -131,6 +171,7 @@ function AdminSuspend({ children }: { children: ReactNode }) {
 const adminChildren = [
   { index: true, element: <AdminDashboardPage /> },
   { path: 'produtos', element: <AdminProductsPage /> },
+  { path: 'produtos/importacoes', element: <AdminImportsHubPage /> },
   { path: 'produtos/importar', element: <AdminProductImportPage /> },
   { path: 'produtos/importar-aplicacoes', element: <AdminApplicationsImportPage /> },
   { path: 'produtos/importar-hf', element: <AdminHfBundleImportPage /> },
@@ -141,6 +182,10 @@ const adminChildren = [
   { path: 'veiculos', element: <AdminVehiclesPage /> },
   { path: 'fabricantes', element: <AdminBrandsPage /> },
   { path: 'fornecedores', element: <AdminSuppliersPage /> },
+  { path: 'fornecedores/importar-conversoes', element: <AdminSupplierConversionImportPage /> },
+  { path: 'fornecedores/importar-custos', element: <AdminSupplierCostImportPage /> },
+  { path: 'precos', element: <AdminPriceListsPage /> },
+  { path: 'precos/:id', element: <AdminPriceListDetailPage /> },
   { path: 'listas', element: <AdminCatalogsPage /> },
   { path: 'clientes', element: <AdminCustomersPage /> },
   { path: 'grupos', element: <AdminCustomerGroupsPage /> },
@@ -167,6 +212,56 @@ const publicChildren = [
     ),
   },
   {
+    path: 'busca',
+    element: (
+      <Suspend>
+        <B2bCatalogRoute>
+          <CatalogPage />
+        </B2bCatalogRoute>
+      </Suspend>
+    ),
+  },
+  {
+    path: 'categoria/:slug',
+    element: (
+      <Suspend>
+        <B2bCatalogRoute>
+          <CategoryPage />
+        </B2bCatalogRoute>
+      </Suspend>
+    ),
+  },
+  {
+    path: 'marca/:slug',
+    element: (
+      <Suspend>
+        <B2bCatalogRoute>
+          <BrandPage />
+        </B2bCatalogRoute>
+      </Suspend>
+    ),
+  },
+  {
+    path: 'categorias',
+    element: (
+      <Suspend>
+        <B2bCatalogRoute>
+          <CategoriesIndexPage />
+        </B2bCatalogRoute>
+      </Suspend>
+    ),
+  },
+  {
+    path: 'marcas',
+    element: (
+      <Suspend>
+        <B2bCatalogRoute>
+          <BrandsIndexPage />
+        </B2bCatalogRoute>
+      </Suspend>
+    ),
+  },
+  {
     path: 'produto/:id',
     element: (
       <Suspend>
@@ -181,6 +276,14 @@ const publicChildren = [
     element: (
       <Suspend>
         <VehiclePage />
+      </Suspend>
+    ),
+  },
+  {
+    path: 'atendimento',
+    element: (
+      <Suspend>
+        <AtendimentoPage />
       </Suspend>
     ),
   },

@@ -1,24 +1,23 @@
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
+import { WhatsAppButton } from '@/components/common/WhatsAppButton'
+import { Logo } from '@/components/navigation/Logo'
 import { Container } from '@/components/layout/Container'
 import { AuthNotConfiguredError, useAuth } from '@/contexts/AuthContext'
-import { formatCpfMask, isValidCpf, onlyDigits } from '@/lib/document'
 import { formatPhoneMask, isValidPhone, normalizePhone } from '@/lib/phone'
+import { buildHomeWhatsAppMessage } from '@/lib/whatsapp'
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 export function RegisterPage() {
   const { signUp, user, loading, isConfigured } = useAuth()
   const navigate = useNavigate()
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
-  const [cpf, setCpf] = useState('')
-  const [username, setUsername] = useState('')
+  const [companyName, setCompanyName] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
-  const [terms, setTerms] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -31,20 +30,14 @@ export function RegisterPage() {
       setError('As senhas não coincidem.')
       return
     }
-    if (!terms) {
-      setError('Aceite os termos para continuar.')
-      return
-    }
-    const cpfDigits = onlyDigits(cpf)
-    if (!isValidCpf(cpfDigits)) {
-      setError('CPF inválido. Confira os 11 dígitos.')
-      return
-    }
     const phoneDigits = phone.trim() ? normalizePhone(phone) : ''
     if (phoneDigits && !isValidPhone(phoneDigits)) {
       setError('Telefone inválido. Use DDD + número (10 ou 11 dígitos).')
       return
     }
+    const parts = fullName.trim().split(/\s+/)
+    const firstName = parts[0] ?? ''
+    const lastName = parts.slice(1).join(' ') || firstName
     setSubmitting(true)
     try {
       await signUp({
@@ -52,9 +45,8 @@ export function RegisterPage() {
         password,
         firstName,
         lastName,
-        username: username || undefined,
         phone: phoneDigits || undefined,
-        cpf: cpfDigits,
+        companyName: companyName.trim() || undefined,
       })
       navigate('/conta', { replace: true })
     } catch (err) {
@@ -67,115 +59,83 @@ export function RegisterPage() {
   }
 
   return (
-    <Container className="py-8">
-      <div className="mx-auto grid max-w-[1050px] grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="py-4 lg:py-10">
-          <h1 className="mt-0 text-[36px] leading-tight font-black lg:text-[44px]">
-            Crie sua conta HF
-          </h1>
-          <p className="text-[17px] text-hf-muted">
-            Cadastre-se para solicitar vínculo B2B com a HF. Após aprovação, o catálogo autorizado
-            fica disponível.
+    <Container className="flex min-h-[70vh] items-center justify-center py-10">
+      <div className="w-full max-w-md rounded-hf border border-hf-line bg-hf-surface p-6 sm:p-8">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <Logo />
+          <h1 className="mt-4 text-2xl font-black text-hf-ink">Solicite seu acesso à HF</h1>
+          <p className="mt-2 text-sm text-hf-muted">
+            Preencha os dados. Após aprovação, o catálogo autorizado da sua empresa fica disponível.
           </p>
-          {!isConfigured ? (
-            <p className="mt-4 rounded-[10px] border border-hf-red/40 bg-hf-surface p-3 text-sm text-hf-muted">
-              Cadastro indisponível no momento. Tente novamente mais tarde.
-            </p>
-          ) : null}
         </div>
 
-        <div className="overflow-hidden rounded-hf border border-hf-line bg-hf-surface">
-          <div className="grid grid-cols-2 border-b border-hf-line">
-            <Link to="/login" className="px-4 py-4 text-center font-extrabold hover:bg-hf-surface-2">
-              Entrar
-            </Link>
-            <span className="bg-hf-surface-2 px-4 py-4 text-center font-extrabold shadow-[inset_0_-3px_var(--hf-red)]">
-              Criar conta grátis
-            </span>
-          </div>
-          <form className="p-5 sm:p-7" onSubmit={onSubmit}>
-            <h2 className="mt-0 text-xl font-extrabold">Criar conta</h2>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input
-                label="Nome"
-                name="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-              />
-              <Input
-                label="Sobrenome"
-                name="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-              />
-              <div className="sm:col-span-2">
-                <Input
-                  label="E-mail"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <Input
-                label="CPF"
-                name="cpf"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="000.000.000-00"
-                value={cpf}
-                onChange={(e) => setCpf(formatCpfMask(e.target.value))}
-                required
-              />
-              <Input
-                label="Telefone / WhatsApp"
-                name="phone"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="(11) 99999-9999"
-                value={phone}
-                onChange={(e) => setPhone(formatPhoneMask(e.target.value))}
-              />
-              <Input
-                label="Usuário (opcional)"
-                name="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                hint="Opcional. Você também pode entrar com o e-mail."
-              />
-              <Input
-                label="Senha"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <Input
-                label="Confirmar senha"
-                name="password2"
-                type="password"
-                value={password2}
-                onChange={(e) => setPassword2(e.target.value)}
-                required
-              />
-            </div>
-            <label className="mt-4 flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={terms}
-                onChange={(e) => setTerms(e.target.checked)}
-              />
-              Li e aceito os termos de uso e a política de privacidade.
-            </label>
-            {error ? <p className="mt-3 text-sm text-hf-danger">{error}</p> : null}
-            <Button type="submit" variant="primary" fullWidth className="mt-4" disabled={submitting}>
-              {submitting ? 'Criando…' : 'Criar conta'}
+        {!isConfigured ? (
+          <p className="mb-4 rounded-[10px] border border-hf-red/40 bg-hf-bg p-3 text-sm text-hf-muted">
+            Cadastro indisponível no momento.
+          </p>
+        ) : null}
+
+        <form className="space-y-3" onSubmit={onSubmit}>
+          <Input
+            label="Nome completo"
+            name="fullName"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
+          <Input
+            label="E-mail"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input
+            label="Nome da empresa (opcional)"
+            name="company"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+          />
+          <Input
+            label="Telefone (opcional)"
+            name="phone"
+            value={phone}
+            onChange={(e) => setPhone(formatPhoneMask(e.target.value))}
+          />
+          <Input
+            label="Senha"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <Input
+            label="Confirmar senha"
+            name="password2"
+            type="password"
+            autoComplete="new-password"
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            required
+          />
+          {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
+          <Button type="submit" variant="primary" fullWidth disabled={submitting}>
+            {submitting ? 'Enviando…' : 'Solicitar acesso'}
+          </Button>
+        </form>
+
+        <div className="mt-4 grid gap-2">
+          <Link to="/login">
+            <Button type="button" variant="outline" fullWidth>
+              Já tenho conta — Entrar
             </Button>
-          </form>
+          </Link>
+          <WhatsAppButton message={buildHomeWhatsAppMessage()} fullWidth>
+            Falar com a HF
+          </WhatsAppButton>
         </div>
       </div>
     </Container>

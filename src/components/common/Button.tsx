@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Variant = 'primary' | 'outline' | 'dark' | 'light' | 'danger'
+type Variant = 'primary' | 'outline' | 'dark' | 'light' | 'danger' | 'whatsapp'
 type Size = 'md' | 'sm'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,13 +12,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-gradient-to-br from-hf-red to-hf-red-bright text-white hover:brightness-110 border-transparent shadow-[0_10px_30px_rgba(197,23,31,0.25)]',
+    'bg-hf-red text-white hover:bg-hf-red-bright border-transparent shadow-[0_10px_30px_rgba(179,32,42,0.28)]',
   outline:
     'bg-transparent text-hf-ink border border-white/40 hover:bg-hf-surface/10',
   dark: 'bg-hf-surface-2 text-white border border-hf-line hover:bg-hf-surface',
   light:
     'bg-hf-surface text-hf-ink border border-hf-line hover:bg-hf-surface-2',
   danger: 'bg-hf-surface text-hf-danger border border-hf-danger/40 hover:bg-hf-surface-2',
+  whatsapp:
+    'bg-hf-whatsapp text-[#062812] border-transparent hover:brightness-110 shadow-[0_10px_24px_rgba(37,211,102,0.28)]',
 }
 
 export function Button({

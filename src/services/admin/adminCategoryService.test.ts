@@ -32,13 +32,13 @@ describe('category hierarchy (3 níveis)', () => {
     cat('s2', 'BANDEJA COMPLETA', 'c1'),
   ]
 
-  it('depth Grupo/Categoria/Subcategoria', () => {
+  it('depth Categoria/Grupo/Subgrupo', () => {
     expect(categoryDepth(items, 'g1')).toBe(1)
     expect(categoryDepth(items, 'c1')).toBe(2)
     expect(categoryDepth(items, 's1')).toBe(3)
-    expect(categoryLevelLabel(1)).toBe('Grupo')
-    expect(categoryLevelLabel(2)).toBe('Categoria')
-    expect(categoryLevelLabel(3)).toBe('Subcategoria')
+    expect(categoryLevelLabel(1)).toBe('Categoria')
+    expect(categoryLevelLabel(2)).toBe('Grupo')
+    expect(categoryLevelLabel(3)).toBe('Subgrupo')
     expect(CATEGORY_MAX_DEPTH).toBe(3)
   })
 

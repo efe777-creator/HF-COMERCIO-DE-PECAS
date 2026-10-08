@@ -1,16 +1,20 @@
+import { Button } from '@/components/common/Button'
 import { Loading } from '@/components/common/Loading'
+import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { features } from '@/config/features'
 import { useAuth } from '@/contexts/AuthContext'
+import { buildAccessPendingWhatsAppMessage } from '@/lib/whatsapp'
 import { isStaffRole } from '@/services/admin/staffService'
 import type { ReactNode } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 
 /**
- * Catálogo B2B: exige login. Staff sempre entra.
- * Cliente sem vínculo ACTIVE vê aviso (RLS já filtra produtos).
+ * Gate do catálogo quando customer_specific_catalog_enabled.
+ * Com a flag false, qualquer visitante vê published (RLS alinhada).
+ * Staff sempre entra; cliente sem ACTIVE vê aviso se a flag estiver true.
  */
 export function B2bCatalogRoute({ children }: { children: ReactNode }) {
-  const { user, loading, profileLoading } = useAuth()
+  const { user, loading, profileLoading, signOut } = useAuth()
   const location = useLocation()
 
   if (!features.customer_login_enabled || !features.customer_specific_catalog_enabled) {
@@ -27,32 +31,38 @@ export function B2bCatalogRoute({ children }: { children: ReactNode }) {
   if (isStaffRole(user.role)) return children
 
   if (!user.customerId || user.customerStatus !== 'active') {
+    const pending = user.customerStatus === 'pending'
+    const suspended = user.customerStatus === 'suspended'
+    const title = suspended
+      ? 'Acesso suspenso'
+      : pending
+        ? 'Empresa pendente de aprovação'
+        : 'Catálogo ainda não liberado'
+    const description = suspended
+      ? 'Sua empresa está suspensa. Fale com a HF para regularizar o acesso.'
+      : pending
+        ? 'Recebemos sua solicitação. Assim que a HF ativar sua empresa, o catálogo autorizado aparece aqui.'
+        : 'Sua conta ainda não está vinculada a um cliente B2B ativo. Solicite o vínculo à HF.'
+
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <h1 className="text-2xl font-extrabold text-hf-ink">Catálogo restrito</h1>
-        <p className="mt-3 text-sm text-hf-muted">
-          {user.customerStatus === 'pending'
-            ? 'Sua empresa está pendente de aprovação. Assim que for ativada, o catálogo autorizado aparece aqui.'
-            : user.customerStatus === 'suspended'
-              ? 'Acesso suspenso. Fale com a HF Comércio de Peças.'
-              : 'Sua conta ainda não está vinculada a um cliente B2B ativo. Solicite o vínculo à HF.'}
-        </p>
+        <h1 className="text-2xl font-extrabold text-hf-ink">{title}</h1>
+        <p className="mt-3 text-sm text-hf-muted">{description}</p>
         {user.customerLegalName ? (
           <p className="mt-2 text-sm font-semibold text-hf-ink">{user.customerLegalName}</p>
         ) : null}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <Link
-            to="/conta"
-            className="inline-flex rounded-[10px] bg-hf-surface-2 px-4 py-2.5 text-sm font-extrabold text-white"
-          >
-            Minha conta
+          <WhatsAppButton message={buildAccessPendingWhatsAppMessage()}>
+            Falar com a HF
+          </WhatsAppButton>
+          <Link to="/conta">
+            <Button type="button" variant="dark">
+              Minha conta
+            </Button>
           </Link>
-          <Link
-            to="/"
-            className="inline-flex rounded-[10px] border border-hf-line px-4 py-2.5 text-sm font-semibold text-hf-ink"
-          >
-            Início
-          </Link>
+          <Button type="button" variant="outline" onClick={() => void signOut()}>
+            Sair
+          </Button>
         </div>
       </div>
     )

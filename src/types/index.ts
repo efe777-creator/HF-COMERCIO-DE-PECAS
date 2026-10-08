@@ -79,175 +79,9 @@ export interface CustomerSavedVehicle {
   versionName?: string | null
 }
 
-export interface CustomerOrderSummary {
-  id: string
-  status: string
-  total: number
-  createdAt: string
-  itemCount: number
-}
+/* Pedidos / frete / pagamento: fora do runtime MVP (flags off). Tipos removidos. */
 
-export interface OrderItemSnapshot {
-  id: string
-  productId?: string | null
-  sku: string
-  nameSnapshot: string
-  unitPrice: number
-  quantity: number
-}
-
-export interface OrderStatusEvent {
-  id: string
-  status: string
-  note?: string | null
-  createdAt: string
-}
-
-export interface OrderLifecycleEvent {
-  id: string
-  eventType: string
-  payload: Record<string, unknown>
-  visibility: 'internal' | 'customer'
-  createdAt: string
-}
-
-export interface OrderDetail {
-  id: string
-  status: string
-  subtotal: number
-  shippingAmount: number
-  total: number
-  createdAt: string
-  addressSnapshot?: Record<string, unknown> | null
-  paymentRef?: string | null
-  items: OrderItemSnapshot[]
-  history: OrderStatusEvent[]
-  /** Eventos customer-visible (F7A). */
-  events: OrderLifecycleEvent[]
-  payment?: {
-    id: string
-    provider?: string | null
-    status: string
-    amount?: number | null
-    externalRef?: string | null
-  } | null
-  shipment?: {
-    id: string
-    provider?: string | null
-    status: string
-    amount?: number | null
-    trackingCode?: string | null
-    metadata?: Record<string, unknown> | null
-  } | null
-}
-
-/** Item logístico opcional na cotação (F6C; mock pode ignorar). */
-export interface ShippingQuoteItem {
-  productId: string
-  quantity: number
-  weightKg?: number | null
-  heightCm?: number | null
-  widthCm?: number | null
-  lengthCm?: number | null
-}
-
-/** Cotação de frete — contrato interno HF (F6 mock; F9 troca provider). */
-export interface ShippingQuoteRequest {
-  postalCode: string
-  state: string
-  city: string
-  subtotal: number
-  itemCount: number
-  originPostalCode?: string
-  items?: ShippingQuoteItem[]
-  totalWeightKg?: number
-}
-
-export interface ShippingQuoteOption {
-  id: string
-  provider: string
-  serviceCode: string
-  label: string
-  amount: number
-  etaDaysMin?: number
-  etaDaysMax?: number
-  metadata?: Record<string, unknown>
-}
-
-export interface ShippingProvider {
-  quote(req: ShippingQuoteRequest): Promise<ShippingQuoteOption[]>
-}
-
-export type SimulatedPaymentMethod = 'pix_simulated' | 'card_simulated'
-
-/** Status interno F9-A (payments.status). `failed` = legado simulated. */
-export type FalPaymentStatus =
-  | 'created'
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'failed'
-  | 'cancelled'
-  | 'expired'
-  | 'refunded'
-
-export type FalPaymentMethod =
-  | 'pix'
-  | 'credit_card'
-  | 'debit_card'
-  | 'pix_simulated'
-  | 'card_simulated'
-  | 'other'
-
-export interface PaymentIntentInput {
-  orderId: string
-  amount: number
-  method: SimulatedPaymentMethod
-}
-
-export interface PaymentIntentResult {
-  paymentId: string
-  provider: 'simulated'
-  status: 'pending' | 'approved' | 'failed' | 'cancelled'
-  externalRef?: string
-  amount?: number
-  orderId?: string
-  orderStatus?: string
-  metadata?: Record<string, unknown>
-}
-
-export interface PaymentProvider {
-  createIntent(input: PaymentIntentInput): Promise<PaymentIntentResult>
-  confirmSimulated(
-    paymentId: string,
-    outcome: 'approve' | 'fail',
-  ): Promise<PaymentIntentResult>
-}
-
-export interface PlaceOrderItemInput {
-  productId: string
-  quantity: number
-}
-
-export interface PlaceOrderInput {
-  idempotencyKey: string
-  addressId: string
-  shippingOptionId: string
-  paymentMethod: SimulatedPaymentMethod
-  documentKind: 'cpf' | 'cnpj'
-  documentValue: string
-  items?: PlaceOrderItemInput[]
-}
-
-export interface PlaceOrderResult {
-  orderId: string
-  status: string
-  total: number
-  paymentId?: string
-  alreadyExisted: boolean
-}
-
-/** Papéis futuros (admin) — Fase 1 só tipa. */
+/** Papéis staff/cliente — Fase 1. */
 export type UserRole =
   | 'customer'
   | 'administrador'
@@ -391,6 +225,8 @@ export type ProductSearchSort =
   | 'price_desc'
   | 'name_asc'
   | 'name_desc'
+  | 'sku_asc'
+  | 'sku_desc'
 
 /** Parâmetros do contrato searchCatalog / RPC search_products. */
 export interface ProductSearchParams {
@@ -429,26 +265,4 @@ export interface VehicleOptionTree {
   versionsByModel: Record<string, string[]>
 }
 
-export interface CartItem {
-  productId: string
-  sku: string
-  name: string
-  price: number
-  quantity: number
-  imageUrl?: string | null
-}
-
-export type CartStorageKind = 'local' | 'supabase'
-
-/**
- * Contrato de persistência do carrinho.
- * Visitante → localStorage (temporário)
- * Autenticado → sync Supabase (futuro)
- * Pedido → persistência definitiva no banco (futuro)
- */
-export interface CartStorage {
-  kind: CartStorageKind
-  load(): CartItem[]
-  save(items: CartItem[]): void
-  clear(): void
-}
+/* Carrinho: fora do runtime MVP (cart_enabled: false). */

@@ -92,9 +92,14 @@ export function AdminHfBundleImportPage() {
       title="Importar arquivo HF (produto + aplicações)"
       description="Uma planilha completa: o sistema separa 1 cadastro por código referência e uma aplicação por linha. Produtos são gravados antes das aplicações."
       actions={
-        <Link to="/admin/produtos/importar" className="text-sm font-semibold text-hf-ink">
-          Só produtos →
-        </Link>
+        <div className="flex flex-wrap gap-3 text-sm font-semibold">
+          <a href="/moldes-importacao/03_bundle_hf.csv" download className="text-hf-red-bright">
+            Baixar molde
+          </a>
+          <Link to="/admin/produtos/importar" className="text-hf-ink">
+            Só produtos →
+          </Link>
+        </div>
       }
     >
       {!allowed ? (
@@ -165,7 +170,7 @@ export function AdminHfBundleImportPage() {
               <h2 className="m-0 text-lg font-extrabold">Importação concluída</h2>
               <p>
                 Produtos — criados: {result.products.created}, atualizados:{' '}
-                {result.products.updated}, categorias novas: {result.products.categories_created}
+                {result.products.updated} (categorias só se já existirem em Admin → Categorias)
               </p>
               {result.applications ? (
                 <p>

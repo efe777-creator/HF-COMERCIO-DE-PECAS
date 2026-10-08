@@ -227,9 +227,9 @@ export function AdminCategoriesPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-extrabold text-hf-ink">Classificação</h1>
       <p className="text-sm text-hf-muted">
-        Hierarquia de {CATEGORY_MAX_DEPTH} níveis: <strong>Grupo</strong> →{' '}
-        <strong>Categoria</strong> → <strong>Subcategoria</strong>. Quarto nível bloqueado.
-        Categorias arquivadas não aparecem aqui nem no cadastro de produto.
+        Hierarquia de {CATEGORY_MAX_DEPTH} níveis: <strong>Categoria</strong> →{' '}
+        <strong>Grupo</strong> → <strong>Subgrupo</strong> (igual ao CSV de importação). Quarto nível
+        bloqueado. Categorias arquivadas não aparecem aqui nem no cadastro de produto.
       </p>
       <form
         ref={formRef}
@@ -261,7 +261,7 @@ export function AdminCategoriesPage() {
             value={parentId}
             onChange={(e) => setParentId(e.target.value)}
           >
-            <option value="">(nenhum — cria Grupo)</option>
+            <option value="">(nenhum — cria Categoria raiz)</option>
             {parentOptions.map((p) => {
               const d = categoryDepth(activeItems, p.id)
               return (

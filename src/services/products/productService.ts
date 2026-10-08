@@ -166,17 +166,16 @@ export async function getProductById(id: string): Promise<Product | null> {
 
   const { data: refs } = await supabase
     .from('product_references')
-    .select('code, ref_type, brand_label, brand_id, status')
+    .select('code, ref_type, brand_label')
     .eq('product_id', id)
-    .eq('status', 'active')
 
   if (refs?.length) {
     product.references = refs.map((r) => ({
       code: String(r.code),
       type: String(r.ref_type),
-      brandId: (r.brand_id as string | null) ?? null,
+      brandId: null,
       brandLabel: (r.brand_label as string | null) ?? undefined,
-      status: (r.status as 'active' | 'inactive' | null) ?? 'active',
+      status: 'active' as const,
     }))
   }
 

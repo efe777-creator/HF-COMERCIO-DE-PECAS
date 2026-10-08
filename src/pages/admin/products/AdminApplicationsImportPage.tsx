@@ -119,6 +119,9 @@ export function AdminApplicationsImportPage() {
       description="Código referência, montadora, modelo, versão e anos. O produto precisa existir — esta importação não cria cadastro de produto."
       actions={
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
+          <a href="/moldes-importacao/02_aplicacoes.csv" download className="text-hf-red-bright">
+            Baixar molde
+          </a>
           <Link to="/admin/produtos/importar" className="text-hf-ink">
             Cadastro de produtos →
           </Link>

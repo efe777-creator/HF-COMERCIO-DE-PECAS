@@ -1,48 +1,65 @@
+import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { useAuth } from '@/contexts/AuthContext'
+import { buildAccessPendingWhatsAppMessage, buildHomeWhatsAppMessage } from '@/lib/whatsapp'
 import { isStaffRole } from '@/services/admin/staffService'
 import { Link } from 'react-router-dom'
 
 const cards = [
-  { to: '/conta/perfil', title: 'Perfil', desc: 'Nome, telefone e empresa vinculada' },
+  { to: '/conta/perfil', title: 'Perfil', desc: 'Nome, telefone e dados da conta' },
   { to: '/catalogo', title: 'Meu catálogo', desc: 'Peças autorizadas para sua empresa' },
+  { to: '/veiculo', title: 'Aplicações', desc: 'Buscar por montadora e modelo' },
 ]
 
 export function AccountHomePage() {
   const { user } = useAuth()
   const isStaff = isStaffRole(user?.role)
   const b2bActive = Boolean(user?.customerId && user.customerStatus === 'active')
+  const pending = user?.customerStatus === 'pending'
+  const suspended = user?.customerStatus === 'suspended'
 
   return (
     <div className="rounded-hf border border-hf-line bg-hf-surface p-5">
-      <h2 className="mt-0 text-xl font-extrabold">Resumo</h2>
+      <h2 className="mt-0 text-xl font-extrabold">Minha conta</h2>
       <p className="text-sm text-hf-muted">
-        Área do cliente B2B. O catálogo exibe apenas produtos das listas autorizadas.
+        Resumo do acesso B2B. O catálogo só mostra produtos das listas autorizadas.
       </p>
-      {user && user.emailConfirmed === false ? (
-        <p className="mt-3 rounded-[10px] border border-[#f0d979] bg-[#fff8db] p-3 text-sm">
-          <strong>Confirme seu e-mail</strong> — verifique a caixa de entrada (e o spam) e clique no
-          link de confirmação.
-        </p>
-      ) : user?.emailConfirmed ? (
-        <p className="mt-3 text-sm text-hf-success">✓ E-mail confirmado</p>
-      ) : null}
 
       {user?.customerLegalName ? (
         <p className="mt-3 rounded-[10px] border border-hf-line bg-hf-bg p-3 text-sm">
-          <strong>{user.customerLegalName}</strong>
+          <strong className="text-hf-ink">{user.customerLegalName}</strong>
           <span className="ml-2 text-hf-muted">· {user.customerStatus ?? '—'}</span>
         </p>
       ) : !isStaff ? (
-        <p className="mt-3 rounded-[10px] border border-[#f0d979] bg-[#fff8db] p-3 text-sm">
-          Conta sem empresa vinculada. Após o cadastro, a HF associa seu login ao cliente B2B.
+        <p className="mt-3 rounded-[10px] border border-hf-line bg-hf-bg p-3 text-sm text-hf-muted">
+          Conta sem empresa vinculada. Solicite o vínculo à HF.
         </p>
       ) : null}
+
+      {user && user.emailConfirmed === false ? (
+        <p className="mt-3 rounded-[10px] border border-[#f0d979]/40 bg-[#2a2410] p-3 text-sm text-hf-ink">
+          <strong>Confirme seu e-mail</strong> — verifique a caixa de entrada e o spam.
+        </p>
+      ) : null}
+
+      {(pending || suspended || (!b2bActive && !isStaff)) && (
+        <div className="mt-3">
+          <WhatsAppButton
+            message={
+              pending || suspended
+                ? buildAccessPendingWhatsAppMessage()
+                : buildHomeWhatsAppMessage()
+            }
+          >
+            Falar com a HF
+          </WhatsAppButton>
+        </div>
+      )}
 
       {isStaff ? (
         <p className="mt-3">
           <Link
             to="/admin"
-            className="inline-flex rounded-[10px] bg-hf-surface-2 px-4 py-2.5 text-sm font-extrabold text-white"
+            className="inline-flex rounded-[10px] bg-hf-red px-4 py-2.5 text-sm font-extrabold text-white"
           >
             Abrir painel administrativo
           </Link>

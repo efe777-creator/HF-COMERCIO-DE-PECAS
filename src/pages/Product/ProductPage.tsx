@@ -1,15 +1,12 @@
 import { Container } from '@/components/layout/Container'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Loading } from '@/components/common/Loading'
+import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { getProductById } from '@/services/products/productService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Product } from '@/types'
-import {
-  buildProductWhatsAppMessage,
-  storeWhatsAppPhone,
-  whatsAppHref,
-} from '@/lib/whatsapp'
+import { buildNotFoundWhatsAppMessage, buildProductWhatsAppMessage } from '@/lib/whatsapp'
 import { formatCodigoReferencia } from '@/lib/productLabels'
 import { formatLadoLabel, formatPosicaoLabel } from '@/lib/productPosicaoLado'
 
@@ -23,10 +20,13 @@ export function ProductPage() {
     let active = true
     void (async () => {
       setLoading(true)
-      const data = id ? await getProductById(id) : null
-      if (active) {
-        setProduct(data)
-        setLoading(false)
+      try {
+        const data = id ? await getProductById(id) : null
+        if (active) setProduct(data)
+      } catch {
+        if (active) setProduct(null)
+      } finally {
+        if (active) setLoading(false)
       }
     })()
     return () => {
@@ -46,30 +46,28 @@ export function ProductPage() {
     return (
       <Container className="py-8">
         <EmptyState
-          title="Produto não encontrado"
-          description="O item solicitado não está disponível no catálogo."
+          title="Produto não disponível"
+          description="Este item não está no catálogo autorizado da sua empresa ou o link é inválido."
           actionLabel="Ver catálogo"
           actionTo="/catalogo"
         />
+        <div className="mt-4 flex justify-center">
+          <WhatsAppButton message={buildNotFoundWhatsAppMessage()}>Falar com a HF</WhatsAppButton>
+        </div>
       </Container>
     )
   }
 
   const current = product
   const categoryHref = current.categorySlug
-    ? `/catalogo?cat=${encodeURIComponent(current.categorySlug)}`
+    ? `/categoria/${encodeURIComponent(current.categorySlug)}`
     : null
-  const phone = storeWhatsAppPhone()
-  const whatsappHref = phone
-    ? whatsAppHref(
-        phone,
-        buildProductWhatsAppMessage({
-          name: current.name,
-          sku: current.sku,
-          productUrl: typeof window !== 'undefined' ? window.location.href : undefined,
-        }),
-      )
+  const brandHref = current.brand
+    ? `/marca/${encodeURIComponent(current.brand.toLowerCase().replace(/\s+/g, '-'))}`
     : null
+  const apps = current.compatibilitySummary
+    ? current.compatibilitySummary.split(' · ').filter(Boolean)
+    : []
 
   function goBack() {
     if (window.history.length > 1) navigate(-1)
@@ -108,7 +106,7 @@ export function ProductPage() {
         <span className="text-hf-ink">{current.name}</span>
       </p>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="grid h-[280px] place-items-center rounded-2xl bg-gradient-to-br from-[#e8ecef] to-[#d7dde1] text-7xl lg:h-[420px]">
+        <div className="grid h-[280px] place-items-center rounded-2xl bg-gradient-to-br from-hf-surface-2 to-[#0c0c0e] text-7xl lg:h-[420px]">
           🧩
         </div>
         <div className="relative rounded-hf border border-hf-line bg-hf-surface p-5">
@@ -119,33 +117,39 @@ export function ProductPage() {
           <div className="mt-2 space-y-1 text-sm text-hf-ink">
             {current.brand ? (
               <p className="m-0">
-                <span className="font-semibold text-hf-ink">Marca:</span> {current.brand}
+                <span className="font-semibold">Marca:</span>{' '}
+                {brandHref ? (
+                  <Link to={`/catalogo?brand=${encodeURIComponent(current.brand)}`} className="underline">
+                    {current.brand}
+                  </Link>
+                ) : (
+                  current.brand
+                )}
               </p>
             ) : null}
             {current.manufacturerCode ? (
               <p className="m-0">
-                <span className="font-semibold text-hf-ink">Cód. fabricante:</span>{' '}
+                <span className="font-semibold">Cód. fabricante:</span>{' '}
                 <span className="font-mono">{current.manufacturerCode}</span>
               </p>
             ) : null}
             {current.categoryName ? (
               <p className="m-0">
-                <span className="font-semibold text-hf-ink">Categoria:</span> {current.categoryName}
+                <span className="font-semibold">Categoria:</span> {current.categoryName}
               </p>
             ) : null}
             {current.posicao || current.lado ? (
               <p className="m-0">
                 {current.posicao ? (
                   <span>
-                    <span className="font-semibold text-hf-ink">Posição:</span>{' '}
+                    <span className="font-semibold">Posição:</span>{' '}
                     {formatPosicaoLabel(current.posicao)}
                   </span>
                 ) : null}
                 {current.posicao && current.lado ? ' · ' : null}
                 {current.lado ? (
                   <span>
-                    <span className="font-semibold text-hf-ink">Lado:</span>{' '}
-                    {formatLadoLabel(current.lado)}
+                    <span className="font-semibold">Lado:</span> {formatLadoLabel(current.lado)}
                   </span>
                 ) : null}
               </p>
@@ -156,48 +160,67 @@ export function ProductPage() {
             <p className="mt-4 text-sm text-hf-ink whitespace-pre-wrap">{current.description}</p>
           ) : null}
 
-          {current.compatibilitySummary ? (
-            <div className="mt-4 rounded-[10px] border border-hf-line bg-hf-bg p-3 text-sm">
-              <p className="m-0 font-semibold text-hf-ink">Aplicações</p>
-              <ul className="mb-0 mt-1 list-none space-y-0.5 p-0 text-hf-ink">
-                {current.compatibilitySummary.split(' · ').map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
+          <p className="mt-4 rounded-[10px] border border-hf-line bg-hf-bg p-3 text-xs text-hf-muted">
+            Confira sempre a aplicação no veículo. Em caso de dúvida, fale com a HF antes de pedir.
+          </p>
+
+          {apps.length ? (
+            <div className="mt-4 overflow-x-auto">
+              <p className="m-0 mb-2 font-semibold text-hf-ink">Aplicações</p>
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-hf-muted">
+                  <tr>
+                    <th className="border-b border-hf-line px-2 py-2 font-semibold">Aplicação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {apps.map((line) => (
+                    <tr key={line} className="border-b border-hf-line/60">
+                      <td className="px-2 py-2 text-hf-ink">{line}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p className="mt-4 text-sm text-hf-muted">Aplicações sob consulta</p>
           )}
 
           {current.references?.length ? (
-            <div className="mt-3 text-sm text-hf-muted">
-              <p className="m-0 font-semibold text-hf-ink">Códigos / referências</p>
-              <ul className="mt-1 list-disc pl-5">
-                {current.references.map((ref) => (
-                  <li key={`${ref.type}-${ref.code}`}>
-                    {ref.code}
-                    {ref.brandLabel ? ` (${ref.brandLabel})` : ''}
-                  </li>
-                ))}
-              </ul>
+            <div className="mt-4 overflow-x-auto">
+              <p className="m-0 mb-2 font-semibold text-hf-ink">Códigos / referências</p>
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-hf-muted">
+                  <tr>
+                    <th className="border-b border-hf-line px-2 py-2 font-semibold">Código</th>
+                    <th className="border-b border-hf-line px-2 py-2 font-semibold">Tipo / marca</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {current.references.map((ref) => (
+                    <tr key={`${ref.type}-${ref.code}`} className="border-b border-hf-line/60">
+                      <td className="px-2 py-2 font-mono text-hf-ink">{ref.code}</td>
+                      <td className="px-2 py-2 text-hf-muted">
+                        {[ref.type, ref.brandLabel].filter(Boolean).join(' · ') || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : null}
 
-          <div className="mt-5 space-y-2">
-            {whatsappHref ? (
-              <a
-                href={whatsappHref}
-                target="_blank"
-                rel="noreferrer"
-                className="flex w-full items-center justify-center rounded-[10px] border border-[#25D366] bg-[#25D366]/10 px-4 py-3 text-sm font-extrabold text-[#128C7E] hover:bg-[#25D366]/20"
-              >
-                Consultar pelo WhatsApp
-              </a>
-            ) : (
-              <p className="text-sm text-hf-muted">
-                WhatsApp não configurado. Defina VITE_WHATSAPP_NUMBER no .env.local.
-              </p>
-            )}
+          <div className="mt-5">
+            <WhatsAppButton
+              fullWidth
+              message={buildProductWhatsAppMessage({
+                name: current.name,
+                sku: current.sku,
+                productUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+              })}
+            >
+              Consultar esta peça
+            </WhatsAppButton>
           </div>
         </div>
       </div>

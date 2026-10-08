@@ -73,6 +73,8 @@ function normalizeSort(sort?: ProductSearchSort | null): ProductSearchSort {
     'price_desc',
     'name_asc',
     'name_desc',
+    'sku_asc',
+    'sku_desc',
   ]
   if (sort && allowed.includes(sort)) return sort
   return 'relevance'
@@ -118,6 +120,8 @@ function mockSearch(params: ProductSearchParams): ProductSearchResult {
   list = [...list].sort((a, b) => {
     if (sort === 'price_asc') return displayPrice(a) - displayPrice(b)
     if (sort === 'price_desc') return displayPrice(b) - displayPrice(a)
+    if (sort === 'sku_asc') return a.sku.localeCompare(b.sku, 'pt-BR')
+    if (sort === 'sku_desc') return b.sku.localeCompare(a.sku, 'pt-BR')
     if (sort === 'name_desc') return b.name.localeCompare(a.name, 'pt-BR')
     return a.name.localeCompare(b.name, 'pt-BR')
   })

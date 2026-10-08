@@ -1,32 +1,32 @@
 import { Container } from '@/components/layout/Container'
-import { useCategories } from '@/hooks/useCatalog'
-import { Link } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
+
+const links = [
+  { to: '/catalogo', label: 'Catálogo' },
+  { to: '/categorias', label: 'Categorias' },
+  { to: '/marcas', label: 'Marcas' },
+  { to: '/veiculo', label: 'Aplicações' },
+  { to: '/atendimento', label: 'Atendimento' },
+]
 
 export function NavBar() {
-  const categories = useCategories()
-
   return (
-    <nav className="hidden bg-hf-surface-2 text-white lg:block">
+    <nav className="hidden border-t border-hf-line bg-hf-surface-2 text-white lg:block">
       <Container className="flex flex-nowrap items-center gap-1 overflow-x-auto">
-        <Link
-          to="/"
-          className="grid h-[46px] w-11 shrink-0 place-items-center text-lg hover:bg-hf-surface/10"
-          aria-label="Início"
-          title="Início"
-        >
-          ⌂
-        </Link>
-        <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-0 overflow-x-auto">
-          {categories.data.map((item) => (
-            <Link
-              key={item.id}
-              to={`/catalogo?cat=${encodeURIComponent(item.slug)}`}
-              className="shrink-0 whitespace-nowrap px-[15px] py-[13px] text-sm hover:bg-hf-surface/10"
-            >
-              {item.name}
-            </Link>
-          ))}
-        </div>
+        {links.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              [
+                'shrink-0 whitespace-nowrap px-[15px] py-[13px] text-sm font-semibold transition',
+                isActive ? 'bg-hf-red text-white' : 'hover:bg-hf-surface/20',
+              ].join(' ')
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
       </Container>
     </nav>
   )

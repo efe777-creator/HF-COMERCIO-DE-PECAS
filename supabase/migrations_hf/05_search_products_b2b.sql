@@ -61,7 +61,7 @@ declare
 begin
   v_offset := (v_page - 1) * v_page_size;
 
-  if v_sort not in ('relevance', 'price_asc', 'price_desc', 'name_asc', 'name_desc') then
+  if v_sort not in ('relevance', 'price_asc', 'price_desc', 'name_asc', 'name_desc', 'sku_asc', 'sku_desc') then
     v_sort := 'relevance';
   end if;
 
@@ -140,14 +140,14 @@ begin
                 case
                   when exists (
                     select 1 from public.product_references pr
-                    where pr.product_id = p.id and pr.status = 'active'
+                    where pr.product_id = p.id
                       and lower(public.f_unaccent(pr.code)) = t
                   ) then 800 else 0
                 end,
                 case
                   when exists (
                     select 1 from public.product_references pr
-                    where pr.product_id = p.id and pr.status = 'active'
+                    where pr.product_id = p.id
                       and lower(public.f_unaccent(pr.code)) like '%' || t || '%'
                   ) then 600 else 0
                 end,
@@ -195,7 +195,7 @@ begin
               or lower(public.f_unaccent(coalesce(pb.name, ''))) like '%' || t || '%'
               or exists (
                 select 1 from public.product_references pr
-                where pr.product_id = p.id and pr.status = 'active'
+                where pr.product_id = p.id
                   and lower(public.f_unaccent(pr.code)) like '%' || t || '%'
               )
             ) as matched
@@ -213,7 +213,10 @@ begin
       case when v_sort = 'relevance' then s.relevance_score end desc nulls last,
       case when v_sort = 'price_asc' then s.price end asc nulls last,
       case when v_sort = 'price_desc' then s.price end desc nulls last,
+      case when v_sort = 'name_asc' then s.name end asc nulls last,
       case when v_sort = 'name_desc' then s.name end desc nulls last,
+      case when v_sort = 'sku_asc' then s.sku end asc nulls last,
+      case when v_sort = 'sku_desc' then s.sku end desc nulls last,
       s.name asc
     limit v_page_size
     offset v_offset
@@ -233,7 +236,7 @@ revoke all on function public.search_products(
 
 grant execute on function public.search_products(
   text, text, text, text, text, text, text, text, text, integer, integer
-) to authenticated;
+) to anon, authenticated;
 
 comment on function public.search_products is
-  'HF B2B: busca publicada com ranking/filtros + customer_can_see_product (authenticated).';
+  'HF: busca publicada com ranking/filtros + customer_can_see_product (anon/authenticated).';

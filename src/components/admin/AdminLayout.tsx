@@ -6,12 +6,15 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 const catalogLinks = [
   { to: '/admin/produtos', label: 'Produtos' },
-  { to: '/admin/produtos/importar', label: 'Importações' },
+  { to: '/admin/produtos/importacoes', label: 'Importações' },
   { to: '/admin/categorias', label: 'Categorias' },
   { to: '/admin/fabricantes', label: 'Marcas' },
   { to: '/admin/montadoras', label: 'Montadoras' },
   { to: '/admin/veiculos', label: 'Aplicações / veículos' },
   { to: '/admin/fornecedores', label: 'Fornecedores / códigos' },
+  { to: '/admin/fornecedores/importar-conversoes', label: 'Conversões' },
+  { to: '/admin/fornecedores/importar-custos', label: 'Custos' },
+  { to: '/admin/precos', label: 'Preços (admin)' },
   { to: '/admin/listas', label: 'Listas de catálogo' },
 ]
 

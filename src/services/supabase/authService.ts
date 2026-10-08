@@ -65,12 +65,14 @@ export async function signUp(params: {
   username?: string
   phone?: string
   cpf?: string
+  companyName?: string
 }): Promise<{ session: Session | null; user: UserProfile | null }> {
   if (!isSupabaseConfigured) throw new AuthNotConfiguredError()
 
   const fullName = `${params.firstName} ${params.lastName}`.trim()
   const phone = params.phone?.trim() ? normalizePhone(params.phone) : null
   const cpf = params.cpf?.replace(/\D/g, '') || null
+  const companyName = params.companyName?.trim() || null
   const { data, error } = await getSupabase().auth.signUp({
     email: params.email.trim(),
     password: params.password,
@@ -82,12 +84,13 @@ export async function signUp(params: {
         username: params.username ?? null,
         phone,
         cpf,
+        company_name: companyName,
       },
     },
   })
   if (error) throw error
 
-  // Persiste CPF no customer quando sessão já existe (confirmação de e-mail desligada)
+  // CPF opcional (PRD UX): só persiste se informado e sessão já existir
   if (data.session?.user && cpf) {
     await getSupabase()
       .from('customers')

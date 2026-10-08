@@ -2,7 +2,7 @@ import { getSupabase } from '@/lib/supabase'
 import { toSlug } from '@/lib/slug'
 import type { Category } from '@/types'
 
-export const CATEGORY_MAX_DEPTH = 3 // Grupo(1) → Categoria(2) → Subcategoria(3)
+export const CATEGORY_MAX_DEPTH = 3 // Categoria(1) → Grupo(2) → Subgrupo(3) — espelha CSV/import
 
 type Row = {
   id: string
@@ -36,7 +36,7 @@ export async function adminListCategories(): Promise<Category[]> {
   return (data as Row[]).map(map)
 }
 
-/** Depth 1 = Grupo (sem pai), 2 = Categoria, 3 = Subcategoria. */
+/** Depth 1 = Categoria (sem pai), 2 = Grupo, 3 = Subgrupo. */
 export function categoryDepth(items: Category[], id: string | null | undefined): number {
   if (!id) return 0
   let depth = 0
@@ -52,13 +52,13 @@ export function categoryDepth(items: Category[], id: string | null | undefined):
 }
 
 export function categoryLevelLabel(depth: number): string {
-  if (depth <= 1) return 'Grupo'
-  if (depth === 2) return 'Categoria'
-  if (depth === 3) return 'Subcategoria'
+  if (depth <= 1) return 'Categoria'
+  if (depth === 2) return 'Grupo'
+  if (depth === 3) return 'Subgrupo'
   return `Nível ${depth}`
 }
 
-/** Path "Grupo / Categoria / Subcategoria". */
+/** Path "Categoria / Grupo / Subgrupo". */
 export function categoryPath(items: Category[], id: string): string {
   const parts: string[] = []
   let cur: string | null | undefined = id
@@ -91,7 +91,7 @@ export function collectCategorySubtreeIds(items: Category[], rootId: string): st
   return ids
 }
 
-/** Pais permitidos: Grupo ou Categoria (depth 1–2). Subcategoria não pode ser pai. */
+/** Pais permitidos: Categoria ou Grupo (depth 1–2). Subgrupo não pode ser pai. */
 export function allowedCategoryParents(
   items: Category[],
   editingId?: string | null,
@@ -130,7 +130,7 @@ export async function adminUpsertCategory(input: {
     const parentDepth = categoryDepth(all, parentId)
     if (parentDepth >= CATEGORY_MAX_DEPTH) {
       throw new Error(
-        'Não é permitido 4º nível. Hierarquia máxima: Grupo → Categoria → Subcategoria.',
+        'Não é permitido 4º nível. Hierarquia máxima: Categoria → Grupo → Subgrupo.',
       )
     }
     if (parentDepth < 1) {
@@ -139,7 +139,7 @@ export async function adminUpsertCategory(input: {
     // Filho terá parentDepth + 1
     if (parentDepth + 1 > CATEGORY_MAX_DEPTH) {
       throw new Error(
-        'Não é permitido 4º nível. Hierarquia máxima: Grupo → Categoria → Subcategoria.',
+        'Não é permitido 4º nível. Hierarquia máxima: Categoria → Grupo → Subgrupo.',
       )
     }
   }

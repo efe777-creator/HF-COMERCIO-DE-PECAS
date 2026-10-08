@@ -5,9 +5,11 @@ import { ErrorState } from '@/components/common/ErrorState'
 import { Input } from '@/components/common/Input'
 import { Loading } from '@/components/common/Loading'
 import { Select } from '@/components/common/Select'
+import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { ProductCard } from '@/components/product/ProductCard'
 import { SavedVehiclesQuickPick } from '@/components/vehicle/SavedVehiclesQuickPick'
 import { features } from '@/config/features'
+import { buildNotFoundWhatsAppMessage } from '@/lib/whatsapp'
 import { listActiveBrands } from '@/services/brands/brandService'
 import { listCategories } from '@/services/categories/categoryService'
 import { searchCatalog } from '@/services/search/searchService'
@@ -20,14 +22,16 @@ const PAGE_SIZE = 24
 
 const SORT_OPTIONS: Array<{ value: ProductSearchSort; label: string }> = [
   { value: 'relevance', label: 'Relevância' },
+  { value: 'name_asc', label: 'Nome A–Z' },
+  { value: 'name_desc', label: 'Nome Z–A' },
+  { value: 'sku_asc', label: 'Código A–Z' },
+  { value: 'sku_desc', label: 'Código Z–A' },
   ...(features.price_enabled
     ? ([
         { value: 'price_asc', label: 'Menor preço' },
         { value: 'price_desc', label: 'Maior preço' },
       ] as const)
     : []),
-  { value: 'name_asc', label: 'Nome A–Z' },
-  { value: 'name_desc', label: 'Nome Z–A' },
 ]
 
 function parseSort(value: string | null): ProductSearchSort {
@@ -65,6 +69,7 @@ export function CatalogPage() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const requestId = useRef(0)
 
   useEffect(() => {
@@ -247,137 +252,95 @@ export function CatalogPage() {
     },
   ].filter(Boolean) as Array<{ key: string; label: string }>
 
-  return (
-    <Container className="py-8">
-      <p className="mb-2 text-[13px] text-hf-muted">
-        <Link to="/" className="hover:underline">
-          Início
-        </Link>{' '}
-        / Catálogo
-      </p>
-      <h1 className="mt-0 mb-2 text-[28px] font-extrabold sm:text-[34px]">Catálogo</h1>
-      <p className="text-hf-muted">
-        Busque por texto ou refine por categoria e veículo. Filtros podem ser usados sozinhos ou
-        combinados.
-      </p>
-
-      <form
-        onSubmit={applySearch}
-        className="mt-5 grid grid-cols-1 gap-3 rounded-hf border border-hf-line bg-hf-surface p-3.5 sm:p-4 lg:grid-cols-[1fr_auto]"
-      >
-        <Input
-          label="Busca"
-          name="catalog-q"
-          value={searchDraft}
-          onChange={(e) => setSearchDraft(e.target.value)}
-          placeholder="Peça, código ou referência"
-        />
-        <div className="flex items-end gap-2">
-          <Button type="submit" variant="primary">
-            Buscar
-          </Button>
-          {activeChips.length ? (
-            <Button type="button" variant="light" onClick={clearFilters}>
-              Limpar
-            </Button>
-          ) : null}
-        </div>
-      </form>
-
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <Select
-          label="Categoria"
-          name="cat"
-          placeholder="Todas"
-          value={cat}
-          options={rootCategories.map((c) => ({ value: c.slug, label: c.name }))}
-          onChange={(e) => patchParams({ cat: e.target.value || null })}
-        />
-        <Select
-          label="Fabricante"
-          name="brand"
-          placeholder="Todos / opcional"
-          value={brand}
-          options={brandOptions}
-          onChange={(e) => patchParams({ brand: e.target.value || null })}
-        />
-        <Select
-          label="Ordenar"
-          name="sort"
-          value={sort}
-          options={SORT_OPTIONS}
-          onChange={(e) =>
-            patchParams({
-              sort: e.target.value === 'relevance' ? null : e.target.value || null,
-            })
-          }
-        />
-        <Select
-          label="Montadora"
-          name="maker"
-          placeholder="Todas / opcional"
-          value={maker}
-          options={(vehicleTree?.makers ?? []).map((m) => ({ value: m, label: m }))}
-          onChange={(e) =>
-            patchParams({
-              maker: e.target.value || null,
-              model: null,
-              year: null,
-              engine: null,
-              version: null,
-            })
-          }
-        />
-        <Select
-          label="Modelo"
-          name="model"
-          placeholder="Todos / opcional"
-          value={model}
-          options={modelOptions}
-          disabled={!maker}
-          onChange={(e) =>
-            patchParams({
-              model: e.target.value || null,
-              year: null,
-              engine: null,
-              version: null,
-            })
-          }
-        />
-        <Select
-          label="Ano"
-          name="year"
-          placeholder="Todos / opcional"
-          value={year}
-          options={yearOptions}
-          disabled={!model}
-          onChange={(e) =>
-            patchParams({
-              year: e.target.value || null,
-            })
-          }
-        />
-        <Select
-          label="Motor"
-          name="engine"
-          placeholder="Todos / opcional"
-          value={engine}
-          options={engineOptions}
-          disabled={!model}
-          onChange={(e) => patchParams({ engine: e.target.value || null })}
-        />
-        <Select
-          label="Versão"
-          name="version"
-          placeholder="Todas / opcional"
-          value={version}
-          options={versionOptions}
-          disabled={!model}
-          onChange={(e) => patchParams({ version: e.target.value || null })}
-        />
-      </div>
-
-      <div className="mt-3 rounded-hf border border-dashed border-[#d8dee3] bg-hf-surface-2 px-3 py-2.5">
+  const filtersPanel = (
+    <div className="space-y-3">
+      <Select
+        label="Categoria"
+        name="cat"
+        placeholder="Todas"
+        value={cat}
+        options={rootCategories.map((c) => ({ value: c.slug, label: c.name }))}
+        onChange={(e) => patchParams({ cat: e.target.value || null })}
+      />
+      <Select
+        label="Marca"
+        name="brand"
+        placeholder="Todas"
+        value={brand}
+        options={brandOptions}
+        onChange={(e) => patchParams({ brand: e.target.value || null })}
+      />
+      <Select
+        label="Ordenar"
+        name="sort"
+        value={sort}
+        options={SORT_OPTIONS}
+        onChange={(e) =>
+          patchParams({
+            sort: e.target.value === 'relevance' ? null : e.target.value || null,
+          })
+        }
+      />
+      <Select
+        label="Montadora"
+        name="maker"
+        placeholder="Todas"
+        value={maker}
+        options={(vehicleTree?.makers ?? []).map((m) => ({ value: m, label: m }))}
+        onChange={(e) =>
+          patchParams({
+            maker: e.target.value || null,
+            model: null,
+            year: null,
+            engine: null,
+            version: null,
+          })
+        }
+      />
+      <Select
+        label="Modelo"
+        name="model"
+        placeholder="Todos"
+        value={model}
+        options={modelOptions}
+        disabled={!maker}
+        onChange={(e) =>
+          patchParams({
+            model: e.target.value || null,
+            year: null,
+            engine: null,
+            version: null,
+          })
+        }
+      />
+      <Select
+        label="Ano"
+        name="year"
+        placeholder="Todos"
+        value={year}
+        options={yearOptions}
+        disabled={!model}
+        onChange={(e) => patchParams({ year: e.target.value || null })}
+      />
+      <Select
+        label="Motor"
+        name="engine"
+        placeholder="Todos"
+        value={engine}
+        options={engineOptions}
+        disabled={!model}
+        onChange={(e) => patchParams({ engine: e.target.value || null })}
+      />
+      <Select
+        label="Versão"
+        name="version"
+        placeholder="Todas"
+        value={version}
+        options={versionOptions}
+        disabled={!model}
+        onChange={(e) => patchParams({ version: e.target.value || null })}
+      />
+      <div className="rounded-[10px] border border-dashed border-hf-line bg-hf-bg px-3 py-2.5">
         <SavedVehiclesQuickPick
           onPick={(v) =>
             patchParams({
@@ -390,6 +353,54 @@ export function CatalogPage() {
           }
         />
       </div>
+      {activeChips.length ? (
+        <Button type="button" variant="light" fullWidth onClick={clearFilters}>
+          Limpar filtros
+        </Button>
+      ) : null}
+    </div>
+  )
+
+  return (
+    <Container className="py-8">
+      <p className="mb-2 text-[13px] text-hf-muted">
+        <Link to="/" className="hover:underline">
+          Início
+        </Link>{' '}
+        / Catálogo
+      </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="mt-0 mb-2 text-[28px] font-extrabold sm:text-[34px]">Catálogo</h1>
+          <p className="text-hf-muted">Busque e filtre — autorização no servidor (RLS).</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="lg:hidden"
+          onClick={() => setFiltersOpen(true)}
+        >
+          Filtrar
+        </Button>
+      </div>
+
+      <form
+        onSubmit={applySearch}
+        className="mt-5 grid grid-cols-1 gap-3 rounded-hf border border-hf-line bg-hf-surface p-3.5 sm:p-4 lg:grid-cols-[1fr_auto]"
+      >
+        <Input
+          label="Busca"
+          name="catalog-q"
+          value={searchDraft}
+          onChange={(e) => setSearchDraft(e.target.value)}
+          placeholder="Peça, código, marca ou aplicação"
+        />
+        <div className="flex items-end gap-2">
+          <Button type="submit" variant="primary">
+            Buscar
+          </Button>
+        </div>
+      </form>
 
       {activeChips.length ? (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -397,7 +408,7 @@ export function CatalogPage() {
             <button
               key={chip.key}
               type="button"
-              className="rounded-full border border-[#d8dee3] bg-[#f7f9fa] px-2.5 py-1.5 text-xs hover:border-hf-line"
+              className="rounded-full border border-hf-line bg-hf-surface px-2.5 py-1.5 text-xs text-hf-ink hover:border-hf-red"
               onClick={() => {
                 if (chip.key === 'maker') {
                   patchParams({ maker: null, model: null, year: null, engine: null, version: null })
@@ -419,43 +430,88 @@ export function CatalogPage() {
         </div>
       ) : null}
 
-      <div className="mt-6">
-        {loading ? <Loading /> : null}
-        {error ? <ErrorState message={error} /> : null}
-        {!loading && !error && products.length === 0 ? (
-          <EmptyState
-            title="Nenhum produto encontrado"
-            description="Ajuste a busca ou os filtros para ver outros resultados."
-            actionLabel="Limpar filtros"
-            actionTo="/catalogo"
-          />
-        ) : null}
-        {!loading && !error && products.length > 0 ? (
-          <>
-            <p className="mb-3 text-sm text-hf-muted">
-              {total} produto{total === 1 ? '' : 's'}
-              {products.length < total ? ` · mostrando ${products.length}` : ''}
-            </p>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-[18px] lg:grid-cols-4">
-              {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-            {hasMore ? (
-              <div className="mt-6 flex justify-center">
-                <Button
-                  type="button"
-                  variant="light"
-                  onClick={() => void loadMore()}
-                  disabled={loadingMore}
-                >
-                  {loadingMore ? 'Carregando…' : 'Carregar mais'}
-                </Button>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="hidden rounded-hf border border-hf-line bg-hf-surface p-4 lg:block">
+          <h2 className="m-0 mb-3 text-sm font-extrabold tracking-wide text-hf-muted uppercase">
+            Filtros
+          </h2>
+          {filtersPanel}
+        </aside>
+
+        <div>
+          {loading ? <Loading /> : null}
+          {error ? <ErrorState message={error} /> : null}
+          {!loading && !error && products.length === 0 ? (
+            <div className="space-y-4">
+              <EmptyState
+                title="Nenhum produto encontrado"
+                description="Ajuste a busca ou os filtros. Se precisar, fale com a HF."
+                actionLabel="Limpar filtros"
+                actionTo="/catalogo"
+              />
+              <div className="flex justify-center">
+                <WhatsAppButton message={buildNotFoundWhatsAppMessage(q)}>
+                  Falar com a HF
+                </WhatsAppButton>
               </div>
-            ) : null}
-          </>
-        ) : null}
+            </div>
+          ) : null}
+          {!loading && !error && products.length > 0 ? (
+            <>
+              <p className="mb-3 text-sm text-hf-muted">
+                {total} produto{total === 1 ? '' : 's'}
+                {products.length < total ? ` · mostrando ${products.length}` : ''}
+              </p>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-[18px]">
+                {products.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+              {hasMore ? (
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    type="button"
+                    variant="light"
+                    onClick={() => void loadMore()}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? 'Carregando…' : 'Carregar mais'}
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
+
+      {filtersOpen ? (
+        <div className="fixed inset-0 z-[200] lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Fechar filtros"
+            onClick={() => setFiltersOpen(false)}
+          />
+          <div className="absolute inset-y-0 right-0 flex w-[min(100%,360px)] flex-col bg-hf-bg shadow-hf">
+            <div className="flex items-center justify-between border-b border-hf-line px-4 py-3">
+              <h2 className="m-0 text-lg font-extrabold">Filtrar</h2>
+              <button
+                type="button"
+                className="text-sm font-semibold text-hf-muted"
+                onClick={() => setFiltersOpen(false)}
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">{filtersPanel}</div>
+            <div className="border-t border-hf-line p-4">
+              <Button type="button" variant="primary" fullWidth onClick={() => setFiltersOpen(false)}>
+                Ver resultados
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </Container>
   )
 }

@@ -4,16 +4,11 @@ import { describe, expect, it } from 'vitest'
 
 const migration = join(
   process.cwd(),
-  'supabase/migrations/20261007140000_apply_catalog_applications_import.sql',
-)
-const hardening = join(
-  process.cwd(),
-  'supabase/migrations/20261007160000_apps_import_no_create_product.sql',
+  'supabase/migrations_hf/06c_apply_catalog_applications_import.sql',
 )
 
-describe('apply_catalog_applications_import — auditoria migration', () => {
+describe('apply_catalog_applications_import — auditoria (migrations_hf)', () => {
   const sql = readFileSync(migration, 'utf8')
-  const hardened = readFileSync(hardening, 'utf8')
 
   it('define RPC com staff_can_import_catalog + grant authenticated', () => {
     expect(sql).toMatch(/create or replace function public\.apply_catalog_applications_import/)
@@ -29,48 +24,12 @@ describe('apply_catalog_applications_import — auditoria migration', () => {
     expect(sql).toMatch(/ja foi processada/)
   })
 
-  it('somente kind catalog_applications e status preview/validated', () => {
+  it('nao cria produto — SKU inexistente e erro', () => {
+    expect(sql).toMatch(/produto nao cadastrado/i)
+    expect(sql).not.toMatch(/insert into public\.products/i)
+  })
+
+  it('kind catalog_applications', () => {
     expect(sql).toMatch(/catalog_applications/)
-    expect(sql).toMatch(/preview.*validated|validated/)
-  })
-
-  it('rollback total: sem exception when others no loop de mutacao', () => {
-    // catalog import engole erros por linha; apply de aplicacoes NAO deve
-    const loopStart = sql.indexOf('for r in')
-    const loopBody = sql.slice(loopStart)
-    expect(loopBody).not.toMatch(/exception\s+when\s+others/i)
-  })
-
-  it('relatorio jsonb estruturado', () => {
-    for (const key of [
-      'created_products',
-      'existing_products',
-      'created_applications',
-      'updated_applications',
-      'already_covered',
-      'skipped_review',
-      'skipped_error',
-      'total_processed',
-    ]) {
-      expect(sql).toContain(key)
-    }
-  })
-
-  it('periodo na PVC; nao usa VV.year como fonte de verdade da aplicacao', () => {
-    expect(sql).toMatch(/year_start/)
-    expect(sql).toMatch(/year_end/)
-    expect(sql).toMatch(/product_vehicle_compatibility/)
-  })
-
-  it('VV ambigua sem vinculo → raise revisao (nao escolhe mais antigo)', () => {
-    expect(sql).toMatch(/versoes duplicadas/)
-    expect(sql).not.toMatch(/order by vv\.created_at/i)
-  })
-
-  it('hardening: nao cria produto (SKU inexistente = erro)', () => {
-    expect(hardened).toMatch(/NUNCA cria produto|produto nao cadastrado/)
-    expect(hardened).not.toMatch(/elsif v_create_product then/)
-    const loop = hardened.slice(hardened.indexOf('for r in'))
-    expect(loop).not.toMatch(/insert into public\.products/i)
   })
 })

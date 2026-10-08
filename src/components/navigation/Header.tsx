@@ -4,23 +4,26 @@ import { NavBar } from './NavBar'
 import { SearchBar } from './SearchBar'
 import { MobileDrawer } from './MobileDrawer'
 import { Container } from '@/components/layout/Container'
-import { useCategories } from '@/hooks/useCatalog'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
+const mobileLinks = [
+  { to: '/', label: 'Início' },
+  { to: '/catalogo', label: 'Catálogo' },
+  { to: '/categorias', label: 'Categorias' },
+  { to: '/marcas', label: 'Marcas' },
+  { to: '/veiculo', label: 'Aplicações' },
+  { to: '/atendimento', label: 'Atendimento' },
+  { to: '/conta', label: 'Minha conta' },
+]
+
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const categories = useCategories()
 
   return (
-    <header className="sticky top-0 z-[100] border-b border-hf-line bg-hf-bg/90 backdrop-blur-md">
+    <header className="sticky top-0 z-[100] border-b border-hf-line bg-hf-bg/92 backdrop-blur-md">
       <Container className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 py-2 sm:gap-x-4 sm:py-2.5 lg:grid-cols-[160px_minmax(0,1fr)_auto] lg:min-h-[84px] lg:gap-x-[22px] lg:py-3">
-        <Logo />
-        <SearchBar />
-        <div className="flex items-center justify-end gap-2 lg:gap-4">
-          <div className="hidden items-center gap-4 lg:flex">
-            <AccountButton />
-          </div>
+        <div className="flex items-center gap-2 lg:contents">
           <button
             type="button"
             className="grid h-10 w-10 place-items-center rounded-[10px] border border-hf-line bg-hf-surface text-lg text-hf-ink lg:hidden"
@@ -29,57 +32,29 @@ export function Header() {
           >
             ☰
           </button>
+          <Logo />
+        </div>
+        <div className="col-span-3 order-last w-full lg:col-span-1 lg:order-none">
+          <SearchBar />
+        </div>
+        <div className="flex items-center justify-end gap-2 lg:gap-4">
+          <AccountButton />
         </div>
       </Container>
       <NavBar />
 
-      <MobileDrawer open={menuOpen} title="Menu" onClose={() => setMenuOpen(false)}>
+      <MobileDrawer open={menuOpen} title="Menu HF" onClose={() => setMenuOpen(false)}>
         <nav className="flex flex-col gap-1 text-sm">
-          <Link
-            to="/"
-            className="rounded-[10px] px-3 py-2.5 font-semibold text-hf-ink hover:bg-hf-surface"
-            onClick={() => setMenuOpen(false)}
-          >
-            Início
-          </Link>
-          <Link
-            to="/catalogo"
-            className="rounded-[10px] px-3 py-2.5 font-semibold text-hf-ink hover:bg-hf-surface"
-            onClick={() => setMenuOpen(false)}
-          >
-            Catálogo / buscar peça
-          </Link>
-          <Link
-            to="/veiculo"
-            className="rounded-[10px] px-3 py-2.5 font-semibold text-hf-ink hover:bg-hf-surface"
-            onClick={() => setMenuOpen(false)}
-          >
-            Buscar pelo carro
-          </Link>
-          <Link
-            to="/conta"
-            className="rounded-[10px] px-3 py-2.5 font-semibold text-hf-ink hover:bg-hf-surface"
-            onClick={() => setMenuOpen(false)}
-          >
-            Minha conta
-          </Link>
-          {categories.data.length > 0 ? (
-            <>
-              <p className="mt-3 mb-1 px-3 text-xs font-bold uppercase tracking-wide text-hf-muted">
-                Categorias
-              </p>
-              {categories.data.slice(0, 12).map((cat) => (
-                <Link
-                  key={cat.id}
-                  to={`/catalogo?cat=${encodeURIComponent(cat.slug)}`}
-                  className="rounded-[10px] px-3 py-2 text-hf-ink hover:bg-hf-surface"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {cat.name}
-                </Link>
-              ))}
-            </>
-          ) : null}
+          {mobileLinks.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="rounded-[10px] px-3 py-2.5 font-semibold text-hf-ink hover:bg-hf-surface"
+              onClick={() => setMenuOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </MobileDrawer>
     </header>

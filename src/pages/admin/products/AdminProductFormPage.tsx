@@ -75,7 +75,7 @@ export function AdminProductFormPage() {
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
   const [status, setStatus] = useState<NonNullable<Product['status']>>('draft')
-  /** Hierarquia admin: Grupo → Categoria → Subcategoria (folha salva em products.category_id). */
+  /** Hierarquia: Categoria → Grupo → Subgrupo (folha em products.category_id). State legado L1=catGrupoId. */
   const [catGrupoId, setCatGrupoId] = useState('')
   const [catCategoriaId, setCatCategoriaId] = useState('')
   const [catSubId, setCatSubId] = useState('')
@@ -402,7 +402,7 @@ export function AdminProductFormPage() {
             </p>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="text-sm">
-                <span className="mb-1 block font-semibold">Grupo</span>
+                <span className="mb-1 block font-semibold">Categoria</span>
                 <select
                   className="w-full rounded-[10px] border border-hf-line px-3 py-2"
                   value={catGrupoId}
@@ -424,7 +424,7 @@ export function AdminProductFormPage() {
                 </select>
               </label>
               <label className="text-sm">
-                <span className="mb-1 block font-semibold">Categoria</span>
+                <span className="mb-1 block font-semibold">Grupo</span>
                 <select
                   className="w-full rounded-[10px] border border-hf-line px-3 py-2"
                   value={catCategoriaId}
@@ -446,7 +446,7 @@ export function AdminProductFormPage() {
                 </select>
               </label>
               <label className="text-sm">
-                <span className="mb-1 block font-semibold">Subcategoria</span>
+                <span className="mb-1 block font-semibold">Subgrupo</span>
                 <select
                   className="w-full rounded-[10px] border border-hf-line px-3 py-2"
                   value={catSubId}

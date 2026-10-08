@@ -1,7 +1,7 @@
-import { parseMoneyBr } from '@/lib/money'
+﻿import { parseMoneyBr } from '@/lib/money'
 import { getSupabase } from '@/lib/supabase'
 import { toSlug } from '@/lib/slug'
-import { FAL_PRINCIPAL_SUPPLIER_CODE } from '@/services/admin/adminCostImportService'
+import { HF_PRINCIPAL_SUPPLIER_CODE } from '@/services/admin/adminCostImportService'
 import { getImportContract } from '@/services/import/contracts'
 import { decodeImportCsvText } from '@/services/import/decodeImportCsvText'
 import { parseCsvToGrid } from '@/services/import/parseCsv'
@@ -16,7 +16,7 @@ import {
   type PricingMethod,
 } from '@/services/pricing/pricingFormulas'
 
-/** Custo do fornecedor do produto; se NULL, fallback FAL-SUP-01. */
+/** Custo do fornecedor do produto; se NULL, fallback HF-SUP-01. */
 export function resolveBaseCost(
   productId: string,
   supplierId: string | null | undefined,
@@ -1080,7 +1080,7 @@ async function loadFalPrincipalSupplierId(): Promise<string | null> {
   const { data, error } = await getSupabase()
     .from('suppliers')
     .select('id')
-    .eq('code', FAL_PRINCIPAL_SUPPLIER_CODE)
+    .eq('code', HF_PRINCIPAL_SUPPLIER_CODE)
     .eq('status', 'active')
     .maybeSingle()
   if (error) throw error
@@ -1776,3 +1776,4 @@ export async function adminGetImportDetail(importId: string): Promise<PriceListI
     })),
   }
 }
+

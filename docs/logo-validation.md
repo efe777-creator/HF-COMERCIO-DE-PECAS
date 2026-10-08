@@ -1,7 +1,13 @@
-# Validação de logo (ponteiro / histórico)
+# Validação logo HF (transparente)
 
-Histórico da Fase 1 (ZIP) e consolidação atual:
+Fonte: `LOGO RENDERIZADO sem fundo.png` (2160×2160, ARGB).
 
-**[docs/entrada/IDENTIDADE_VISUAL.md](../../docs/entrada/IDENTIDADE_VISUAL.md)**
+Processamento: crop ao bbox opaco + padding, resize 512×372, cantos A=0.
 
-Logo principal em uso no app: `src/assets/logos/logo-fal-transparente.png` (origem `LOGOTIPO/logo-fal-transparente.png`).
+Saídas:
+
+- `src/assets/logos/logo-hf.png`
+- `public/logo-hf.png`
+- `public/favicon.png`
+
+Cantos verificados: A=0 (sem caixa branca no header escuro).

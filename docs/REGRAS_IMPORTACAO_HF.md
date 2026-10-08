@@ -9,23 +9,36 @@ Arquivo CSV/XLSX → Upload → Mapeamento → Preview → Validação
 
 ## Formato BR
 
-- UTF-8
-- Separador comum `;`
+- UTF-8 (moldes com BOM)
+- Separador `;`
 
 ## Regras obrigatórias
 
 1. Produto novo → `status = draft` (nunca publicar automaticamente)
 2. SKU existente → **update parcial** (campos vazios não apagam dados)
-3. SKU duplicado no arquivo → erro de validação
-4. Marca ou categoria inexistente → **erro** (não auto-criar)
-5. Não inventar aplicações, preços ou estoque
+3. SKU duplicado no arquivo → consolidado / validado conforme frente
+4. Categoria, grupo, subgrupo ou montadora inexistente → **erro** (não auto-criar). Hierarquia igual ao Admin: **Categoria → Grupo → Subgrupo**. Escopo HF L1: Suspensão, Direção, Freios, Transmissão.
+5. Aplicações não criam produto — SKU precisa existir
+6. Preços/custos importados são **admin internos**; vitrine B2B não exibe preço
 
-## Contratos existentes (adaptar)
+## RPCs (Supabase HF)
 
-- Import produtos: `apply_catalog_products_import`
-- Import aplicações: `apply_catalog_applications_import`
-- Bundle (legado “importar-hf”): transformar em import nativo do catálogo HF
+| Frente | Kind | RPC |
+|--------|------|-----|
+| Produtos | `catalog` | `apply_catalog_products_import` |
+| Aplicações | `catalog_applications` | `apply_catalog_applications_import` |
+| Conversões | `supplier_conversion` | `apply_supplier_conversion_import` |
+| Custos | `supplier_cost` | `apply_supplier_cost_import` |
+| Listas de preço | `price_list` | `apply_price_list_import` |
 
-## Fora do MVP
+Bundle HF: preview client-side → cria imports de produtos e aplicações e chama as RPCs acima.
 
-Import de custos, conversões comerciais, listas de preço e estoque.
+Fornecedor principal seed: `HF-SUP-01`.
+
+Moldes: ver `docs/MOLDES_IMPORTACAO_HF.md` e hub `/admin/produtos/importacoes`.
+
+## Fora do escopo (loja)
+
+- Preço / estoque / carrinho na vitrine pública
+- Import de clientes B2B, imagens ou estoque físico
+- Auto-criar categorias/marcas na importação

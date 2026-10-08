@@ -5,7 +5,8 @@
 export const features = {
   catalog_enabled: true,
   customer_login_enabled: true,
-  customer_specific_catalog_enabled: true,
+  /** false = catálogo published livre (sem login / sem lista B2B por cliente). */
+  customer_specific_catalog_enabled: false,
   ecommerce_enabled: false,
   price_enabled: false,
   inventory_enabled: false,
