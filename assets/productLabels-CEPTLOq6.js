@@ -1,1 +1,0 @@
-var e=`Código referência`;function t(t){return`${e}: ${t}`}export{t as n,e as t};
