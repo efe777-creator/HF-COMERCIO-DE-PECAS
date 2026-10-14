@@ -1,11 +1,13 @@
 import { Container } from '@/components/layout/Container'
 import { NavLink } from 'react-router-dom'
 
+/** Links da barra principal (cliente). Sobre = página institucional pública. */
 const links = [
   { to: '/catalogo', label: 'Catálogo' },
   { to: '/categorias', label: 'Categorias' },
   { to: '/marcas', label: 'Marcas' },
   { to: '/veiculo', label: 'Aplicações' },
+  { to: '/sobre', label: 'Sobre a HF' },
   { to: '/atendimento', label: 'Atendimento' },
 ]
 

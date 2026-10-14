@@ -29,6 +29,9 @@ const BrandsIndexPage = lazy(() =>
 const AtendimentoPage = lazy(() =>
   import('@/pages/Support/AtendimentoPage').then((m) => ({ default: m.AtendimentoPage })),
 )
+const SobrePage = lazy(() =>
+  import('@/pages/About/SobrePage').then((m) => ({ default: m.SobrePage })),
+)
 const ProductPage = lazy(() =>
   import('@/pages/Product/ProductPage').then((m) => ({ default: m.ProductPage })),
 )
@@ -284,6 +287,14 @@ const publicChildren = [
     element: (
       <Suspend>
         <AtendimentoPage />
+      </Suspend>
+    ),
+  },
+  {
+    path: 'sobre',
+    element: (
+      <Suspend>
+        <SobrePage />
       </Suspend>
     ),
   },

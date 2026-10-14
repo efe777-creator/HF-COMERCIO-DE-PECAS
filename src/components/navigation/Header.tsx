@@ -13,6 +13,7 @@ const mobileLinks = [
   { to: '/categorias', label: 'Categorias' },
   { to: '/marcas', label: 'Marcas' },
   { to: '/veiculo', label: 'Aplicações' },
+  { to: '/sobre', label: 'Sobre a HF' },
   { to: '/atendimento', label: 'Atendimento' },
   { to: '/conta', label: 'Minha conta' },
 ]

@@ -38,6 +38,9 @@ export function Footer() {
           <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/veiculo">
             Aplicações
           </Link>
+          <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/sobre">
+            Sobre a HF
+          </Link>
         </div>
         <div>
           <h4 className="mt-0 mb-3 text-hf-ink">Conta</h4>
