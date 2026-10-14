@@ -18,6 +18,17 @@ pnpm install   # ou npm install
 pnpm dev
 ```
 
+## Branches
+
+| Branch | Uso |
+|--------|-----|
+| `plan` | WIP de planos Cursor / docs — abre PR para `dev` |
+| `dev` | Integração e trabalho diário — abre PR para `main` quando estável |
+| `main` | Código estável (referência de produção) |
+| `hostinger-static` | Só artefato de deploy (`dist` + `site.zip`) — **não** mergear fonte nesta branch |
+
+Fluxo: `plan` → `dev` → `main`. Deploy Hostinger: rebuild a partir de `main` e atualizar `hostinger-static` (ver `docs/DEPLOY_HOSTINGER.md`).
+
 ## Documentação
 
 Ver pasta `docs/`:
@@ -27,6 +38,7 @@ Ver pasta `docs/`:
 - `ROADMAP_HF.md`
 - `MODELO_CATALOGO_HF.md`
 - `REGRAS_IMPORTACAO_HF.md`
+- `DEPLOY_HOSTINGER.md`
 
 ## Segurança
 
