@@ -1,0 +1,1 @@
+import{n as e,r as t}from"./supabase-BEw5lyYJ.js";async function n(){if(!e||!t)return[];let{data:n,error:r}=await t.from(`product_brands`).select(`id, name, slug, status`).eq(`status`,`active`).order(`name`);if(r)throw r;return(n??[]).map(e=>({id:String(e.id),name:String(e.name),slug:String(e.slug),status:e.status}))}export{n as t};

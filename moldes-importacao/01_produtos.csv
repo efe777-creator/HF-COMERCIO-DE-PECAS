@@ -1,0 +1,5 @@
+﻿codigo_fal;nome;categoria;grupo;subgrupo;posicao;lado;descricao_curta;descricao
+HF-IMP-001;Amortecedor dianteiro exemplo;SUSPENSÃO;AMORTECEDORES E KITS;;DIANT;;Amortecedor dianteiro;Exemplo — só categorias do escopo HF
+HF-IMP-002;Pivô suspensão exemplo;SUSPENSÃO;PIVÔ;;DIANT;LE;Pivô dianteiro esquerdo;Exemplo com lado
+HF-IMP-003;Pastilha de freio exemplo;FREIOS;PASTILHAS;;;;;Pastilha de freio;Exemplo Freios
+HF-IMP-004;Homocinética exemplo;TRANSMISSÃO;HOMOCINÉTICA;;;;LE;Homocinética;Exemplo Transmissão
