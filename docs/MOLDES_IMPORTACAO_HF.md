@@ -5,7 +5,7 @@ Arquivos em `public/moldes-importacao/` (UTF-8 com BOM, separador `;`).
 | Arquivo | Uso |
 |---------|-----|
 | `01_produtos.csv` | Cadastro de produtos |
-| `02_aplicacoes.csv` | Aplicações (SKU existente) |
+| `02_aplicacoes.csv` | Aplicações (SKU existente): `codigo_fal;montadora;modelo;versao;ano_inicio;ano_fim` — **sem** coluna nome |
 | `03_bundle_hf.csv` | Produto + aplicação na mesma planilha |
 | `04_conversoes_fornecedor.csv` | Código HF ↔ fornecedor |
 | `05_custos_fornecedor.csv` | Custo por código fornecedor |

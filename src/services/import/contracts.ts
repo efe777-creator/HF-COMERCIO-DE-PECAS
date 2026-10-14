@@ -108,7 +108,8 @@ const priceListContract: ImportContract = {
 
 /**
  * Frente B — aplicações (compatibilidade).
- * Nome opcional; produto NÃO é criado — SKU deve existir.
+ * Molde oficial: codigo + montadora + modelo + versao + anos (sem nome).
+ * `name` permanece opcional só para arquivos legados; produto NÃO é criado — SKU deve existir.
  */
 const catalogApplicationsContract: ImportContract = {
   kind: 'catalog_applications',
