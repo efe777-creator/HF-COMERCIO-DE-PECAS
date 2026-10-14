@@ -1,0 +1,1 @@
+var e={catalog_enabled:!0,customer_login_enabled:!0,customer_specific_catalog_enabled:!1,ecommerce_enabled:!1,price_enabled:!1,inventory_enabled:!1,quotation_enabled:!1,orders_enabled:!1,cart_enabled:!1,checkout_enabled:!1,payment_enabled:!1,freight_enabled:!1,vehicle_plate_enabled:!1};export{e as t};
