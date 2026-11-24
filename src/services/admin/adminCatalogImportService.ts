@@ -7,7 +7,7 @@ import { parseXlsxToGrid } from '@/services/import/parseXlsx'
 import { adminListCategories } from '@/services/admin/adminCategoryService'
 import {
   consolidateProductRows,
-  enforceExistingCategories,
+  ensureImportCategories,
   productFrozenPayload,
   type ImportCategoryNode,
   type ProductPreviewRow,
@@ -98,7 +98,7 @@ export async function adminPreviewCatalogImport(file: File): Promise<{
     loadExistingSkus(skus),
     loadPublishedCategoryNodes(),
   ])
-  const consolidated = enforceExistingCategories(
+  const consolidated = ensureImportCategories(
     consolidateProductRows(validation.mapped, existing),
     cats,
   )

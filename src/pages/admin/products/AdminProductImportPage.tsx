@@ -8,6 +8,7 @@ import {
   type CatalogImportPreviewRow,
 } from '@/services/admin/adminCatalogImportService'
 import { delimiterLabel } from '@/services/import'
+import { toUserMessage } from '@/lib/toUserMessage'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -70,13 +71,31 @@ export function AdminProductImportPage() {
     setError(null)
     try {
       const result = await adminApplyCatalogImport(importId)
-      setReport(
-        `Criados: ${result.created}. Atualizados: ${result.updated}. Ignorados: ${result.skipped}. ` +
-          `(Categorias não são criadas na importação — cadastre em Admin → Categorias.)`,
-      )
+      const previewErrors = preview?.filter((r) => !r.ok).length ?? 0
+      const willCreateCats =
+        preview?.filter(
+          (r) => r.ok && (r.createCategoria || r.createGrupo || r.createSubgrupo),
+        ).length ?? 0
+      const parts = [
+        `Criados: ${result.created}`,
+        `Atualizados: ${result.updated}`,
+        `Categorias/grupos criados: ${result.categories_created}`,
+        `Falhas no apply: ${result.failed}`,
+        `Ignorados: ${result.skipped}`,
+      ]
+      if (willCreateCats > 0) {
+        parts.push(`${willCreateCats} linha(s) pediam hierarquia nova (ver prévia)`)
+      }
+      if (previewErrors > 0) {
+        parts.push(`${previewErrors} linha(s) com erro na prévia — não entraram`)
+      }
+      if (result.created === 0 && result.updated === 0) {
+        parts.push('Nenhum produto foi gravado')
+      }
+      setReport(parts.join('. ') + '.')
       setPhase('done')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao aplicar importação')
+      setError(toUserMessage(err, 'Falha ao aplicar importação'))
       setPhase('preview')
     } finally {
       setBusy(false)
@@ -84,9 +103,14 @@ export function AdminProductImportPage() {
   }
 
   const validCount = preview?.filter((r) => r.ok).length ?? 0
+  const errorCount = preview ? preview.length - validCount : 0
+  const warnCreateCount =
+    preview?.filter(
+      (r) => r.ok && (r.createCategoria || r.createGrupo || r.createSubgrupo),
+    ).length ?? 0
   const visible = preview
     ? showOnlyErrors
-      ? preview.filter((r) => !r.ok)
+      ? preview.filter((r) => !r.ok || r.createCategoria || r.createGrupo || r.createSubgrupo)
       : preview
     : []
 
@@ -122,9 +146,9 @@ export function AdminProductImportPage() {
               <h2 className="m-0 text-lg font-extrabold text-hf-ink">Arquivo de cadastro</h2>
               <p className="mt-1 text-sm text-hf-muted">
                 Envie CSV ou Excel com código referência, nome, categoria, grupo (e opcionalmente
-                subgrupo, posição, lado e descrições). SKUs repetidos no arquivo são consolidados
-                em um produto. Produtos novos entram como rascunho e indisponíveis; a reimportação
-                atualiza o cadastro sem alterar preço nem estoque.
+                subgrupo, posição, lado e descrições). SKUs repetidos são consolidados. Categoria,
+                grupo ou subgrupo inexistentes serão criados automaticamente. Produtos novos entram
+                como rascunho e indisponíveis.
               </p>
               <input
                 ref={fileInputRef}
@@ -186,7 +210,10 @@ export function AdminProductImportPage() {
           {preview && phase !== 'done' ? (
             <>
               <p className="rounded-[10px] border border-[#f0d979] bg-[#fff8db] p-3 text-sm">
-                Nenhuma alteração foi feita até a confirmação. Válidos: {validCount}.
+                Prévia — nada foi gravado ainda. Válidos: {validCount}
+                {warnCreateCount > 0 ? ` · Criará categoria/grupo: ${warnCreateCount}` : null}
+                {errorCount > 0 ? ` · Erros: ${errorCount}` : null}. Após confirmar, fotos casam
+                com o código referência já gravado.
               </p>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -194,7 +221,7 @@ export function AdminProductImportPage() {
                   checked={showOnlyErrors}
                   onChange={(e) => setShowOnlyErrors(e.target.checked)}
                 />
-                Mostrar só erros
+                Mostrar só erros e avisos de criação
               </label>
               <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
                 <table className="min-w-full text-left text-sm">

@@ -1,5 +1,7 @@
 import { mockVehicleTree } from '@/data/mocks/vehicles'
+import { expandYearsForSelector } from '@/lib/vehicleAppYear'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
+import { buildYearsByModelFromSources } from '@/services/vehicles/buildYearsByModel'
 import type { VehicleFilter, VehicleOptionTree } from '@/types'
 
 function relationName(value: unknown): string | undefined {
@@ -11,8 +13,24 @@ function relationName(value: unknown): string | undefined {
   return (value as { name?: string }).name
 }
 
+/** Chave composta modelo|versão para cascata pública. */
+export function vehicleModelVersionKey(model: string, version: string): string {
+  return `${model}|${version}`
+}
+
+function pushUnique(map: Record<string, string[]>, key: string, value: string) {
+  map[key] ??= []
+  if (!map[key].includes(value)) map[key].push(value)
+}
+
+function pushYear(map: Record<string, Set<number>>, key: string, year: number) {
+  map[key] ??= new Set()
+  map[key].add(year)
+}
+
 /**
- * Opções de veículo a partir de manufacturers / models / vehicle_versions.
+ * Opções de veículo a partir de manufacturers / models / vehicle_versions / PVC.
+ * Anos do seletor vêm da faixa PVC (+ vv.year / fab do modelo).
  * Fallback mock só sem Supabase configurado.
  */
 export async function getVehicleOptions(): Promise<VehicleOptionTree> {
@@ -20,30 +38,44 @@ export async function getVehicleOptions(): Promise<VehicleOptionTree> {
     return mockVehicleTree
   }
 
-  const [{ data: makers, error: e1 }, { data: models, error: e2 }, { data: versions, error: e3 }] =
-    await Promise.all([
-      supabase.from('manufacturers').select('id, name').eq('status', 'active').order('name'),
-      supabase
-        .from('models')
-        .select('id, name, manufacturer_id, manufacturers(name)')
-        .eq('status', 'active')
-        .order('name'),
-      supabase
-        .from('vehicle_versions')
-        .select('year, engine, version_name, model_id, manufacturers(name), models(name)')
-        .eq('status', 'active'),
-    ])
+  const [
+    { data: makers, error: e1 },
+    { data: models, error: e2 },
+    { data: versions, error: e3 },
+    { data: pvcRows, error: e4 },
+  ] = await Promise.all([
+    supabase.from('manufacturers').select('id, name').eq('status', 'active').order('name'),
+    supabase
+      .from('models')
+      .select(
+        'id, name, manufacturer_id, production_year_start, production_year_end, manufacturers(name)',
+      )
+      .eq('status', 'active')
+      .order('name'),
+    supabase
+      .from('vehicle_versions')
+      .select('id, year, engine, version_name, model_id, manufacturers(name), models(name)')
+      .eq('status', 'active'),
+    supabase.from('product_vehicle_compatibility').select('vehicle_version_id, year_start, year_end'),
+  ])
 
   if (e1) throw e1
   if (e2) throw e2
   if (e3) throw e3
+  if (e4) throw e4
 
   const makerNames = (makers ?? []).map((m) => String(m.name))
   const modelsByMaker: Record<string, string[]> = {}
-  const yearsByModel: Record<string, string[]> = {}
   const enginesByModelYear: Record<string, string[]> = {}
   const enginesByModel: Record<string, string[]> = {}
   const versionsByModel: Record<string, string[]> = {}
+  const enginesByModelVersion: Record<string, string[]> = {}
+  const yearsByModelVersionSets: Record<string, Set<number>> = {}
+
+  const modelMeta = new Map<
+    string,
+    { name: string; productionYearStart: number | null; productionYearEnd: number | null }
+  >()
 
   for (const m of models ?? []) {
     const makerName =
@@ -55,46 +87,102 @@ export async function getVehicleOptions(): Promise<VehicleOptionTree> {
     if (!modelsByMaker[makerName].includes(modelName)) {
       modelsByMaker[makerName].push(modelName)
     }
+    modelMeta.set(String(m.id), {
+      name: modelName,
+      productionYearStart:
+        m.production_year_start == null ? null : Number(m.production_year_start),
+      productionYearEnd: m.production_year_end == null ? null : Number(m.production_year_end),
+    })
   }
+
+  const versionById = new Map<
+    string,
+    {
+      modelName: string
+      year: number | null
+      engine: string | null
+      versionName: string | null
+    }
+  >()
 
   for (const v of versions ?? []) {
     const modelName = relationName(v.models)
     if (!modelName) continue
+    const id = String(v.id)
+    const year = v.year == null ? null : Number(v.year)
+    const engine = v.engine ? String(v.engine) : null
+    const versionName = v.version_name ? String(v.version_name) : null
+    versionById.set(id, { modelName, year, engine, versionName })
 
-    if (v.year != null) {
-      const year = String(v.year)
-      yearsByModel[modelName] ??= []
-      if (!yearsByModel[modelName].includes(year)) yearsByModel[modelName].push(year)
-
-      if (v.engine) {
-        const key = `${modelName}|${year}`
-        enginesByModelYear[key] ??= []
-        const engine = String(v.engine)
-        if (!enginesByModelYear[key].includes(engine)) {
-          enginesByModelYear[key].push(engine)
-        }
-      }
+    if (year != null && engine) {
+      pushUnique(enginesByModelYear, `${modelName}|${year}`, engine)
     }
 
-    if (v.engine) {
-      enginesByModel[modelName] ??= []
-      const engine = String(v.engine)
-      if (!enginesByModel[modelName].includes(engine)) {
-        enginesByModel[modelName].push(engine)
-      }
+    if (engine) {
+      pushUnique(enginesByModel, modelName, engine)
     }
 
-    if (v.version_name) {
-      versionsByModel[modelName] ??= []
-      const vn = String(v.version_name)
-      if (!versionsByModel[modelName].includes(vn)) {
-        versionsByModel[modelName].push(vn)
+    if (versionName) {
+      pushUnique(versionsByModel, modelName, versionName)
+      const mvKey = vehicleModelVersionKey(modelName, versionName)
+      if (engine) pushUnique(enginesByModelVersion, mvKey, engine)
+      if (year != null) pushYear(yearsByModelVersionSets, mvKey, year)
+    }
+  }
+
+  const yearSources: Parameters<typeof buildYearsByModelFromSources>[0] = []
+
+  for (const pvc of pvcRows ?? []) {
+    const vv = versionById.get(String(pvc.vehicle_version_id))
+    if (!vv) continue
+    const yearStart = pvc.year_start == null ? null : Number(pvc.year_start)
+    const yearEnd = pvc.year_end == null ? null : Number(pvc.year_end)
+    yearSources.push({
+      modelName: vv.modelName,
+      versionYear: vv.year,
+      yearStart,
+      yearEnd,
+    })
+    if (vv.versionName) {
+      const mvKey = vehicleModelVersionKey(vv.modelName, vv.versionName)
+      for (const y of expandYearsForSelector(yearStart, yearEnd, vv.year)) {
+        pushYear(yearsByModelVersionSets, mvKey, y)
       }
     }
   }
 
-  for (const k of Object.keys(yearsByModel)) {
-    yearsByModel[k].sort((a, b) => Number(b) - Number(a))
+  // Garante anos mesmo sem PVC: vv.year + fab do modelo.
+  for (const [modelId, meta] of modelMeta) {
+    const modelVersions = (versions ?? []).filter((v) => String(v.model_id) === modelId)
+    if (modelVersions.length === 0) {
+      yearSources.push({
+        modelName: meta.name,
+        versionYear: null,
+        yearStart: null,
+        yearEnd: null,
+        productionYearStart: meta.productionYearStart,
+        productionYearEnd: meta.productionYearEnd,
+      })
+      continue
+    }
+    for (const v of modelVersions) {
+      const hasPvc = (pvcRows ?? []).some((p) => String(p.vehicle_version_id) === String(v.id))
+      if (hasPvc) continue
+      yearSources.push({
+        modelName: meta.name,
+        versionYear: v.year == null ? null : Number(v.year),
+        yearStart: null,
+        yearEnd: null,
+        productionYearStart: meta.productionYearStart,
+        productionYearEnd: meta.productionYearEnd,
+      })
+    }
+  }
+
+  const yearsByModel = buildYearsByModelFromSources(yearSources)
+  const yearsByModelVersion: Record<string, string[]> = {}
+  for (const [key, set] of Object.entries(yearsByModelVersionSets)) {
+    yearsByModelVersion[key] = [...set].sort((a, b) => b - a).map(String)
   }
 
   return {
@@ -104,6 +192,8 @@ export async function getVehicleOptions(): Promise<VehicleOptionTree> {
     enginesByModelYear,
     enginesByModel,
     versionsByModel,
+    enginesByModelVersion,
+    yearsByModelVersion,
   }
 }
 

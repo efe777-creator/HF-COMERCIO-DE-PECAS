@@ -9,12 +9,24 @@ import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { ProductCard } from '@/components/product/ProductCard'
 import { SavedVehiclesQuickPick } from '@/components/vehicle/SavedVehiclesQuickPick'
 import { features } from '@/config/features'
+import { useProductCompatVerdicts } from '@/hooks/useProductCompatVerdicts'
 import { buildNotFoundWhatsAppMessage } from '@/lib/whatsapp'
 import { listActiveBrands } from '@/services/brands/brandService'
 import { listCategories } from '@/services/categories/categoryService'
+import { mapEquivalentSkus } from '@/services/products/equivalenceLinksService'
 import { searchCatalog } from '@/services/search/searchService'
-import { getVehicleOptions } from '@/services/vehicles/vehicleService'
-import type { Category, Product, ProductBrand, ProductSearchSort, VehicleOptionTree } from '@/types'
+import {
+  getVehicleOptions,
+  vehicleModelVersionKey,
+} from '@/services/vehicles/vehicleService'
+import type {
+  Category,
+  Product,
+  ProductBrand,
+  ProductSearchSort,
+  VehicleFilter,
+  VehicleOptionTree,
+} from '@/types'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -60,6 +72,7 @@ export function CatalogPage() {
 
   const [searchDraft, setSearchDraft] = useState(q)
   const [products, setProducts] = useState<Product[]>([])
+  const [equivSkus, setEquivSkus] = useState<Map<string, string[]>>(() => new Map())
   const [total, setTotal] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [loadedPage, setLoadedPage] = useState(1)
@@ -70,7 +83,39 @@ export function CatalogPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
+
+  useEffect(() => {
+    if (!products.length) {
+      setEquivSkus(new Map())
+      return
+    }
+    let active = true
+    void mapEquivalentSkus(products.map((p) => p.id))
+      .then((m) => {
+        if (active) setEquivSkus(m)
+      })
+      .catch(() => {
+        if (active) setEquivSkus(new Map())
+      })
+    return () => {
+      active = false
+    }
+  }, [products])
   const requestId = useRef(0)
+
+  const vehicleFilter: VehicleFilter | null = useMemo(() => {
+    if (!maker && !model && !year && !engine && !version) return null
+    return {
+      maker: maker || undefined,
+      model: model || undefined,
+      year: year || undefined,
+      engine: engine || undefined,
+      version: version || undefined,
+    }
+  }, [maker, model, year, engine, version])
+
+  const productIds = useMemo(() => products.map((p) => p.id), [products])
+  const { verdicts } = useProductCompatVerdicts(productIds, vehicleFilter)
 
   useEffect(() => {
     setSearchDraft(q)
@@ -157,29 +202,54 @@ export function CatalogPage() {
   }, [searchArgs])
 
   const modelOptions = useMemo(() => {
-    if (!vehicleTree || !maker) return []
-    return (vehicleTree.modelsByMaker[maker] ?? []).map((m) => ({ value: m, label: m }))
+    if (!vehicleTree) return []
+    const list = maker
+      ? (vehicleTree.modelsByMaker[maker] ?? [])
+      : [...new Set(Object.values(vehicleTree.modelsByMaker).flat())].sort((a, b) =>
+          a.localeCompare(b, 'pt-BR'),
+        )
+    return list.map((m) => ({ value: m, label: m }))
   }, [vehicleTree, maker])
 
-  const yearOptions = useMemo(() => {
-    if (!vehicleTree || !model) return []
-    return (vehicleTree.yearsByModel[model] ?? []).map((y) => ({ value: y, label: y }))
+  const versionOptions = useMemo(() => {
+    if (!vehicleTree) return []
+    const list = model
+      ? (vehicleTree.versionsByModel[model] ?? [])
+      : [...new Set(Object.values(vehicleTree.versionsByModel).flat())].sort((a, b) =>
+          a.localeCompare(b, 'pt-BR'),
+        )
+    return list.map((v) => ({ value: v, label: v }))
   }, [vehicleTree, model])
 
   const engineOptions = useMemo(() => {
-    if (!vehicleTree || !model) return []
-    if (year) {
-      const key = `${model}|${year}`
-      const byYear = vehicleTree.enginesByModelYear[key] ?? []
-      if (byYear.length) return byYear.map((e) => ({ value: e, label: e }))
+    if (!vehicleTree) return []
+    if (model && version) {
+      const byVersion =
+        vehicleTree.enginesByModelVersion[vehicleModelVersionKey(model, version)] ?? []
+      if (byVersion.length) return byVersion.map((e) => ({ value: e, label: e }))
     }
-    return (vehicleTree.enginesByModel[model] ?? []).map((e) => ({ value: e, label: e }))
-  }, [vehicleTree, model, year])
+    if (model) {
+      return (vehicleTree.enginesByModel[model] ?? []).map((e) => ({ value: e, label: e }))
+    }
+    return [...new Set(Object.values(vehicleTree.enginesByModel).flat())]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((e) => ({ value: e, label: e }))
+  }, [vehicleTree, model, version])
 
-  const versionOptions = useMemo(() => {
-    if (!vehicleTree || !model) return []
-    return (vehicleTree.versionsByModel[model] ?? []).map((v) => ({ value: v, label: v }))
-  }, [vehicleTree, model])
+  const yearOptions = useMemo(() => {
+    if (!vehicleTree) return []
+    if (model && version) {
+      const byVersion =
+        vehicleTree.yearsByModelVersion[vehicleModelVersionKey(model, version)] ?? []
+      if (byVersion.length) return byVersion.map((y) => ({ value: y, label: y }))
+    }
+    if (model) {
+      return (vehicleTree.yearsByModel[model] ?? []).map((y) => ({ value: y, label: y }))
+    }
+    return [...new Set(Object.values(vehicleTree.yearsByModel).flat())]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((y) => ({ value: y, label: y }))
+  }, [vehicleTree, model, version])
 
   const brandOptions = useMemo(
     () => brands.map((b) => ({ value: b.name, label: b.name })),
@@ -287,15 +357,19 @@ export function CatalogPage() {
         placeholder="Todas"
         value={maker}
         options={(vehicleTree?.makers ?? []).map((m) => ({ value: m, label: m }))}
-        onChange={(e) =>
+        onChange={(e) => {
+          const nextMaker = e.target.value || null
+          const allowedModels = nextMaker
+            ? (vehicleTree?.modelsByMaker[nextMaker] ?? [])
+            : null
+          const modelOk = !nextMaker || !model || (allowedModels?.includes(model) ?? false)
           patchParams({
-            maker: e.target.value || null,
-            model: null,
-            year: null,
-            engine: null,
-            version: null,
+            maker: nextMaker,
+            ...(modelOk
+              ? {}
+              : { model: null, version: null, engine: null, year: null }),
           })
-        }
+        }}
       />
       <Select
         label="Modelo"
@@ -303,33 +377,17 @@ export function CatalogPage() {
         placeholder="Todos"
         value={model}
         options={modelOptions}
-        disabled={!maker}
-        onChange={(e) =>
+        onChange={(e) => {
+          const nextModel = e.target.value || null
+          const versionOk =
+            !nextModel ||
+            !version ||
+            (vehicleTree?.versionsByModel[nextModel] ?? []).includes(version)
           patchParams({
-            model: e.target.value || null,
-            year: null,
-            engine: null,
-            version: null,
+            model: nextModel,
+            ...(versionOk ? {} : { version: null, engine: null, year: null }),
           })
-        }
-      />
-      <Select
-        label="Ano"
-        name="year"
-        placeholder="Todos"
-        value={year}
-        options={yearOptions}
-        disabled={!model}
-        onChange={(e) => patchParams({ year: e.target.value || null })}
-      />
-      <Select
-        label="Motor"
-        name="engine"
-        placeholder="Todos"
-        value={engine}
-        options={engineOptions}
-        disabled={!model}
-        onChange={(e) => patchParams({ engine: e.target.value || null })}
+        }}
       />
       <Select
         label="Versão"
@@ -337,8 +395,23 @@ export function CatalogPage() {
         placeholder="Todas"
         value={version}
         options={versionOptions}
-        disabled={!model}
         onChange={(e) => patchParams({ version: e.target.value || null })}
+      />
+      <Select
+        label="Motor"
+        name="engine"
+        placeholder="Todos"
+        value={engine}
+        options={engineOptions}
+        onChange={(e) => patchParams({ engine: e.target.value || null })}
+      />
+      <Select
+        label="Ano"
+        name="year"
+        placeholder="Todos"
+        value={year}
+        options={yearOptions}
+        onChange={(e) => patchParams({ year: e.target.value || null })}
       />
       <div className="rounded-[10px] border border-dashed border-hf-line bg-hf-bg px-3 py-2.5">
         <SavedVehiclesQuickPick
@@ -410,17 +483,8 @@ export function CatalogPage() {
               type="button"
               className="rounded-full border border-hf-line bg-hf-surface px-2.5 py-1.5 text-xs text-hf-ink hover:border-hf-red"
               onClick={() => {
-                if (chip.key === 'maker') {
-                  patchParams({ maker: null, model: null, year: null, engine: null, version: null })
-                } else if (chip.key === 'model') {
-                  patchParams({ model: null, year: null, engine: null, version: null })
-                } else if (chip.key === 'year') {
-                  patchParams({ year: null })
-                } else if (chip.key === 'sort') {
-                  patchParams({ sort: null })
-                } else {
-                  patchParams({ [chip.key]: null })
-                }
+                if (chip.key === 'sort') patchParams({ sort: null })
+                else patchParams({ [chip.key]: null })
                 if (chip.key === 'q') setSearchDraft('')
               }}
             >
@@ -462,9 +526,15 @@ export function CatalogPage() {
                 {total} produto{total === 1 ? '' : 's'}
                 {products.length < total ? ` · mostrando ${products.length}` : ''}
               </p>
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-[18px]">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-[18px] lg:grid-cols-4">
                 {products.map((p) => (
-                  <ProductCard key={p.id} product={p} />
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    verdict={verdicts.get(p.id)}
+                    fitFilter={vehicleFilter}
+                    equivalentSkus={equivSkus.get(p.id)}
+                  />
                 ))}
               </div>
               {hasMore ? (

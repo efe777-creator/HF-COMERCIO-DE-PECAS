@@ -35,13 +35,13 @@ RPCs: `is_staff`, `search_products`, `apply_catalog_products_import`, `apply_cat
 
 ## Migrations — política
 
-**Não** aplicar cegamente as 52 migrations FAL.
+**Não** aplicar cegamente as 52 migrations de legado externo.
 
 | Classificação | Exemplos |
 |---------------|----------|
 | APLICAR_HF | fase2 (fatiada), fase3 storage, fase4 search, import products/apps, posicao/lado, operators, import_profiles |
 | ADAPTAR | fase2 (cortar carts/orders/payments), fase5 role protect, imports.kind |
-| NÃO_APLICAR_MVP | fase6+ ecommerce, MP, inventory modes, price list RPCs operacionais, seeds comerciais FAL |
+| NÃO_APLICAR_MVP | fase6+ ecommerce, MP, inventory modes, price list RPCs operacionais, seeds comerciais externos |
 
 Lista detalhada: inventário da auditoria GATE 01 (52 arquivos em `supabase/migrations/`).
 
@@ -50,4 +50,4 @@ Lista detalhada: inventário da auditoria GATE 01 (52 arquivos em `supabase/migr
 - Org: HF COMERCIO DE PEÇAS  
 - Projeto ref: `owllmfcpbodqmoerdfxx`  
 - Região: `sa-east-1`  
-- **Proibido** usar projeto/credenciais FAL
+- **Proibido** usar projeto/credenciais de terceiros

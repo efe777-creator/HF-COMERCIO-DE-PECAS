@@ -61,7 +61,7 @@ const supplierConversionContract: ImportContract = {
   fields: [
     {
       key: 'sku',
-      aliases: ['codigo_fal', 'codigo', 'sku', 'cod_fal'],
+      aliases: ['codigo_referencia', 'codigo', 'codigo_fal', 'sku', 'cod_fal'],
       required: true,
     },
     {
@@ -137,7 +137,12 @@ const catalogApplicationsContract: ImportContract = {
     },
     {
       key: 'versao',
-      aliases: ['versao', 'versão', 'version', 'motor', 'engine'],
+      aliases: ['versao', 'versão', 'version', 'trim'],
+      required: false,
+    },
+    {
+      key: 'motorizacao',
+      aliases: ['motorizacao', 'motorização', 'motor', 'engine', 'cilindrada'],
       required: false,
     },
     {
@@ -171,7 +176,12 @@ const catalogHfBundleContract: ImportContract = {
     },
     {
       key: 'versao',
-      aliases: ['versao', 'versão', 'version', 'motor', 'engine'],
+      aliases: ['versao', 'versão', 'version', 'trim'],
+      required: false,
+    },
+    {
+      key: 'motorizacao',
+      aliases: ['motorizacao', 'motorização', 'motor', 'engine', 'cilindrada'],
       required: false,
     },
     {

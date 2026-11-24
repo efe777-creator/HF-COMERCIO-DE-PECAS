@@ -253,14 +253,15 @@ export function AdminPriceListsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-hf-ink">Listas de preços</h1>
+          <h1 className="text-2xl font-extrabold text-hf-ink">Listas de preço</h1>
           <p className="mt-1 max-w-2xl text-sm text-hf-muted">
-            Consulte e ajuste preços da lista selecionada. Para classificar um produto (Categoria /
-            Grupo / Subgrupo), abra o cadastro em{' '}
-            <Link className="font-semibold text-hf-ink underline" to="/admin/produtos">
-              Produtos
+            <strong>Gestão das listas</strong> (criar, status, duplicar, importar). Abra uma lista
+            para formação e itens. Andar 1: 1 preço por SKU. Formação: custo → markup/margem →
+            venda. Listas são <strong>globais</strong>. Não confundir com{' '}
+            <Link className="font-semibold text-hf-ink underline" to="/admin/clientes/listas">
+              Listas B2B
             </Link>{' '}
-            ou gerencie a árvore em{' '}
+            (visibilidade — dentro de Clientes). Taxonomia em{' '}
             <Link className="font-semibold text-hf-ink underline" to="/admin/categorias">
               Categorias
             </Link>
@@ -541,7 +542,7 @@ export function AdminPriceListsPage() {
                           </button>
                           <button
                             type="button"
-                            className="block w-full px-2 py-1.5 text-left text-sm font-semibold text-red-700 hover:bg-hf-bg"
+                            className="block w-full px-2 py-1.5 text-left text-sm font-semibold text-hf-danger hover:bg-hf-bg"
                             onClick={() => void onDelete(list)}
                           >
                             Excluir

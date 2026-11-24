@@ -100,7 +100,7 @@ export function AdminSupplierConversionImportPage() {
     const supplierName = suppliers.find((s) => s.id === supplierId)?.name ?? 'fornecedor'
     const ok = window.confirm(
       `Confirmar ${valid} conversão(ões) para "${supplierName}"?\n\n` +
-        `SKU FAL inexistente não cria produto.\n` +
+        `SKU HF inexistente não cria produto.\n` +
         `Linhas com erro serão ignoradas.`,
     )
     if (!ok) return
@@ -144,8 +144,10 @@ export function AdminSupplierConversionImportPage() {
           </a>
         </div>
         <p className="mt-1 text-sm text-hf-muted">
-          Formato: <code className="rounded bg-hf-bg px-1">codigo_fal;codigo_fornecedor</code>.
-          Fornecedor obrigatório na tela (não inferido do arquivo). Persiste em{' '}
+          Formato:{' '}
+          <code className="rounded bg-hf-bg px-1">codigo_referencia;codigo_fornecedor</code>{' '}
+          (alias legado <code className="rounded bg-hf-bg px-1">codigo_fal</code> ainda
+          aceito). Fornecedor obrigatório na tela (não inferido do arquivo). Persiste em{' '}
           <strong>supplier_products</strong> — não usa product_references.
         </p>
       </div>
@@ -226,7 +228,7 @@ export function AdminSupplierConversionImportPage() {
               <thead>
                 <tr className="bg-hf-bg text-left">
                   <th className="px-2 py-1">Linha</th>
-                  <th className="px-2 py-1">SKU FAL</th>
+                  <th className="px-2 py-1">SKU HF</th>
                   <th className="px-2 py-1">Cód. fornecedor</th>
                   <th className="px-2 py-1">Ação</th>
                   <th className="px-2 py-1">Erros / avisos</th>

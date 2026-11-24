@@ -26,6 +26,7 @@ import {
   type AdminOperatorUserRow,
 } from '@/services/admin/adminOperatorsService'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 const STATUSES: CustomerStatus[] = ['pending', 'active', 'suspended', 'inactive']
 
@@ -168,7 +169,20 @@ export function AdminCustomersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-hf-ink">Clientes B2B</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="m-0 text-2xl font-extrabold text-hf-ink">Clientes B2B</h1>
+          <p className="mt-1 text-sm text-hf-muted">
+            Listas B2B (visibilidade de catálogo) ficam dentro de Clientes — não confundir com
+            Listas de preço.
+          </p>
+        </div>
+        <Link to="/admin/clientes/listas">
+          <Button type="button" variant="light">
+            Listas B2B
+          </Button>
+        </Link>
+      </div>
       <p className="text-sm text-hf-muted">
         Cadastro de empresas. Status controla acesso. Associe grupo, catálogos e usuários de login.
       </p>

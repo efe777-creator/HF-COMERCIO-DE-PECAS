@@ -10,7 +10,7 @@ export const features = {
   ecommerce_enabled: false,
   price_enabled: false,
   inventory_enabled: false,
-  quotation_enabled: false,
+  quotation_enabled: true,
   orders_enabled: false,
   cart_enabled: false,
   checkout_enabled: false,

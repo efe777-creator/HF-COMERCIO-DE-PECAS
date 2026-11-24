@@ -7,6 +7,7 @@ import {
   expandMappedRowsForVersions,
   mergePeriods,
   parseYearPeriod,
+  listVersionsForModel,
   resolveVehicleVersionMatch,
   splitVersionSafe,
   type ApplicationCatalogs,
@@ -177,9 +178,39 @@ describe('applicationImportCore', () => {
         pvc: [],
       },
     )
+    expect(rows[0].action).toBe('new')
+    expect(rows[0].createProduct).toBe(true)
+    expect(rows[0].applyable).toBe(true)
+    expect(rows[0].message).toMatch(/rascunho/i)
+  })
+
+  it('analyze — SKU inexistente sem nome = erro claro', () => {
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SEMNOME',
+            name: '',
+            montadora: 'VW',
+            modelo: 'Gol',
+            versao: '1.0',
+            ano_inicio: '2010',
+            ano_fim: '2014',
+          },
+        },
+      ],
+      {
+        productsBySku: new Map(),
+        makers: [],
+        models: [],
+        versions: [],
+        pvc: [],
+      },
+    )
     expect(rows[0].action).toBe('error')
     expect(rows[0].createProduct).toBe(false)
-    expect(rows[0].message).toMatch(/não cadastrado/i)
+    expect(rows[0].message).toMatch(/não tem nome/i)
   })
 
   it('analyzeApplicationMappedRows — dedupe lógico no arquivo', () => {
@@ -375,5 +406,421 @@ describe('applicationImportCore', () => {
     expect(rows[0].createModel).toBe(true)
     expect(rows[0].createVersion).toBe(true)
     expect(rows[0].action).toBe('new')
+  })
+
+  // —— FIND-004 MARCHA 1: blank → todas as VVs do modelo ——
+
+  it('T1 blank + 3 VVs do modelo → 3 applyable com vehicleVersionId distintos', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'Amortecedor' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [
+        { id: 'vv-a', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.0' },
+        { id: 'vv-b', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.4' },
+        { id: 'vv-c', manufacturerId: 'm1', modelId: 'mod1', versionName: 'Fire' },
+      ],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'Amortecedor',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(3)
+    expect(rows.every((r) => r.applyable)).toBe(true)
+    expect(rows.every((r) => r.action === 'new')).toBe(true)
+    expect(rows.every((r) => r.createVersion === false)).toBe(true)
+    expect(rows.map((r) => r.vehicleVersionId).sort()).toEqual(['vv-a', 'vv-b', 'vv-c'])
+  })
+
+  it('T2 blank + 0 VV → 1 createVersion envelope', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].createVersion).toBe(true)
+    expect(rows[0].vehicleVersionId).toBeNull()
+    expect(rows[0].action).toBe('new')
+    expect(rows[0].applyable).toBe(true)
+  })
+
+  it('T3 versao explicita inalterada (1 VV)', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [
+        { id: 'vv-10', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.0' },
+        { id: 'vv-14', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.4' },
+      ],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '1.0',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].vehicleVersionId).toBe('vv-10')
+    expect(rows[0].versao).toBe('1.0')
+    expect(rows[0].createVersion).toBe(false)
+  })
+
+  it('T4 blank + ano_fim vazio permanece null apos expansao', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [
+        { id: 'vv-a', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.0' },
+        { id: 'vv-b', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.4' },
+      ],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '',
+            ano_inicio: '2012',
+            ano_fim: '',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(2)
+    expect(rows.every((r) => r.yearStart === 2012)).toBe(true)
+    expect(rows.every((r) => r.yearEnd === null)).toBe(true)
+  })
+
+  it('T5 blank nao expande para VV de outro model_id', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [
+        { id: 'mod-palio', manufacturerId: 'm1', name: 'Palio' },
+        { id: 'mod-siena', manufacturerId: 'm1', name: 'Siena' },
+      ],
+      versions: [
+        { id: 'vv-palio', manufacturerId: 'm1', modelId: 'mod-palio', versionName: '1.0' },
+        { id: 'vv-siena', manufacturerId: 'm1', modelId: 'mod-siena', versionName: '1.0' },
+      ],
+      pvc: [],
+    }
+    expect(listVersionsForModel(catalogs.versions, 'm1', 'mod-palio').map((v) => v.id)).toEqual([
+      'vv-palio',
+    ])
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].vehicleVersionId).toBe('vv-palio')
+  })
+
+  it('M2 — blank + intervalo + split explicito coexistentes', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'VW' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Gol' }],
+      versions: [
+        { id: 'vv-10', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.0' },
+        { id: 'vv-16', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.6' },
+        { id: 'vv-mi', manufacturerId: 'm1', modelId: 'mod1', versionName: 'Mi' },
+      ],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'VW',
+            modelo: 'Gol',
+            versao: '',
+            ano_inicio: '2008',
+            ano_fim: '2017',
+          },
+        },
+        {
+          lineNumber: 3,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'VW',
+            modelo: 'Gol',
+            versao: '1.0/1.6',
+            ano_inicio: '2018',
+            ano_fim: '',
+          },
+        },
+      ],
+      catalogs,
+    )
+    const blankRows = rows.filter((r) => r.lineNumber === 2)
+    const splitRows = rows.filter((r) => r.lineNumber === 3)
+    expect(blankRows).toHaveLength(3)
+    expect(blankRows.every((r) => r.yearStart === 2008 && r.yearEnd === 2017)).toBe(true)
+    expect(splitRows).toHaveLength(2)
+    expect(splitRows.map((r) => r.versao).sort()).toEqual(['1.0', '1.6'])
+    expect(splitRows.every((r) => r.yearEnd === null)).toBe(true)
+  })
+
+  it('M2 — arquivo duplica blank mesma chave → segunda already_covered (sem reexpandir)', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [
+        { id: 'vv-a', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.0' },
+        { id: 'vv-b', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.4' },
+      ],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+        {
+          lineNumber: 3,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows.filter((r) => r.lineNumber === 2)).toHaveLength(2)
+    expect(rows.filter((r) => r.lineNumber === 3)).toHaveLength(1)
+    expect(rows.find((r) => r.lineNumber === 3)?.action).toBe('already_covered')
+    expect(rows.find((r) => r.lineNumber === 3)?.duplicateOfLine).toBe(2)
+  })
+
+  it('T6 blank + PVC ja cobre uma VV → already_covered nessa VV; demais new', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [
+        { id: 'vv-a', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.0' },
+        { id: 'vv-b', manufacturerId: 'm1', modelId: 'mod1', versionName: '1.4' },
+      ],
+      pvc: [
+        {
+          productId: 'p1',
+          vehicleVersionId: 'vv-a',
+          yearStart: 2008,
+          yearEnd: 2020,
+        },
+      ],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: '',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(2)
+    const byVv = Object.fromEntries(rows.map((r) => [r.vehicleVersionId, r]))
+    expect(byVv['vv-a'].action).toBe('already_covered')
+    expect(byVv['vv-a'].applyable).toBe(false)
+    expect(byVv['vv-b'].action).toBe('new')
+    expect(byVv['vv-b'].applyable).toBe(true)
+  })
+
+  it('motorizacao em branco + versao → todas as engines daquela versao', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [
+        { id: 'vv-a', manufacturerId: 'm1', modelId: 'mod1', versionName: 'Fire', engine: '1.0' },
+        { id: 'vv-b', manufacturerId: 'm1', modelId: 'mod1', versionName: 'Fire', engine: '1.4' },
+        { id: 'vv-c', manufacturerId: 'm1', modelId: 'mod1', versionName: 'ELX', engine: '1.0' },
+      ],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: 'Fire',
+            motorizacao: '',
+            ano_inicio: '2010',
+            ano_fim: '2015',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(2)
+    expect(rows.map((r) => r.vehicleVersionId).sort()).toEqual(['vv-a', 'vv-b'])
+    expect(rows.every((r) => r.motorizacao === '1.0' || r.motorizacao === '1.4')).toBe(true)
+  })
+
+  it('motorizacao preenchida restringe engine', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [
+        { id: 'vv-a', manufacturerId: 'm1', modelId: 'mod1', versionName: 'Fire', engine: '1.0' },
+        { id: 'vv-b', manufacturerId: 'm1', modelId: 'mod1', versionName: 'Fire', engine: '1.4' },
+      ],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: 'Fire',
+            motorizacao: '1.4',
+            ano_inicio: '2010',
+            ano_fim: '',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].vehicleVersionId).toBe('vv-b')
+    expect(rows[0].motorizacao).toBe('1.4')
+    expect(rows[0].createVersion).toBe(false)
+  })
+
+  it('motorizacao + versao ambos preenchidos e ausentes → createVersion com engine', () => {
+    const catalogs: ApplicationCatalogs = {
+      productsBySku: new Map([['sku1', { id: 'p1', name: 'X' }]]),
+      makers: [{ id: 'm1', name: 'Fiat' }],
+      models: [{ id: 'mod1', manufacturerId: 'm1', name: 'Palio' }],
+      versions: [],
+      pvc: [],
+    }
+    const rows = analyzeApplicationMappedRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'SKU1',
+            name: 'X',
+            montadora: 'Fiat',
+            modelo: 'Palio',
+            versao: 'Adventure',
+            motorizacao: '1.8',
+            ano_inicio: '2012',
+            ano_fim: '2016',
+          },
+        },
+      ],
+      catalogs,
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].createVersion).toBe(true)
+    expect(rows[0].versao).toBe('Adventure')
+    expect(rows[0].motorizacao).toBe('1.8')
   })
 })

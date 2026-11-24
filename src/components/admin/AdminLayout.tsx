@@ -4,26 +4,44 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
-const catalogLinks = [
-  { to: '/admin/produtos', label: 'Produtos' },
+type AdminNavLink = {
+  to: string
+  label: string
+  /** Match só a rota exata (não filhos). */
+  end?: boolean
+  /**
+   * Quando o destino é prefixo de outro item do menu (ex.: Produtos vs Importações),
+   * evita acender os dois ao mesmo tempo.
+   */
+  inactiveUnder?: string[]
+}
+
+const catalogLinks: AdminNavLink[] = [
+  {
+    to: '/admin/produtos',
+    label: 'Produtos',
+    inactiveUnder: ['/admin/produtos/importacoes'],
+  },
+  { to: '/admin/kits', label: 'Kits' },
   { to: '/admin/produtos/importacoes', label: 'Importações' },
   { to: '/admin/categorias', label: 'Categorias' },
-  { to: '/admin/fabricantes', label: 'Marcas' },
-  { to: '/admin/montadoras', label: 'Montadoras' },
-  { to: '/admin/veiculos', label: 'Aplicações / veículos' },
-  { to: '/admin/fornecedores', label: 'Fornecedores / códigos' },
-  { to: '/admin/fornecedores/importar-conversoes', label: 'Conversões' },
-  { to: '/admin/fornecedores/importar-custos', label: 'Custos' },
-  { to: '/admin/precos', label: 'Preços (admin)' },
-  { to: '/admin/listas', label: 'Listas de catálogo' },
+  { to: '/admin/veiculos', label: 'Veículos' },
+  { to: '/admin/fornecedores', label: 'Fornecedores' },
+  { to: '/admin/precos', label: 'Listas de preço' },
 ]
 
-const clientsLinks = [
+const commercialLinks: AdminNavLink[] = [
+  { to: '/admin/campanhas', label: 'Campanhas' },
+  { to: '/admin/cotacoes', label: 'Cotações (leads)' },
+  { to: '/admin/leads', label: 'Leads (inbox)' },
+]
+
+const clientsLinks: AdminNavLink[] = [
   { to: '/admin/clientes', label: 'Clientes B2B' },
   { to: '/admin/grupos', label: 'Grupos' },
 ]
 
-const opsLinks = [{ to: '/admin/operadores', label: 'Usuários / operadores' }]
+const opsLinks: AdminNavLink[] = [{ to: '/admin/operadores', label: 'Usuários / operadores' }]
 
 function linkClass({ isActive }: { isActive: boolean }) {
   return [
@@ -32,15 +50,27 @@ function linkClass({ isActive }: { isActive: boolean }) {
   ].join(' ')
 }
 
+function navLinkIsActive(
+  link: AdminNavLink,
+  pathname: string,
+  defaultActive: boolean,
+): boolean {
+  if (link.inactiveUnder?.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return false
+  }
+  return defaultActive
+}
+
 function NavSection({
   title,
   links,
   onNavigate,
 }: {
   title: string
-  links: { to: string; label: string }[]
+  links: AdminNavLink[]
   onNavigate: () => void
 }) {
+  const { pathname } = useLocation()
   return (
     <div>
       <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wide text-white/45">
@@ -48,7 +78,17 @@ function NavSection({
       </p>
       <div className="space-y-0.5">
         {links.map((l) => (
-          <NavLink key={l.to} to={l.to} className={linkClass} onClick={onNavigate}>
+          <NavLink
+            key={l.to}
+            to={l.to}
+            end={l.end}
+            className={({ isActive }) =>
+              linkClass({
+                isActive: navLinkIsActive(l, pathname, isActive),
+              })
+            }
+            onClick={onNavigate}
+          >
             {l.label}
           </NavLink>
         ))}
@@ -114,6 +154,7 @@ export function AdminLayout() {
             </NavLink>
           </div>
           <NavSection title="Catálogo" links={catalogLinks} onNavigate={closeNav} />
+          <NavSection title="Comercial" links={commercialLinks} onNavigate={closeNav} />
           <NavSection title="Clientes" links={clientsLinks} onNavigate={closeNav} />
           <NavSection title="Sistema" links={opsLinks} onNavigate={closeNav} />
         </div>

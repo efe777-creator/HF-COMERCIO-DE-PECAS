@@ -1,6 +1,6 @@
 -- F8.1-C: conversões fornecedor × produto (kind=supplier_conversion)
 -- Fonte oficial: supplier_products (NÃO product_references).
--- Upsert por (supplier_id, supplier_sku); SKU FAL inexistente = erro (sem auto-criar produto).
+-- Upsert por (supplier_id, supplier_sku); SKU HF inexistente = erro (sem auto-criar produto).
 
 -- ---------------------------------------------------------------------------
 -- imports.supplier_id (kinds de fornecedor)
@@ -13,7 +13,7 @@ create index if not exists imports_supplier_id_idx
   where supplier_id is not null;
 
 -- ---------------------------------------------------------------------------
--- UNIQUE parcial: um código de fornecedor → no máximo um produto FAL
+-- UNIQUE parcial: um código de fornecedor → no máximo um produto HF
 -- ---------------------------------------------------------------------------
 create unique index if not exists supplier_products_supplier_sku_uidx
   on public.supplier_products (supplier_id, supplier_sku)
@@ -105,7 +105,7 @@ begin
       if v_sku is null or v_supplier_sku is null then
         update public.import_items
         set result = 'error',
-            errors = array['SKU FAL ou codigo fornecedor ausente']
+            errors = array['SKU HF ou codigo fornecedor ausente']
         where id = r.id;
         v_failed := v_failed + 1;
         continue;
@@ -120,7 +120,7 @@ begin
       if v_product_id is null then
         update public.import_items
         set result = 'error',
-            errors = array['Produto nao encontrado (SKU FAL inexistente)']
+            errors = array['Produto nao encontrado (SKU HF inexistente)']
         where id = r.id;
         v_failed := v_failed + 1;
         continue;

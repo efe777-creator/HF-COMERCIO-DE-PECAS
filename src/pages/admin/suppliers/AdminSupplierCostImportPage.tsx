@@ -228,7 +228,7 @@ export function AdminSupplierCostImportPage() {
                 <tr className="bg-hf-bg text-left">
                   <th className="px-2 py-1">Linha</th>
                   <th className="px-2 py-1">Cód. forn.</th>
-                  <th className="px-2 py-1">SKU FAL</th>
+                  <th className="px-2 py-1">SKU HF</th>
                   <th className="px-2 py-1">Custo atual</th>
                   <th className="px-2 py-1">Novo custo</th>
                   <th className="px-2 py-1">Erros</th>

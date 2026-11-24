@@ -9,6 +9,7 @@ import {
 } from '@/services/admin/adminManufacturerService'
 import type { Manufacturer } from '@/types'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 export function AdminManufacturersPage() {
   const [items, setItems] = useState<Manufacturer[]>([])
@@ -71,10 +72,21 @@ export function AdminManufacturersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-hf-ink">Montadoras</h1>
-      <p className="text-sm text-hf-muted">
-        Cadastro de montadora (veículo). Não confundir com fabricante de peça.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="m-0 text-sm">
+            <Link className="font-semibold text-hf-auth-link" to="/admin/veiculos">
+              ← Veículos
+            </Link>
+          </p>
+          <h1 className="mt-1 text-2xl font-extrabold text-hf-ink">Montadoras (veículo)</h1>
+          <p className="text-sm text-hf-muted">
+            Montadora do carro (VW, Chevrolet…). Modelos e configurações ficam em Veículos. Não
+            confundir com marca da peça. Esta tela não aparece no menu — acesso só pela hub
+            Veículos.
+          </p>
+        </div>
+      </div>
       <form
         ref={formRef}
         onSubmit={onSubmit}

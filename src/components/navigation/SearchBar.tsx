@@ -1,12 +1,18 @@
 import { useProductSearch } from '@/hooks/useCatalog'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+
+function catalogSearchPath(pathname: string): string | null {
+  if (pathname === '/busca' || pathname === '/catalogo') return pathname
+  return null
+}
 
 export function SearchBar() {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const { data, loading } = useProductSearch(query)
   const navigate = useNavigate()
+  const location = useLocation()
   const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -17,7 +23,35 @@ export function SearchBar() {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
+  function goToSearch(term: string) {
+    const t = term.trim()
+    const onCatalog = catalogSearchPath(location.pathname)
+    if (onCatalog) {
+      const params = new URLSearchParams(location.search)
+      if (t) params.set('q', t)
+      else params.delete('q')
+      params.delete('page')
+      const qs = params.toString()
+      navigate(qs ? `${onCatalog}?${qs}` : onCatalog)
+      return
+    }
+    navigate(t ? `/busca?q=${encodeURIComponent(t)}` : '/busca')
+  }
+
   const suggestions = data.slice(0, 6)
+  const resultsHref = (() => {
+    const t = query.trim()
+    const onCatalog = catalogSearchPath(location.pathname)
+    if (onCatalog) {
+      const params = new URLSearchParams(location.search)
+      if (t) params.set('q', t)
+      else params.delete('q')
+      params.delete('page')
+      const qs = params.toString()
+      return qs ? `${onCatalog}?${qs}` : onCatalog
+    }
+    return t ? `/busca?q=${encodeURIComponent(t)}` : '/busca'
+  })()
 
   return (
     <div className="relative w-full" ref={wrapRef}>
@@ -32,7 +66,7 @@ export function SearchBar() {
           if (e.key === 'Enter') {
             e.preventDefault()
             setOpen(false)
-            navigate(`/busca?q=${encodeURIComponent(query.trim())}`)
+            goToSearch(query)
           }
         }}
         placeholder="Busque por peça, código, marca ou aplicação"
@@ -69,7 +103,7 @@ export function SearchBar() {
             </>
           ) : (
             <Link
-              to={`/busca?q=${encodeURIComponent(query.trim())}`}
+              to={resultsHref}
               className="block px-4 py-3 text-sm text-hf-ink hover:bg-hf-surface-2"
               onClick={() => setOpen(false)}
             >

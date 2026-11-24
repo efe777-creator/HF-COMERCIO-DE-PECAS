@@ -58,4 +58,23 @@ describe('category hierarchy (3 níveis)', () => {
     expect(collectCategorySubtreeIds(items, 's1')).toEqual(['s1'])
     expect(collectCategorySubtreeIds(items, 'missing')).toEqual([])
   })
+
+  it('criar por nível: pai coerente (Grupo sob Categoria; Subgrupo sob Grupo)', () => {
+    const forGrupo = allowedCategoryParents(items).filter(
+      (p) => categoryDepth(items, p.id) === 1,
+    )
+    const forSubgrupo = allowedCategoryParents(items).filter(
+      (p) => categoryDepth(items, p.id) === 2,
+    )
+    expect(forGrupo.map((p) => p.id)).toEqual(['g1'])
+    expect(forSubgrupo.map((p) => p.id)).toEqual(['c1'])
+    const subgrupoNaCategoria = forSubgrupo.filter((p) => p.parentId === 'g1')
+    expect(subgrupoNaCategoria.map((p) => p.id)).toEqual(['c1'])
+  })
+
+  it('labels por depth batem Categoria/Grupo/Subgrupo', () => {
+    expect(categoryLevelLabel(categoryDepth(items, 'g1'))).toBe('Categoria')
+    expect(categoryLevelLabel(categoryDepth(items, 'c1'))).toBe('Grupo')
+    expect(categoryLevelLabel(categoryDepth(items, 's1'))).toBe('Subgrupo')
+  })
 })

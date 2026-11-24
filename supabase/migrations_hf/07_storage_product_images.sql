@@ -1,5 +1,5 @@
 -- HF Storage: bucket de imagens de produto (idempotente).
--- Fonte de verdade: migrations_hf (não aplicar supabase/migrations legado FAL).
+-- Fonte de verdade: migrations_hf (não aplicar supabase/migrations legado externo).
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

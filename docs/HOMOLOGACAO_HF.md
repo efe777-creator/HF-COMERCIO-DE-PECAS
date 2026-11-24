@@ -1,11 +1,11 @@
 # Homologação HF — gate final (Etapa 10)
 
-Checklist do plano oficial FAL → HF. Evolução B2B (PRD 1.0) substitui “catálogo anônimo” por **catálogo autenticado sem preço público**.
+Checklist do plano oficial HF. Evolução B2B (PRD 1.0) substitui “catálogo anônimo” por **catálogo autenticado sem preço público**.
 
 ## Infra
 
 - [x] GitHub HF (`efe777-creator/HF-COMERCIO-DE-PECAS`)
-- [x] Supabase HF `owllmfcpbodqmoerdfxx` (sa-east-1) — sem URL/keys FAL
+- [x] Supabase HF `owllmfcpbodqmoerdfxx` (sa-east-1) — sem URL/keys de terceiros
 - [x] Auth + `profiles` / roles staff
 - [x] RLS (`migrations_hf/04_rls.sql`) + `customer_can_see_product`
 - [x] Storage `product-images` (+ logos/imports)

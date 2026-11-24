@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   consolidateProductRows,
-  enforceExistingCategories,
+  ensureImportCategories,
   normalizeLado,
   normalizePosicao,
   productFrozenPayload,
@@ -158,7 +158,7 @@ describe('productImportCore', () => {
     expect(rows[0].productId).toBe('uuid-1')
   })
 
-  it('enforceExistingCategories bloqueia hierarquia inexistente', () => {
+  it('ensureImportCategories marca create quando hierarquia falta', () => {
     const cats = [
       { id: 'r1', name: 'Suspensão', slug: 'suspensao', parentId: null },
       { id: 'g1', name: 'Pivô', slug: 'pivo', parentId: 'r1' },
@@ -192,9 +192,40 @@ describe('productImportCore', () => {
       ],
       new Map(),
     )
-    const checked = enforceExistingCategories(rows, cats)
+    const checked = ensureImportCategories(rows, cats)
     expect(checked[0].applyable).toBe(true)
-    expect(checked[1].applyable).toBe(false)
-    expect(checked[1].message).toMatch(/Categoria/)
+    expect(checked[0].createGrupo).toBe(false)
+    expect(checked[1].applyable).toBe(true)
+    expect(checked[1].createCategoria).toBe(true)
+    expect(checked[1].createGrupo).toBe(true)
+    expect(checked[1].warnings.join(' ')).toMatch(/será criada/)
+  })
+
+  it('ensureImportCategories aceita sinônimo de grupo (axial de direção → axial)', () => {
+    const cats = [
+      { id: 'r1', name: 'DIREÇÃO', slug: 'direcao', parentId: null },
+      { id: 'g1', name: 'AXIAL', slug: 'axial', parentId: 'r1' },
+    ]
+    const rows = consolidateProductRows(
+      [
+        {
+          lineNumber: 2,
+          values: {
+            sku: 'BRD1',
+            name: 'Axial',
+            categoria: 'DIREÇÃO',
+            grupo: 'AXIAL DE DIREÇÃO',
+            subgrupo: '',
+            posicao: '',
+            lado: '',
+          },
+        },
+      ],
+      new Map(),
+    )
+    const checked = ensureImportCategories(rows, cats)
+    expect(checked[0].applyable).toBe(true)
+    expect(checked[0].createGrupo).toBe(false)
   })
 })
+

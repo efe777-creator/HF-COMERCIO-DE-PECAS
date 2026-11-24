@@ -20,6 +20,7 @@ export {
 export type { ApplicationPreviewRow } from './applicationImportCore'
 export {
   consolidateProductRows,
+  ensureImportCategories,
   splitHfMappedRows,
   productFrozenPayload,
 } from './productImportCore'

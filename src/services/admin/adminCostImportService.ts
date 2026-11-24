@@ -7,10 +7,8 @@ import { parseXlsxToGrid } from '@/services/import/parseXlsx'
 import { validateImportGrid } from '@/services/import/validate'
 import type { ImportGrid } from '@/services/import/types'
 
-/** Código do fornecedor próprio FAL — codigo_fornecedor = products.sku. */
+/** Código do fornecedor próprio HF — codigo_fornecedor = products.sku. */
 export const HF_PRINCIPAL_SUPPLIER_CODE = 'HF-SUP-01'
-/** @deprecated use HF_PRINCIPAL_SUPPLIER_CODE */
-export const FAL_PRINCIPAL_SUPPLIER_CODE = HF_PRINCIPAL_SUPPLIER_CODE
 
 export type CostImportPreviewRow = {
   line: number
@@ -230,18 +228,18 @@ export async function adminPreviewCostImport(input: {
         } else if (falPrincipal && falBySku) {
           const hit = falBySku.get(supplierSku)
           if (!hit) {
-            lineErrors.push('SKU FAL não encontrado (HF Principal)')
+            lineErrors.push('SKU HF não encontrado (HF Principal)')
           } else {
             productId = hit.productId
             productSku = hit.productSku
             oldCost = hit.cost
             action = hit.hasLink ? 'update' : 'create'
             if (!hit.hasLink) {
-              warnings.push('Vínculo FAL será criado (código = SKU)')
+              warnings.push('Vínculo HF Principal será criado (código = SKU)')
             }
           }
         } else {
-          lineErrors.push('Sem conversão: código fornecedor não vinculado a produto FAL')
+          lineErrors.push('Sem conversão: código fornecedor não vinculado a produto HF')
         }
       }
     }
@@ -336,18 +334,18 @@ export async function adminEnsurePrincipalSupplier(productIds: string[]): Promis
   const unique = [...new Set(productIds.filter(Boolean))]
   if (!unique.length) return 0
   const sb = getSupabase()
-  const { data: fal, error: falErr } = await sb
+  const { data: principal, error: principalErr } = await sb
     .from('suppliers')
     .select('id')
     .eq('code', HF_PRINCIPAL_SUPPLIER_CODE)
     .eq('status', 'active')
     .maybeSingle()
-  if (falErr) throw falErr
-  if (!fal?.id) return 0
+  if (principalErr) throw principalErr
+  if (!principal?.id) return 0
 
   const { data, error } = await sb
     .from('products')
-    .update({ supplier_id: fal.id })
+    .update({ supplier_id: principal.id })
     .in('id', unique)
     .is('supplier_id', null)
     .select('id')

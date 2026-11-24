@@ -5,6 +5,7 @@ import { entityStatusLabel } from '@/lib/adminLabels'
 import { adminListBrands, adminSetBrandStatus, adminUpsertBrand } from '@/services/admin/adminBrandService'
 import type { ProductBrand } from '@/types'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 export function AdminBrandsPage() {
   const [items, setItems] = useState<ProductBrand[]>([])
@@ -67,10 +68,19 @@ export function AdminBrandsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-hf-ink">Fabricantes</h1>
-      <p className="text-sm text-hf-muted">
-        Fabricante de peça (ex.: Nakata). Diferente de montadora e fornecedor.
-      </p>
+      <div>
+        <p className="m-0 text-sm">
+          <Link className="font-semibold text-hf-auth-link" to="/admin/produtos">
+            ← Produtos
+          </Link>
+        </p>
+        <h1 className="mt-1 text-2xl font-extrabold text-hf-ink">Marcas (peça)</h1>
+        <p className="text-sm text-hf-muted">
+          Marca/fabricante da peça (ex.: Nakata). Cadastro aninhado em Produtos — não aparece no
+          menu. Não confundir com <strong>montadora do veículo</strong> (VW, GM) nem com
+          fornecedor. Andar 1: 1 SKU = 1 marca; preço/qtd por marca fica no Andar 2.
+        </p>
+      </div>
       <form
         ref={formRef}
         onSubmit={onSubmit}
@@ -81,7 +91,7 @@ export function AdminBrandsPage() {
         <div className="min-w-[220px] flex-1">
           <Input
             ref={nameInputRef}
-            label={editing ? 'Editar fabricante' : 'Novo fabricante'}
+            label={editing ? 'Editar marca' : 'Nova marca'}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -95,7 +105,7 @@ export function AdminBrandsPage() {
         ) : null}
       </form>
       <Input
-        label="Buscar fabricante"
+        label="Buscar marca"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Nome ou slug…"

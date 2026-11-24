@@ -1,4 +1,4 @@
-﻿import { parseMoneyBr } from '@/lib/money'
+import { parseMoneyBr } from '@/lib/money'
 import { getSupabase } from '@/lib/supabase'
 import { toSlug } from '@/lib/slug'
 import { HF_PRINCIPAL_SUPPLIER_CODE } from '@/services/admin/adminCostImportService'
@@ -21,15 +21,15 @@ export function resolveBaseCost(
   productId: string,
   supplierId: string | null | undefined,
   costMap: Map<string, number>,
-  falSupplierId: string | null,
+  hfPrincipalSupplierId: string | null,
 ): number | null {
   if (supplierId) {
     const direct = costMap.get(`${supplierId}:${productId}`)
     if (direct != null) return direct
   }
-  if (falSupplierId) {
-    const fal = costMap.get(`${falSupplierId}:${productId}`)
-    if (fal != null) return fal
+  if (hfPrincipalSupplierId) {
+    const principalCost = costMap.get(`${hfPrincipalSupplierId}:${productId}`)
+    if (principalCost != null) return principalCost
   }
   return null
 }
@@ -523,7 +523,7 @@ export async function adminListPriceListItems(
 
   const raw = data ?? []
   const productIds = raw.map((row) => String((row as Record<string, unknown>).product_id))
-  const [costMap, falSupplierId] = await Promise.all([
+  const [costMap, hfPrincipalSupplierId] = await Promise.all([
     loadPrincipalCosts(productIds),
     loadFalPrincipalSupplierId(),
   ])
@@ -551,7 +551,7 @@ export async function adminListPriceListItems(
           const p = Array.isArray(prod) ? prod[0] : prod
           return p?.supplier_id ?? null
         }),
-        falSupplierId,
+        hfPrincipalSupplierId,
       ].filter((id): id is string => Boolean(id)),
     ),
   ]
@@ -576,10 +576,10 @@ export async function adminListPriceListItems(
     const p = Array.isArray(prod) ? prod[0] : prod
     const productId = String(r.product_id)
     const supplierId = p?.supplier_id ?? null
-    const baseCost = resolveBaseCost(productId, supplierId, costMap, falSupplierId)
+    const baseCost = resolveBaseCost(productId, supplierId, costMap, hfPrincipalSupplierId)
     const effectiveSupplierId =
       supplierId ??
-      (falSupplierId && costMap.has(`${falSupplierId}:${productId}`) ? falSupplierId : null)
+      (hfPrincipalSupplierId && costMap.has(`${hfPrincipalSupplierId}:${productId}`) ? hfPrincipalSupplierId : null)
     const extraCost = Number(r.extra_cost ?? 0)
     const costTotal =
       baseCost == null
@@ -825,7 +825,7 @@ async function buildVirtualMissingItems(
   if (!missing.length) return []
 
   const missingIds = missing.map((p) => String(p.id))
-  const [costMap, falSupplierId] = await Promise.all([
+  const [costMap, hfPrincipalSupplierId] = await Promise.all([
     loadPrincipalCosts(missingIds),
     loadFalPrincipalSupplierId(),
   ])
@@ -833,7 +833,7 @@ async function buildVirtualMissingItems(
     ...new Set(
       [
         ...missing.map((p) => (p.supplier_id as string | null) ?? null),
-        falSupplierId,
+        hfPrincipalSupplierId,
       ].filter((id): id is string => Boolean(id)),
     ),
   ]
@@ -851,10 +851,10 @@ async function buildVirtualMissingItems(
   return missing.map((p) => {
     const productId = String(p.id)
     const supplierId = (p.supplier_id as string | null) ?? null
-    const baseCost = resolveBaseCost(productId, supplierId, costMap, falSupplierId)
+    const baseCost = resolveBaseCost(productId, supplierId, costMap, hfPrincipalSupplierId)
     const effectiveSupplierId =
       supplierId ??
-      (falSupplierId && costMap.has(`${falSupplierId}:${productId}`) ? falSupplierId : null)
+      (hfPrincipalSupplierId && costMap.has(`${hfPrincipalSupplierId}:${productId}`) ? hfPrincipalSupplierId : null)
     const costTotal =
       baseCost == null ? null : computeCostTotal(baseCost, 0, 0, listPct)
     return {
@@ -1363,34 +1363,65 @@ export type ProductListPriceRow = {
   isDefault: boolean
   itemId: string | null
   price: number | null
+  pricingMethod: PricingMethod
+  pricingPercent: number
+  listExtraCostPercent: number
+  extraCost: number
+  baseCost: number | null
+  costTotal: number | null
+  effectiveMarginPct: number | null
+  effectiveMarkupPct: number | null
+  priceOrigin: PriceOrigin | null
+  supplierId: string | null
 }
 
-/** Todas as listas + preço do produto em cada uma (se houver). */
+/** Todas as listas + preço/custo/margem do produto em cada uma (se houver). */
 export async function adminListProductListPrices(productId: string): Promise<ProductListPriceRow[]> {
   const sb = getSupabase()
-  const [{ data: lists, error: lErr }, { data: items, error: iErr }] = await Promise.all([
-    selectPriceListsWithPercentFallback((columns) =>
-      sb.from('price_lists').select(columns).order('priority', { ascending: false }),
-    ),
-    sb
-      .from('price_list_items')
-      .select('id, price_list_id, price')
-      .eq('product_id', productId),
-  ])
+  const [{ data: lists, error: lErr }, { data: items, error: iErr }, { data: prod, error: pErr }] =
+    await Promise.all([
+      selectPriceListsWithPercentFallback((columns) =>
+        sb.from('price_lists').select(columns).order('priority', { ascending: false }),
+      ),
+      sb
+        .from('price_list_items')
+        .select('id, price_list_id, price, extra_cost, price_origin')
+        .eq('product_id', productId),
+      sb.from('products').select('id, supplier_id').eq('id', productId).maybeSingle(),
+    ])
   if (lErr) throw lErr
   if (iErr) throw iErr
+  if (pErr) throw pErr
 
-  const byList = new Map<string, { id: string; price: number }>()
+  const supplierId = (prod?.supplier_id as string | null) ?? null
+  const [costMap, hfPrincipalSupplierId] = await Promise.all([
+    loadPrincipalCosts([productId]),
+    loadFalPrincipalSupplierId(),
+  ])
+  const baseCost = resolveBaseCost(productId, supplierId, costMap, hfPrincipalSupplierId)
+
+  const byList = new Map<
+    string,
+    { id: string; price: number; extraCost: number; priceOrigin: PriceOrigin }
+  >()
   for (const row of items ?? []) {
     byList.set(String(row.price_list_id), {
       id: String(row.id),
       price: Number(row.price),
+      extraCost: Number(row.extra_cost ?? 0),
+      priceOrigin: (row.price_origin as PriceOrigin) || 'manual',
     })
   }
 
   return (lists ?? []).map((raw) => {
     const list = mapList(raw as unknown as Record<string, unknown>)
     const hit = byList.get(list.id)
+    const extraCost = hit?.extraCost ?? 0
+    const price = hit?.price ?? null
+    const costTotal =
+      baseCost == null
+        ? null
+        : computeCostTotal(baseCost, extraCost, 0, list.listExtraCostPercent)
     return {
       priceListId: list.id,
       listName: list.name,
@@ -1399,9 +1430,83 @@ export async function adminListProductListPrices(productId: string): Promise<Pro
       priority: list.priority,
       isDefault: list.isDefault,
       itemId: hit?.id ?? null,
-      price: hit?.price ?? null,
+      price,
+      pricingMethod: list.pricingMethod,
+      pricingPercent: list.pricingPercent,
+      listExtraCostPercent: list.listExtraCostPercent,
+      extraCost,
+      baseCost,
+      costTotal,
+      effectiveMarginPct:
+        price == null || costTotal == null
+          ? null
+          : toPercent(effectiveMarginFraction(price, costTotal)),
+      effectiveMarkupPct:
+        price == null || costTotal == null
+          ? null
+          : toPercent(effectiveMarkupFraction(price, costTotal)),
+      priceOrigin: hit?.priceOrigin ?? null,
+      supplierId: supplierId ?? hfPrincipalSupplierId,
     }
   })
+}
+
+/** Grava custo do produto no fornecedor (supplier_id do produto ou HF principal). */
+export async function adminUpsertProductSupplierCost(input: {
+  productId: string
+  cost: number
+  supplierId?: string | null
+}): Promise<void> {
+  if (!(input.cost >= 0) || Number.isNaN(input.cost)) {
+    throw new Error('Custo inválido')
+  }
+  const sb = getSupabase()
+  let supplierId = input.supplierId?.trim() || null
+  if (!supplierId) {
+    const { data: prod, error: pErr } = await sb
+      .from('products')
+      .select('supplier_id')
+      .eq('id', input.productId)
+      .maybeSingle()
+    if (pErr) throw pErr
+    supplierId = (prod?.supplier_id as string | null) ?? null
+  }
+  if (!supplierId) {
+    supplierId = await loadFalPrincipalSupplierId()
+  }
+  if (!supplierId) {
+    throw new Error('Sem fornecedor para gravar custo (cadastre supplier ou HF principal)')
+  }
+
+  const { data: existing, error: findErr } = await sb
+    .from('supplier_products')
+    .select('id')
+    .eq('supplier_id', supplierId)
+    .eq('product_id', input.productId)
+    .maybeSingle()
+  if (findErr) throw findErr
+
+  if (existing?.id) {
+    const { error } = await sb
+      .from('supplier_products')
+      .update({ cost: input.cost })
+      .eq('id', existing.id)
+    if (error) throw error
+    return
+  }
+
+  const { data: prodSku } = await sb
+    .from('products')
+    .select('sku')
+    .eq('id', input.productId)
+    .maybeSingle()
+  const { error: insErr } = await sb.from('supplier_products').insert({
+    supplier_id: supplierId,
+    product_id: input.productId,
+    supplier_sku: String(prodSku?.sku ?? input.productId),
+    cost: input.cost,
+  })
+  if (insErr) throw insErr
 }
 
 /**

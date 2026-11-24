@@ -732,7 +732,9 @@ export function AdminPriceListDetailPage() {
             </div>
           </div>
           <p className="mt-1 text-xs text-hf-muted">
-            Método de formação ≠ origem do preço do item (calculated / imported / manual).
+            Detalhe: formação e itens desta lista (1 preço por SKU no Andar 1). Gestão de listas
+            (criar/duplicar) fica em Listas de preço. Método de formação ≠ origem do item
+            (calculated / imported / manual).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -767,8 +769,10 @@ export function AdminPriceListDetailPage() {
           <button
             key={t.id}
             type="button"
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              tab === t.id ? 'bg-hf-navy text-white' : 'bg-hf-bg text-hf-ink'
+            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+              tab === t.id
+                ? 'border-hf-red bg-hf-red text-white'
+                : 'border-hf-line bg-hf-surface-2 text-hf-ink'
             }`}
             onClick={() => selectTab(t.id)}
           >
@@ -1053,7 +1057,7 @@ export function AdminPriceListDetailPage() {
                             </button>
                             <button
                               type="button"
-                              className="text-sm font-semibold text-red-700 underline"
+                              className="text-sm font-semibold text-hf-danger underline"
                               disabled={busyRow}
                               onClick={() => void removeItem(item.id)}
                             >
