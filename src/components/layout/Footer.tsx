@@ -89,6 +89,15 @@ export function Footer() {
           <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/atendimento">
             Falar com a HF
           </Link>
+          <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/cotacao">
+            Solicitar cotação
+          </Link>
+          <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/seja-parceiro">
+            Seja parceiro
+          </Link>
+          <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/privacidade">
+            Privacidade
+          </Link>
         </div>
       </Container>
     </footer>

@@ -103,6 +103,7 @@ export function AdminApplicationsImportPage() {
   const summary = preview
     ? {
         productExisting: preview.filter((r) => r.productExists && r.applyable).length,
+        productCreate: preview.filter((r) => r.createProduct).length,
         productMissing: preview.filter((r) => r.action === 'error' && !r.productExists).length,
         appNew: preview.filter((r) => r.action === 'new').length,
         appUpdate: preview.filter((r) => r.action === 'update').length,
@@ -116,7 +117,7 @@ export function AdminApplicationsImportPage() {
   return (
     <PageShell
       title="Importar aplicações"
-      description="Código referência, montadora, modelo, versão e anos. O produto precisa existir — esta importação não cria cadastro de produto."
+      description="Colunas: código, montadora, modelo, versão, motorização (opcional), ano início/fim. Versão ou motorização em branco = todas as do modelo. SKU inexistente com nome cria produto rascunho; montadora/modelo/versão novos também podem ser criados."
       actions={
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
           <a href="/moldes-importacao/02_aplicacoes.csv" download className="text-hf-red-bright">
@@ -239,7 +240,8 @@ export function AdminApplicationsImportPage() {
                   <p className="m-0 text-hf-muted">Produtos (referência)</p>
                   <ul className="mt-1 list-disc pl-5">
                     <li>Já cadastrados (ok): {summary.productExisting}</li>
-                    <li>Não cadastrados (erro): {summary.productMissing}</li>
+                    <li>Serão criados (rascunho): {summary.productCreate}</li>
+                    <li>Sem nome (erro): {summary.productMissing}</li>
                   </ul>
                 </div>
                 <div>
@@ -280,6 +282,7 @@ export function AdminApplicationsImportPage() {
                     <th className="px-2 py-2">Montadora</th>
                     <th className="px-2 py-2">Modelo</th>
                     <th className="px-2 py-2">Versão</th>
+                    <th className="px-2 py-2">Motor</th>
                     <th className="px-2 py-2">Anos</th>
                     <th className="px-2 py-2">Situação</th>
                     <th className="px-2 py-2">Detalhe</th>
@@ -288,14 +291,15 @@ export function AdminApplicationsImportPage() {
                 <tbody>
                   {visible.map((r, idx) => (
                     <tr
-                      key={`${r.lineNumber}-${r.versao}-${idx}`}
+                      key={`${r.lineNumber}-${r.versao}-${r.motorizacao}-${idx}`}
                       className="border-b border-hf-line last:border-0"
                     >
                       <td className="px-2 py-1.5">{r.lineNumber}</td>
                       <td className="px-2 py-1.5 font-medium">{r.sku}</td>
                       <td className="px-2 py-1.5">{r.montadora}</td>
                       <td className="px-2 py-1.5">{r.modelo}</td>
-                      <td className="px-2 py-1.5">{r.versao || '—'}</td>
+                      <td className="px-2 py-1.5">{r.versao || 'Todas'}</td>
+                      <td className="px-2 py-1.5">{r.motorizacao || 'Todas'}</td>
                       <td className="whitespace-nowrap px-2 py-1.5">
                         {r.yearStart ?? '—'}
                         {' → '}

@@ -12,6 +12,7 @@ import {
 import { adminListProducts } from '@/services/admin/adminProductService'
 import type { Product } from '@/types'
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
 export function AdminCatalogsPage() {
   const [items, setItems] = useState<AdminCatalogList[]>([])
@@ -80,11 +81,23 @@ export function AdminCatalogsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-extrabold text-hf-ink">Listas de catálogo</h1>
-      <p className="text-sm text-hf-muted">
-        Um produto único pode pertencer a várias listas. Clientes/grupos enxergam só o que for
-        associado.
-      </p>
+      <div>
+        <p className="m-0 text-sm">
+          <Link className="font-semibold text-hf-auth-link" to="/admin/clientes">
+            ← Clientes B2B
+          </Link>
+        </p>
+        <h1 className="mt-1 text-2xl font-extrabold text-hf-ink">Listas B2B (catálogo)</h1>
+        <p className="text-sm text-hf-muted">
+          Visibilidade: conjuntos de produtos para clientes/grupos —{' '}
+          <strong>não é lista de preço</strong>. Preços ficam em{' '}
+          <Link className="font-semibold text-hf-auth-link" to="/admin/precos">
+            Listas de preço
+          </Link>
+          . Um produto pode entrar em várias listas B2B. Acesso só via Clientes (sem item no
+          menu).
+        </p>
+      </div>
 
       <form onSubmit={onSubmit} className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-2">
         <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} required />

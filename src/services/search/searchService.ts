@@ -5,6 +5,7 @@ import {
   displayPrice,
 } from '@/services/pricing/priceResolutionService'
 import { attachCompatibilitySummaries } from '@/services/products/compatibilitySummary'
+import { attachPrimaryProductImages } from '@/services/products/productImages'
 import type { Product, ProductSearchParams, ProductSearchResult, ProductSearchSort } from '@/types'
 
 const DEFAULT_PAGE_SIZE = 24
@@ -31,17 +32,18 @@ function mapRpcRow(row: Record<string, unknown>): Product {
     posicao: (row.posicao as Product['posicao']) ?? null,
     lado: (row.lado as Product['lado']) ?? null,
     attrs: (row.attrs as Record<string, unknown> | null) ?? {},
+    productKind: row.product_kind === 'kit' ? 'kit' : 'item',
     stock: undefined,
   }
 }
 
-/** Completa posicao/lado da página atual (RPC search ainda não devolve esses campos). */
+/** Completa posicao/lado/product_kind da página atual (RPC search ainda não devolve esses campos). */
 async function enrichPageProductMeta(products: Product[]): Promise<Product[]> {
   if (!products.length || !isSupabaseConfigured || !supabase) return products
   const ids = products.map((p) => p.id)
   const { data, error } = await supabase
     .from('products')
-    .select('id, posicao, lado, manufacturer_code')
+    .select('id, posicao, lado, manufacturer_code, product_kind')
     .in('id', ids)
   if (error) throw error
   const meta = new Map(
@@ -51,6 +53,7 @@ async function enrichPageProductMeta(products: Product[]): Promise<Product[]> {
         posicao: (r.posicao as Product['posicao']) ?? null,
         lado: (r.lado as Product['lado']) ?? null,
         manufacturerCode: (r.manufacturer_code as string | null) ?? undefined,
+        productKind: (r.product_kind === 'kit' ? 'kit' : 'item') as Product['productKind'],
       },
     ]),
   )
@@ -62,6 +65,7 @@ async function enrichPageProductMeta(products: Product[]): Promise<Product[]> {
       posicao: p.posicao ?? m.posicao,
       lado: p.lado ?? m.lado,
       manufacturerCode: p.manufacturerCode ?? m.manufacturerCode,
+      productKind: p.productKind ?? m.productKind,
     }
   })
 }
@@ -114,6 +118,22 @@ function mockSearch(params: ProductSearchParams): ProductSearchResult {
         (p.categoryName ?? '').toLowerCase() === c ||
         (p.categoryId ?? '').toLowerCase() === c,
     )
+  }
+
+  // Filtros de veículo (mock): AND com a busca textual — nunca bloqueiam o `q`
+  const vehicleNeedles = [params.maker, params.model, params.year, params.engine, params.version]
+    .map((v) => (v ?? '').trim().toLowerCase())
+    .filter(Boolean)
+  if (vehicleNeedles.length) {
+    list = list.filter((p) => {
+      const hay = [p.compatibilitySummary, p.name, p.sku]
+        .filter(Boolean)
+        .join(' ')
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '')
+        .toLowerCase()
+      return vehicleNeedles.every((n) => hay.includes(n))
+    })
   }
 
   const sort = normalizeSort(params.sort)
@@ -178,7 +198,8 @@ export async function searchCatalog(params: ProductSearchParams = {}): Promise<P
     compact: true,
     maxEntries: 4,
   })
-  let items = await attachResolvedPrices(withApps)
+  const withImages = await attachPrimaryProductImages(withApps)
+  let items = await attachResolvedPrices(withImages)
 
   // Reordena a página pelo preço resolvido (RPC ainda usa preço legado)
   if (sort === 'price_asc' || sort === 'price_desc') {

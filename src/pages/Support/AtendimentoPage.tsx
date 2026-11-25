@@ -1,5 +1,6 @@
 import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { Container } from '@/components/layout/Container'
+import { PaymentConditionsNotice } from '@/components/payment/PaymentConditionsNotice'
 import { businessConfig } from '@/config/business'
 import { buildHomeWhatsAppMessage } from '@/lib/whatsapp'
 import { Link } from 'react-router-dom'
@@ -36,6 +37,7 @@ export function AtendimentoPage() {
       <div className="mt-6">
         <WhatsAppButton message={buildHomeWhatsAppMessage()}>Falar com a HF no WhatsApp</WhatsAppButton>
       </div>
+      <PaymentConditionsNotice audience="guest" className="mt-8 max-w-xl" />
     </Container>
   )
 }

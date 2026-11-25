@@ -8,6 +8,13 @@
 
 export type PricingMethod = 'markup_on_cost' | 'margin_on_sell' | 'fixed'
 
+/** Label do campo % na UI de formação (lista / aba / modal). */
+export function pricingPercentInputLabel(method: PricingMethod): string {
+  if (method === 'markup_on_cost') return 'Markup (%)'
+  if (method === 'margin_on_sell') return 'Margem (%)'
+  return '% (formação)'
+}
+
 /** custo_total = custo_base ajustado por % da lista + custo_adicional_item (+ list_extra_cost R$ se informado). */
 export function computeCostTotal(
   baseCost: number,

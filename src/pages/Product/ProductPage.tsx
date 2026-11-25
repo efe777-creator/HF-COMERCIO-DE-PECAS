@@ -1,20 +1,60 @@
-import { Container } from '@/components/layout/Container'
+import { Badge } from '@/components/common/Badge'
+import { Button } from '@/components/common/Button'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Loading } from '@/components/common/Loading'
 import { WhatsAppButton } from '@/components/common/WhatsAppButton'
-import { getProductById } from '@/services/products/productService'
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import type { Product } from '@/types'
+import { Container } from '@/components/layout/Container'
+import { PaymentConditionsNotice } from '@/components/payment/PaymentConditionsNotice'
+import { PaymentMethodPricesBlock } from '@/components/payment/PaymentMethodPricesBlock'
+import { useAuth } from '@/contexts/AuthContext'
+import { CompatibilityAppsBlock } from '@/components/product/CompatibilityAppsBlock'
+import { CompatibilityStateBadge } from '@/components/product/CompatibilityStateBadge'
+import { PdpAccordion } from '@/components/product/PdpAccordion'
+import { PdpPurchaseBar } from '@/components/product/PdpPurchaseBar'
+import { ProductGallery } from '@/components/product/ProductGallery'
+import { features } from '@/config/features'
+import { useProductCompatVerdicts } from '@/hooks/useProductCompatVerdicts'
+import { toCommercialTitleCase } from '@/lib/entityNormalize'
+import {
+  joinProductDescription,
+  needsDescriptionCollapse,
+  truncateDescription,
+  buildPdpCatalogFilterLink,
+} from '@/lib/productDescription'
+import {
+  AJUDA_APLICACAO_TEXT,
+  APLICACAO_SECTION_LABEL,
+  formatReferenciaFromProduct,
+  VER_DESCRICAO_COMPLETA_LABEL,
+  VER_MAIS_CATALOGO_LABEL,
+  VER_MENOS_DESCRICAO_LABEL,
+} from '@/lib/productLabels'
+import { buildProductSpecRows } from '@/lib/productSpecs'
 import { buildNotFoundWhatsAppMessage, buildProductWhatsAppMessage } from '@/lib/whatsapp'
-import { formatCodigoReferencia } from '@/lib/productLabels'
-import { formatLadoLabel, formatPosicaoLabel } from '@/lib/productPosicaoLado'
+import { loadCompatibilityGroups } from '@/services/products/compatibilitySummary'
+import {
+  loadStoreKitComposition,
+  type StoreKitComposition,
+} from '@/services/products/kitCompositionStoreService'
+import { listEquivalentProducts } from '@/services/products/equivalenceLinksService'
+import { getProductById } from '@/services/products/productService'
+import type { CompatibilityAppGroup, Product, VehicleFilter } from '@/types'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 export function ProductPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const { user } = useAuth()
+  const b2bActive = Boolean(user?.customerId && user.customerStatus === 'active')
   const [product, setProduct] = useState<Product | null>(null)
+  const [appGroups, setAppGroups] = useState<CompatibilityAppGroup[]>([])
+  const [equivalents, setEquivalents] = useState<Product[]>([])
+  const [kitComposition, setKitComposition] = useState<StoreKitComposition | null>(null)
   const [loading, setLoading] = useState(true)
+  const [descOpen, setDescOpen] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -23,8 +63,29 @@ export function ProductPage() {
       try {
         const data = id ? await getProductById(id) : null
         if (active) setProduct(data)
+        if (active && data?.id) {
+          const groupsMap = await loadCompatibilityGroups([data.id])
+          if (active) setAppGroups(groupsMap.get(data.id) ?? [])
+          const equiv = await listEquivalentProducts(data.id).catch(() => [] as Product[])
+          if (active) setEquivalents(equiv)
+          if (data.productKind === 'kit') {
+            const bom = await loadStoreKitComposition(data.id)
+            if (active) setKitComposition(bom)
+          } else if (active) {
+            setKitComposition(null)
+          }
+        } else if (active) {
+          setAppGroups([])
+          setEquivalents([])
+          setKitComposition(null)
+        }
       } catch {
-        if (active) setProduct(null)
+        if (active) {
+          setProduct(null)
+          setAppGroups([])
+          setEquivalents([])
+          setKitComposition(null)
+        }
       } finally {
         if (active) setLoading(false)
       }
@@ -34,9 +95,46 @@ export function ProductPage() {
     }
   }, [id])
 
+  const descriptionFull = useMemo(() => {
+    if (!product) return ''
+    return joinProductDescription(product.shortDescription ?? '', product.description ?? '')
+  }, [product])
+
+  const descriptionNeedsCollapse = needsDescriptionCollapse(descriptionFull)
+  const descriptionShown =
+    descOpen || !descriptionNeedsCollapse
+      ? descriptionFull
+      : truncateDescription(descriptionFull)
+
+  const specRows = useMemo(() => (product ? buildProductSpecRows(product) : []), [product])
+  const catalogFilter = useMemo(
+    () => buildPdpCatalogFilterLink(appGroups.map((g) => g.maker)),
+    [appGroups],
+  )
+
+  const fitFilter: VehicleFilter | null = useMemo(() => {
+    const maker = params.get('maker')?.trim() || ''
+    const model = params.get('model')?.trim() || ''
+    const year = params.get('year')?.trim() || ''
+    const engine = params.get('engine')?.trim() || ''
+    const version = params.get('version')?.trim() || ''
+    if (!maker && !model && !year && !engine && !version) return null
+    return {
+      maker: maker || undefined,
+      model: model || undefined,
+      year: year || undefined,
+      engine: engine || undefined,
+      version: version || undefined,
+    }
+  }, [params])
+
+  const productIds = useMemo(() => (product?.id ? [product.id] : []), [product?.id])
+  const { verdicts } = useProductCompatVerdicts(productIds, fitFilter)
+  const pdpVerdict = product?.id ? verdicts.get(product.id) : undefined
+
   if (loading) {
     return (
-      <Container className="py-8">
+      <Container maxWidth="pdp" className="py-8">
         <Loading />
       </Container>
     )
@@ -44,7 +142,7 @@ export function ProductPage() {
 
   if (!product) {
     return (
-      <Container className="py-8">
+      <Container maxWidth="pdp" className="py-8">
         <EmptyState
           title="Produto não disponível"
           description="Este item não está no catálogo autorizado da sua empresa ou o link é inválido."
@@ -59,23 +157,33 @@ export function ProductPage() {
   }
 
   const current = product
+  const displayName = toCommercialTitleCase(current.name)
   const categoryHref = current.categorySlug
     ? `/categoria/${encodeURIComponent(current.categorySlug)}`
     : null
-  const brandHref = current.brand
-    ? `/marca/${encodeURIComponent(current.brand.toLowerCase().replace(/\s+/g, '-'))}`
-    : null
-  const apps = current.compatibilitySummary
-    ? current.compatibilitySummary.split(' · ').filter(Boolean)
-    : []
+  const waMessage = buildProductWhatsAppMessage({
+    name: current.name,
+    sku: current.sku,
+    productUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+  })
 
   function goBack() {
     if (window.history.length > 1) navigate(-1)
     else navigate('/catalogo')
   }
 
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setLinkCopied(true)
+      window.setTimeout(() => setLinkCopied(false), 2000)
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
-    <Container className="py-8">
+    <Container maxWidth="pdp" className="py-2 pb-24 sm:py-3 lg:pb-8">
       <button
         type="button"
         onClick={goBack}
@@ -84,146 +192,294 @@ export function ProductPage() {
       >
         ← Voltar
       </button>
-      <p className="mb-2 text-[13px] text-hf-muted">
-        <Link to="/" className="hover:underline">
-          Início
-        </Link>
-        {' / '}
-        {current.categoryName ? (
-          categoryHref ? (
-            <Link to={categoryHref} className="hover:underline">
-              {current.categoryName}
+
+      <nav aria-label="Breadcrumb" className="mb-3">
+        <ol className="m-0 flex list-none flex-wrap items-center gap-1 p-0 text-[12px] text-hf-muted">
+          <li>
+            <Link to="/" className="hover:underline">
+              Início
             </Link>
-          ) : (
-            <span>{current.categoryName}</span>
-          )
-        ) : (
-          <Link to="/catalogo" className="hover:underline">
-            Catálogo
-          </Link>
-        )}
-        {' / '}
-        <span className="text-hf-ink">{current.name}</span>
-      </p>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="grid h-[280px] place-items-center rounded-2xl bg-gradient-to-br from-hf-surface-2 to-[#0c0c0e] text-7xl lg:h-[420px]">
-          🧩
-        </div>
-        <div className="relative rounded-hf border border-hf-line bg-hf-surface p-5">
-          <h1 className="mt-0 text-[26px] font-extrabold leading-tight sm:text-[32px]">
-            {current.name}
-          </h1>
-          <p className="mt-1 text-sm text-hf-muted">{formatCodigoReferencia(current.sku)}</p>
-          <div className="mt-2 space-y-1 text-sm text-hf-ink">
-            {current.brand ? (
-              <p className="m-0">
-                <span className="font-semibold">Marca:</span>{' '}
-                {brandHref ? (
-                  <Link to={`/catalogo?brand=${encodeURIComponent(current.brand)}`} className="underline">
-                    {current.brand}
-                  </Link>
-                ) : (
-                  current.brand
-                )}
-              </p>
-            ) : null}
-            {current.manufacturerCode ? (
-              <p className="m-0">
-                <span className="font-semibold">Cód. fabricante:</span>{' '}
-                <span className="font-mono">{current.manufacturerCode}</span>
-              </p>
-            ) : null}
+          </li>
+          <li aria-hidden="true">/</li>
+          <li>
             {current.categoryName ? (
-              <p className="m-0">
-                <span className="font-semibold">Categoria:</span> {current.categoryName}
-              </p>
-            ) : null}
-            {current.posicao || current.lado ? (
-              <p className="m-0">
-                {current.posicao ? (
-                  <span>
-                    <span className="font-semibold">Posição:</span>{' '}
-                    {formatPosicaoLabel(current.posicao)}
-                  </span>
-                ) : null}
-                {current.posicao && current.lado ? ' · ' : null}
-                {current.lado ? (
-                  <span>
-                    <span className="font-semibold">Lado:</span> {formatLadoLabel(current.lado)}
-                  </span>
-                ) : null}
-              </p>
+              categoryHref ? (
+                <Link to={categoryHref} className="hover:underline">
+                  {current.categoryName}
+                </Link>
+              ) : (
+                <span>{current.categoryName}</span>
+              )
+            ) : (
+              <Link to="/catalogo" className="hover:underline">
+                Catálogo
+              </Link>
+            )}
+          </li>
+          <li aria-hidden="true">/</li>
+          <li className="text-hf-ink">{displayName}</li>
+        </ol>
+      </nav>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,55fr)_minmax(0,45fr)] lg:gap-6">
+        {/* Galeria */}
+        <div className="order-1 min-w-0">
+          <ProductGallery
+            images={
+              current.images?.length
+                ? current.images
+                : current.imageUrl
+                  ? [current.imageUrl]
+                  : []
+            }
+            alt={displayName}
+          />
+        </div>
+
+        {/* Buy-box sticky */}
+        <div className="order-2 min-w-0 lg:sticky lg:top-20 lg:row-span-2 lg:self-start">
+          <div className="flex flex-wrap items-center gap-2">
+            {current.productKind === 'kit' ? <Badge>Kit</Badge> : null}
+            {current.brand ? (
+              <Link
+                to={`/catalogo?brand=${encodeURIComponent(current.brand)}`}
+                className="inline-flex rounded-hf border border-hf-line bg-hf-surface-2 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-hf-ink hover:border-hf-red/50"
+              >
+                {toCommercialTitleCase(current.brand)}
+              </Link>
             ) : null}
           </div>
 
-          {current.description ? (
-            <p className="mt-4 text-sm text-hf-ink whitespace-pre-wrap">{current.description}</p>
-          ) : null}
+          <h1 className="mt-2 text-[22px] font-extrabold leading-tight text-hf-ink sm:text-[26px]">
+            {displayName}
+          </h1>
+          <p className="mt-1 text-sm text-hf-muted">{formatReferenciaFromProduct(current)}</p>
 
-          <p className="mt-4 rounded-[10px] border border-hf-line bg-hf-bg p-3 text-xs text-hf-muted">
-            Confira sempre a aplicação no veículo. Em caso de dúvida, fale com a HF antes de pedir.
+          <p className="mt-3 rounded-hf border border-hf-line bg-hf-bg px-3 py-2 text-xs text-hf-muted">
+            {AJUDA_APLICACAO_TEXT}
           </p>
 
-          {apps.length ? (
-            <div className="mt-4 overflow-x-auto">
-              <p className="m-0 mb-2 font-semibold text-hf-ink">Aplicações</p>
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-hf-muted">
-                  <tr>
-                    <th className="border-b border-hf-line px-2 py-2 font-semibold">Aplicação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {apps.map((line) => (
-                    <tr key={line} className="border-b border-hf-line/60">
-                      <td className="px-2 py-2 text-hf-ink">{line}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {b2bActive && current?.id ? (
+            <div className="mt-3">
+              <PaymentMethodPricesBlock
+                productId={current.id}
+                customerId={user?.customerId}
+                fallbackBasePrice={
+                  current.priceVisible || features.price_enabled
+                    ? (current.resolvedPrice ?? current.price)
+                    : null
+                }
+              />
             </div>
           ) : (
-            <p className="mt-4 text-sm text-hf-muted">Aplicações sob consulta</p>
+            <div className="mt-3">
+              <PaymentConditionsNotice audience="guest" />
+            </div>
           )}
 
-          {current.references?.length ? (
-            <div className="mt-4 overflow-x-auto">
-              <p className="m-0 mb-2 font-semibold text-hf-ink">Códigos / referências</p>
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-hf-muted">
-                  <tr>
-                    <th className="border-b border-hf-line px-2 py-2 font-semibold">Código</th>
-                    <th className="border-b border-hf-line px-2 py-2 font-semibold">Tipo / marca</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {current.references.map((ref) => (
-                    <tr key={`${ref.type}-${ref.code}`} className="border-b border-hf-line/60">
-                      <td className="px-2 py-2 font-mono text-hf-ink">{ref.code}</td>
-                      <td className="px-2 py-2 text-hf-muted">
-                        {[ref.type, ref.brandLabel].filter(Boolean).join(' · ') || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          <div className="mt-5">
-            <WhatsAppButton
-              fullWidth
-              message={buildProductWhatsAppMessage({
-                name: current.name,
-                sku: current.sku,
-                productUrl: typeof window !== 'undefined' ? window.location.href : undefined,
-              })}
-            >
+          <div className="mt-4 flex flex-col gap-2">
+            {features.quotation_enabled ? (
+              <Link
+                to={`/cotacao?sku=${encodeURIComponent(current.sku)}&name=${encodeURIComponent(current.name)}&productId=${encodeURIComponent(current.id)}`}
+              >
+                <Button fullWidth variant="primary" type="button">
+                  Solicitar cotação
+                </Button>
+              </Link>
+            ) : null}
+            <WhatsAppButton fullWidth message={waMessage}>
               Consultar esta peça
             </WhatsAppButton>
           </div>
+
+          <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
+            <button
+              type="button"
+              className="text-hf-muted hover:text-hf-ink hover:underline"
+              onClick={() => void copyLink()}
+            >
+              {linkCopied ? 'Link copiado' : 'Copiar link'}
+            </button>
+            <a href="#pdp-detalhes" className="text-hf-red hover:underline">
+              Ver detalhes ↓
+            </a>
+          </div>
+        </div>
+
+        {/* Acordeões sob a galeria */}
+        <div className="order-3 min-w-0 lg:col-start-1">
+          <PdpAccordion
+            items={[
+              ...(current.productKind === 'kit' && kitComposition?.lines.length
+                ? [
+                    {
+                      id: 'kit-bom',
+                      title: 'Composição do kit',
+                      icon: 'K',
+                      defaultOpen: true,
+                      children: (
+                        <ul className="m-0 space-y-2 p-0 list-none">
+                          {kitComposition.lines.map((line) => (
+                            <li
+                              key={line.componentProductId}
+                              className="flex items-center gap-3 border-b border-hf-line py-2 last:border-0"
+                            >
+                              {line.imageUrl ? (
+                                <img
+                                  src={line.imageUrl}
+                                  alt=""
+                                  className="h-12 w-12 rounded object-contain bg-hf-bg"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded bg-hf-bg" />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <Link
+                                  to={`/produto/${line.componentProductId}`}
+                                  className="font-semibold text-hf-ink hover:underline"
+                                >
+                                  {line.name}
+                                </Link>
+                                <p className="m-0 text-xs text-hf-muted">
+                                  {line.sku} · qtd {line.quantity}
+                                </p>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ),
+                    },
+                  ]
+                : []),
+              {
+                id: 'apps',
+                title: APLICACAO_SECTION_LABEL,
+                icon: 'A',
+                defaultOpen: current.productKind !== 'kit',
+                children: (
+                  <div className="space-y-3">
+                    {pdpVerdict ? (
+                      <CompatibilityStateBadge
+                        verdict={pdpVerdict}
+                        variant="pdp"
+                        showHint
+                      />
+                    ) : null}
+                    <CompatibilityAppsBlock
+                      variant="pdp"
+                      groups={appGroups}
+                      summary={current.compatibilitySummary}
+                    />
+                    <p className="m-0 text-xs text-hf-muted">{AJUDA_APLICACAO_TEXT}</p>
+                    <Link
+                      to={catalogFilter.href}
+                      className="inline-flex text-sm font-semibold text-hf-red hover:underline"
+                    >
+                      {VER_MAIS_CATALOGO_LABEL}
+                      {catalogFilter.hint}
+                    </Link>
+                  </div>
+                ),
+              },
+              ...(equivalents.length
+                ? [
+                    {
+                      id: 'equivalencias',
+                      title: `Equivalências (${equivalents.length})`,
+                      icon: '=',
+                      defaultOpen: true,
+                      children: (
+                        <ul className="m-0 space-y-2 p-0 list-none">
+                          {equivalents.map((eq) => (
+                            <li
+                              key={eq.id}
+                              className="flex items-center gap-3 border-b border-hf-line py-2 last:border-0"
+                            >
+                              {eq.imageUrl ? (
+                                <img
+                                  src={eq.imageUrl}
+                                  alt=""
+                                  className="h-12 w-12 rounded object-contain bg-hf-bg"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded bg-hf-bg" />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <Link
+                                  to={`/produto/${eq.id}`}
+                                  className="font-semibold text-hf-ink hover:underline"
+                                >
+                                  {eq.name}
+                                </Link>
+                                <p className="m-0 text-xs text-hf-muted">
+                                  {formatReferenciaFromProduct(eq)}
+                                </p>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ),
+                    },
+                  ]
+                : []),
+              {
+                id: 'desc',
+                title: 'Descrição',
+                icon: 'D',
+                defaultOpen: false,
+                children: descriptionFull ? (
+                  <div>
+                    <p className="m-0 whitespace-pre-wrap text-sm text-hf-ink">{descriptionShown}</p>
+                    {descriptionNeedsCollapse ? (
+                      <button
+                        type="button"
+                        className="mt-2 text-sm font-semibold text-hf-red hover:underline"
+                        onClick={() => setDescOpen((v) => !v)}
+                      >
+                        {descOpen ? VER_MENOS_DESCRICAO_LABEL : VER_DESCRICAO_COMPLETA_LABEL}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="m-0 text-sm text-hf-muted">Sem descrição cadastrada.</p>
+                ),
+              },
+              {
+                id: 'specs',
+                title: 'Especificações',
+                icon: 'E',
+                defaultOpen: false,
+                children: specRows.length ? (
+                  <table className="min-w-full text-left text-sm">
+                    <tbody>
+                      {specRows.map((row, i) => (
+                        <tr
+                          key={`${row.label}-${i}`}
+                          className={i % 2 === 0 ? 'bg-hf-bg/60' : 'bg-transparent'}
+                        >
+                          <th className="w-[40%] px-2 py-1.5 font-semibold text-hf-muted">
+                            {row.label}
+                          </th>
+                          <td className="px-2 py-1.5 text-hf-ink">{row.value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="m-0 text-sm text-hf-muted">Sem especificações cadastradas.</p>
+                ),
+              },
+            ]}
+          />
         </div>
       </div>
+
+      <PdpPurchaseBar
+        sku={current.sku}
+        name={current.name}
+        productId={current.id}
+        whatsappMessage={waMessage}
+      />
     </Container>
   )
 }

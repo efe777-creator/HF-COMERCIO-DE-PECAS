@@ -4,6 +4,8 @@
  * Decisões de prévia são congeladas no payload (apply não recalcula).
  */
 
+import { normalizeEntityMatchKey } from '@/lib/entityNormalize'
+import { parseYearRangeToken, parseYearToken } from '@/lib/vehicleAppYear'
 import { normalizeImportText } from '@/services/import/normalizeText'
 
 export type MatchConfidence = 'exact' | 'probable' | 'unidentified'
@@ -29,7 +31,7 @@ export type YearPeriod = {
   end: number | null
 }
 
-/** Parse anos do arquivo. Fim vazio = vigente (não erro). */
+/** Parse anos do arquivo. Fim vazio = vigente (não erro). Aceita YY e faixa 99/10. */
 export function parseYearPeriod(
   startRaw: string | null | undefined,
   endRaw: string | null | undefined,
@@ -37,23 +39,31 @@ export function parseYearPeriod(
   const s = normalizeImportText(startRaw)
   const e = normalizeImportText(endRaw)
 
+  if (s && !e) {
+    const range = parseYearRangeToken(s)
+    if (range) {
+      if (!range.ok) return { ok: false, reason: 'periodo_invalido' }
+      return { ok: true, period: { start: range.yearStart, end: range.yearEnd } }
+    }
+  }
+
   let start: number | null = null
   let end: number | null = null
 
   if (s) {
-    const n = Number(s)
-    if (!Number.isInteger(n) || n < 1950 || n > 2100) {
+    const parsed = parseYearToken(s)
+    if (!parsed.ok || parsed.year == null) {
       return { ok: false, reason: 'ano_inicio_invalido' }
     }
-    start = n
+    start = parsed.year
   }
 
   if (e) {
-    const n = Number(e)
-    if (!Number.isInteger(n) || n < 1950 || n > 2100) {
+    const parsed = parseYearToken(e)
+    if (!parsed.ok || parsed.year == null) {
       return { ok: false, reason: 'ano_fim_invalido' }
     }
-    end = n
+    end = parsed.year
   }
 
   if (start != null && end != null && end < start) {
@@ -129,10 +139,13 @@ export function classifyMatch(
   candidates: string[],
   query: string,
 ): { confidence: MatchConfidence; best: string | null } {
-  const q = normalizeImportText(query).toLowerCase()
+  const q = normalizeEntityMatchKey(normalizeImportText(query))
   if (!q) return { confidence: 'unidentified', best: null }
 
-  const norm = candidates.map((c) => ({ raw: c, n: normalizeImportText(c).toLowerCase() }))
+  const norm = candidates.map((c) => ({
+    raw: c,
+    n: normalizeEntityMatchKey(normalizeImportText(c)),
+  }))
   const exact = norm.find((c) => c.n === q)
   if (exact) return { confidence: 'exact', best: exact.raw }
 
@@ -171,21 +184,23 @@ export function applicationLogicKey(input: {
   montadora: string
   modelo: string
   versao: string
+  motorizacao?: string
   yearStart: number | null
   yearEnd: number | null
 }): string {
   return [
-    normalizeImportText(input.sku).toLowerCase(),
-    normalizeImportText(input.montadora).toLowerCase(),
-    normalizeImportText(input.modelo).toLowerCase(),
-    normalizeImportText(input.versao).toLowerCase(),
+    normalizeEntityMatchKey(normalizeImportText(input.sku)),
+    normalizeEntityMatchKey(normalizeImportText(input.montadora)),
+    normalizeEntityMatchKey(normalizeImportText(input.modelo)),
+    normalizeEntityMatchKey(normalizeImportText(input.versao)),
+    normalizeEntityMatchKey(normalizeImportText(input.motorizacao ?? '')),
     input.yearStart ?? '',
     input.yearEnd ?? '',
   ].join('|')
 }
 
 export function normKey(s: string): string {
-  return normalizeImportText(s).toLowerCase()
+  return normalizeEntityMatchKey(normalizeImportText(s))
 }
 
 export type CatalogMaker = { id: string; name: string }
@@ -195,6 +210,7 @@ export type CatalogVersion = {
   manufacturerId: string
   modelId: string
   versionName: string | null
+  engine?: string | null
 }
 export type CatalogPvc = {
   productId: string
@@ -218,11 +234,16 @@ export type ApplicationCatalogs = {
  * 3) se PVC do produto aponta para uma das correspondências → usar
  * 4) se múltiplas → ambíguo (revisão)
  * 5) se zero → criar (quando aprovado)
+ *
+ * Nota: `versao` vazia na planilha NÃO usa este matcher para escolher 1 VV —
+ * ver expansão blank→todas as VVs do modelo em `analyzeApplicationMappedRows`.
  */
 export function resolveVehicleVersionMatch(input: {
   manufacturerId: string | null
   modelId: string | null
   versionName: string
+  /** Se informado, restringe por `vehicle_versions.engine`. */
+  engine?: string | null
   productId: string | null
   versions: CatalogVersion[]
   pvc: CatalogPvc[]
@@ -234,12 +255,17 @@ export function resolveVehicleVersionMatch(input: {
     return { status: 'none', versionId: null }
   }
   const want = normKey(input.versionName || '')
-  const matches = input.versions.filter(
-    (v) =>
-      v.manufacturerId === input.manufacturerId &&
-      v.modelId === input.modelId &&
-      normKey(v.versionName ?? '') === want,
-  )
+  const wantEngine = input.engine != null && String(input.engine).trim()
+    ? normKey(String(input.engine))
+    : null
+  const matches = input.versions.filter((v) => {
+    if (v.manufacturerId !== input.manufacturerId || v.modelId !== input.modelId) {
+      return false
+    }
+    if (normKey(v.versionName ?? '') !== want) return false
+    if (wantEngine != null && normKey(v.engine ?? '') !== wantEngine) return false
+    return true
+  })
 
   if (matches.length === 0) return { status: 'none', versionId: null }
   if (matches.length === 1) return { status: 'one', versionId: matches[0].id }
@@ -253,6 +279,38 @@ export function resolveVehicleVersionMatch(input: {
   return { status: 'ambiguous', versionId: null }
 }
 
+/** VVs do modelo (catálogo já filtrado active no loader). Não cruza outros model_id. */
+export function listVersionsForModel(
+  versions: CatalogVersion[],
+  manufacturerId: string,
+  modelId: string,
+): CatalogVersion[] {
+  return versions.filter(
+    (v) => v.manufacturerId === manufacturerId && v.modelId === modelId,
+  )
+}
+
+/** Filtra VVs do modelo por versão e/ou motorização (campos vazios = sem filtro). */
+export function filterVersionsForApp(input: {
+  versions: CatalogVersion[]
+  manufacturerId: string
+  modelId: string
+  versao: string
+  motorizacao: string
+}): CatalogVersion[] {
+  return listVersionsForModel(input.versions, input.manufacturerId, input.modelId).filter(
+    (v) => {
+      if (input.motorizacao && normKey(v.engine ?? '') !== normKey(input.motorizacao)) {
+        return false
+      }
+      if (input.versao && normKey(v.versionName ?? '') !== normKey(input.versao)) {
+        return false
+      }
+      return true
+    },
+  )
+}
+
 export type ApplicationPreviewRow = {
   lineNumber: number
   sku: string
@@ -260,6 +318,8 @@ export type ApplicationPreviewRow = {
   montadora: string
   modelo: string
   versao: string
+  /** Motorização (engine). Vazio = todas as do modelo (com filtro de versão). */
+  motorizacao: string
   yearStart: number | null
   yearEnd: number | null
   versionParts: string[]
@@ -295,11 +355,13 @@ function emptyRow(
     | 'createModel'
     | 'createVersion'
     | 'periodAction'
-  > & { periodAction?: PeriodAction | null },
+    | 'motorizacao'
+  > & { periodAction?: PeriodAction | null; motorizacao?: string },
 ): ApplicationPreviewRow {
   const action = partial.action
   return {
     ...partial,
+    motorizacao: partial.motorizacao ?? '',
     periodAction: partial.periodAction ?? null,
     applyable: action === 'new' || action === 'update' || action === 'found',
     productExists: false,
@@ -314,28 +376,32 @@ function emptyRow(
   }
 }
 
-/** Expande linhas com split seguro em uma linha lógica por parte. */
+/** Expande linhas com split seguro de versão e/ou motorização (ex.: 1.0/1.6). */
 export function expandMappedRowsForVersions(
   rows: Array<{ lineNumber: number; values: Record<string, string> }>,
 ): Array<{ lineNumber: number; values: Record<string, string>; versionSplit: boolean }> {
   const out: Array<{ lineNumber: number; values: Record<string, string>; versionSplit: boolean }> =
     []
   for (const row of rows) {
-    const info = splitVersionSafe(row.values.versao)
-    if (info.split && info.parts.length > 1) {
-      for (const part of info.parts) {
+    const verInfo = splitVersionSafe(row.values.versao)
+    const motInfo = splitVersionSafe(row.values.motorizacao)
+    const verParts =
+      verInfo.split && verInfo.parts.length > 1 ? verInfo.parts : [verInfo.original]
+    const motParts =
+      motInfo.split && motInfo.parts.length > 1 ? motInfo.parts : [motInfo.original]
+    const split = verParts.length > 1 || motParts.length > 1
+    for (const versao of verParts) {
+      for (const motorizacao of motParts) {
         out.push({
           lineNumber: row.lineNumber,
-          values: { ...row.values, versao: part },
-          versionSplit: true,
+          values: {
+            ...row.values,
+            versao,
+            motorizacao,
+          },
+          versionSplit: split,
         })
       }
-    } else {
-      out.push({
-        lineNumber: row.lineNumber,
-        values: { ...row.values, versao: info.original },
-        versionSplit: false,
-      })
     }
   }
   return out
@@ -366,6 +432,7 @@ export function analyzeApplicationMappedRows(
     const montadora = normalizeImportText(row.values.montadora)
     const modelo = normalizeImportText(row.values.modelo)
     const versao = normalizeImportText(row.values.versao)
+    const motorizacao = normalizeImportText(row.values.motorizacao)
     const periodParse = parseYearPeriod(row.values.ano_inicio, row.values.ano_fim)
 
     if (!sku || !montadora || !modelo) {
@@ -377,6 +444,7 @@ export function analyzeApplicationMappedRows(
           montadora,
           modelo,
           versao,
+          motorizacao,
           yearStart: null,
           yearEnd: null,
           versionParts: versao ? [versao] : [],
@@ -397,6 +465,7 @@ export function analyzeApplicationMappedRows(
           montadora,
           modelo,
           versao,
+          motorizacao,
           yearStart: null,
           yearEnd: null,
           versionParts: versao ? [versao] : [],
@@ -413,6 +482,7 @@ export function analyzeApplicationMappedRows(
       montadora,
       modelo,
       versao,
+      motorizacao,
       yearStart: periodParse.period.start,
       yearEnd: periodParse.period.end,
     })
@@ -426,6 +496,7 @@ export function analyzeApplicationMappedRows(
           montadora,
           modelo,
           versao,
+          motorizacao,
           yearStart: periodParse.period.start,
           yearEnd: periodParse.period.end,
           versionParts: versao ? [versao] : [],
@@ -448,25 +519,29 @@ export function analyzeApplicationMappedRows(
         ? rawProductId
         : null
 
-    // Frente B: aplicação NÃO cria produto
+    // SKU inexistente: cria rascunho se houver nome; senão erro claro
     if (!productExists) {
-      out.push(
-        emptyRow({
-          lineNumber: row.lineNumber,
-          sku,
-          name,
-          montadora,
-          modelo,
-          versao,
-          yearStart: periodParse.period.start,
-          yearEnd: periodParse.period.end,
-          versionParts: versao ? [versao] : [],
-          versionSplit: row.versionSplit,
-          action: 'error',
-          message: 'Produto não cadastrado — importe o cadastro primeiro.',
-        }),
-      )
-      continue
+      if (!name) {
+        out.push(
+          emptyRow({
+            lineNumber: row.lineNumber,
+            sku,
+            name,
+            montadora,
+            modelo,
+            versao,
+            motorizacao,
+            yearStart: periodParse.period.start,
+            yearEnd: periodParse.period.end,
+            versionParts: versao ? [versao] : [],
+            versionSplit: row.versionSplit,
+            action: 'error',
+            message: `Produto “${sku}” não existe e a linha não tem nome para criar.`,
+          }),
+        )
+        continue
+      }
+      // segue fluxo com createProduct=true (definido no push final)
     }
 
     const makerMatch = makerNames.length
@@ -508,13 +583,104 @@ export function analyzeApplicationMappedRows(
       createModel = true
     }
 
+    // Motorização ou versão em branco → expandir para todas as VVs que casarem.
+    const blankVersion = !versao
+    const blankMotor = !motorizacao
+    const expandAll = blankVersion || blankMotor
+
+    if (expandAll && manufacturerId && modelId) {
+      const modelVersions = filterVersionsForApp({
+        versions,
+        manufacturerId,
+        modelId,
+        versao,
+        motorizacao,
+      })
+      if (modelVersions.length > 0) {
+        for (const vv of modelVersions) {
+          let periodAction: PeriodAction | null = 'create'
+          if (productId) {
+            const existing = pvc.find(
+              (p) => p.productId === productId && p.vehicleVersionId === vv.id,
+            )
+            if (existing) {
+              periodAction = comparePeriods(
+                { start: existing.yearStart, end: existing.yearEnd },
+                periodParse.period,
+              )
+            }
+          }
+
+          const vehicleConfidence: MatchConfidence =
+            makerMatch.confidence === 'probable' || modelMatch.confidence === 'probable'
+              ? 'probable'
+              : 'exact'
+
+          const action = applicationActionFromParts({
+            productResolved: true,
+            vehicleConfidence,
+            periodAction,
+            versionAmbiguous: false,
+            hasError: false,
+          })
+
+          let message = 'Nova aplicação'
+          if (action === 'new') {
+            message = blankMotor
+              ? 'Novo cadastro (motorização: todas as do filtro)'
+              : 'Novo cadastro de aplicação (versão do modelo)'
+          } else if (action === 'update') message = 'Será atualizado o período'
+          else if (action === 'already_covered') message = 'Já contemplado'
+          else if (action === 'found') message = 'Já cadastrado'
+          else if (action === 'review' && periodAction === 'review_gap') {
+            message = 'Precisa de revisão — lacuna no período'
+          } else if (action === 'review') {
+            message = 'Precisa de revisão — correspondência de veículo'
+          }
+
+          const applyable = action === 'new' || action === 'update' || action === 'found'
+
+          out.push({
+            lineNumber: row.lineNumber,
+            sku,
+            name: name || product?.name || '',
+            montadora,
+            modelo,
+            versao: vv.versionName ?? versao,
+            motorizacao: vv.engine ?? motorizacao,
+            yearStart: periodParse.period.start,
+            yearEnd: periodParse.period.end,
+            versionParts: vv.versionName ? [vv.versionName] : versao ? [versao] : [],
+            versionSplit: row.versionSplit,
+            action,
+            periodAction,
+            message,
+            applyable,
+            productExists: true,
+            productId,
+            manufacturerId,
+            modelId,
+            vehicleVersionId: vv.id,
+            createProduct: false,
+            createManufacturer: false,
+            createModel: false,
+            createVersion: false,
+          })
+        }
+        continue
+      }
+      // 0 VV → envelope createVersion abaixo
+    }
+
     const versionAmbiguousPrep =
+      !expandAll &&
       manufacturerId &&
       modelId &&
       resolveVehicleVersionMatch({
         manufacturerId,
         modelId,
         versionName: versao,
+        engine: motorizacao,
         productId,
         versions,
         pvc,
@@ -534,10 +700,12 @@ export function analyzeApplicationMappedRows(
         vehicleVersionId = versionAmbiguousPrep.versionId
       } else {
         createVersion = Boolean(manufacturerId && modelId) || createManufacturer || createModel
-        // se maker/model ainda serão criados, versão também
         if (createManufacturer || createModel) createVersion = true
         if (!manufacturerId && !createManufacturer) createVersion = false
       }
+    } else if (expandAll && manufacturerId && modelId) {
+      // expand sem VV → 1 envelope (engine/version_name conforme planilha)
+      createVersion = true
     } else if (createManufacturer || createModel) {
       createVersion = true
     }
@@ -565,8 +733,9 @@ export function analyzeApplicationMappedRows(
             ? 'exact'
             : 'unidentified'
 
+    const willCreateProduct = !productExists && Boolean(name)
     const action = applicationActionFromParts({
-      productResolved: true,
+      productResolved: productExists || willCreateProduct,
       vehicleConfidence,
       periodAction,
       versionAmbiguous,
@@ -574,7 +743,9 @@ export function analyzeApplicationMappedRows(
     })
 
     let message = 'Nova aplicação'
-    if (action === 'new') message = 'Novo cadastro de aplicação'
+    if (willCreateProduct) {
+      message = `Produto “${sku}” será criado como rascunho · nova aplicação`
+    } else if (action === 'new') message = 'Novo cadastro de aplicação'
     else if (action === 'update') message = 'Será atualizado o período'
     else if (action === 'already_covered') message = 'Já contemplado'
     else if (action === 'found') message = 'Já cadastrado'
@@ -595,6 +766,7 @@ export function analyzeApplicationMappedRows(
       montadora,
       modelo,
       versao,
+      motorizacao,
       yearStart: periodParse.period.start,
       yearEnd: periodParse.period.end,
       versionParts: versao ? [versao] : [],
@@ -603,12 +775,12 @@ export function analyzeApplicationMappedRows(
       periodAction,
       message,
       applyable,
-      productExists: true,
+      productExists,
       productId,
       manufacturerId,
       modelId,
       vehicleVersionId,
-      createProduct: false,
+      createProduct: willCreateProduct && applyable,
       createManufacturer: createManufacturer && applyable,
       createModel: createModel && applyable,
       createVersion: createVersion && applyable,
@@ -629,6 +801,7 @@ export function previewRowToFrozenPayload(row: ApplicationPreviewRow): Record<st
     montadora: row.montadora,
     modelo: row.modelo,
     versao: row.versao,
+    motorizacao: row.motorizacao,
     year_start: row.yearStart,
     year_end: row.yearEnd,
     product_id:

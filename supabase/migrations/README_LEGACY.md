@@ -1,6 +1,6 @@
-# migrations/ — LEGADO FAL (não aplicar no HF)
+# migrations/ — legado externo (não aplicar no HF)
 
-Esta pasta veio da cópia FAL e contém pedidos, pagamentos MP, frete, estoque, etc.
+Esta pasta veio da cópia referência e contém pedidos, pagamentos MP, frete, estoque, etc.
 
 **Fonte de verdade do projeto HF:** `supabase/migrations_hf/`
 

@@ -56,15 +56,19 @@ export function AdminSuppliersPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold text-hf-ink">Fornecedores</h1>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/admin/fornecedores/importar-conversoes">
-            <Button variant="light">Importar conversões</Button>
-          </Link>
-          <Link to="/admin/fornecedores/importar-custos">
-            <Button variant="light">Importar custos</Button>
-          </Link>
+        <div>
+          <h1 className="text-2xl font-extrabold text-hf-ink">Fornecedores</h1>
+          <p className="mt-1 text-sm text-hf-muted">
+            Cadastro. Conversões e custos entram só pelo hub{' '}
+            <Link className="font-semibold text-hf-auth-link" to="/admin/produtos/importacoes">
+              Importações
+            </Link>
+            .
+          </p>
         </div>
+        <Link to="/admin/produtos/importacoes">
+          <Button variant="light">Importações</Button>
+        </Link>
       </div>
       <form onSubmit={onSubmit} className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-3">
         <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} required />

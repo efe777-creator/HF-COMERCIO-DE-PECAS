@@ -1,6 +1,6 @@
-/** Dados de demonstração — NÃO são o catálogo real da FAL. */
+/** Dados de demonstração — NÃO são o catálogo real da HF. */
 export const MOCK_DISCLAIMER =
-  'DEMO / MOCK — dados fictícios apenas para fundação visual. Não representam o catálogo real da FAL.'
+  'DEMO / MOCK — dados fictícios apenas para fundação visual. Não representam o catálogo real da HF.'
 
 export const mockCategories = [
   {

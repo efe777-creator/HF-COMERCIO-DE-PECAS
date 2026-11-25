@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sync:source:dry": "node scripts/sync-catalog-source-to-hf.mjs --dry-run",
+    "sync:source:apply": "node scripts/sync-catalog-source-to-hf.mjs --apply"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

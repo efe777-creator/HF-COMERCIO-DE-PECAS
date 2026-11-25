@@ -132,13 +132,18 @@ export interface Product {
   resolvedPriceListId?: string | null
   /** Origem da resolução (F6B.1). */
   priceSource?: 'override' | 'list' | 'default'
+  /** true = exibir preço na vitrine (público ou B2B com lista assigned). */
+  priceVisible?: boolean
   /** Quantidade: só mocks/admin. Loja pública usa `available`. */
   stock?: number
   /** Disponibilidade pública (sem quantidade). */
   available?: boolean
   isIncomplete?: boolean
   status?: 'draft' | 'published' | 'archived'
+  productKind?: 'item' | 'kit'
   imageUrl?: string | null
+  /** Galeria pública (URLs Storage) — preenchida na PDP. */
+  images?: string[]
   manufacturerCode?: string
   /**
    * Posição da peça (atributo do produto).
@@ -149,6 +154,8 @@ export interface Product {
   /** Lado da peça (atributo do produto). */
   lado?: 'ESQUERDO' | 'DIREITO' | 'AMBOS' | null
   compatibilitySummary?: string
+  /** Grupos estruturados para CompatibilityAppsBlock (card/PDP). */
+  compatibilityGroups?: CompatibilityAppGroup[]
   references?: ProductReference[]
   attrs?: Record<string, unknown>
   /** Logística opcional (F6C) — não inventar no seed. */
@@ -173,15 +180,27 @@ export interface VehicleModel {
   name: string
   slug: string
   status: EntityStatus
+  productionYearStart?: number | null
+  productionYearEnd?: number | null
+  qualityStatus?: string | null
 }
 
 export interface VehicleVersion {
   id: string
   manufacturerId: string
   modelId: string
+  /** @deprecated Preferir yearStart/yearEnd (período da config). */
   year: number | null
+  /** Início do período desta configuração (opcional). */
+  yearStart: number | null
+  /** Fim do período desta configuração (opcional; null = vigente). */
+  yearEnd: number | null
   engine: string | null
+  /** Combustível. null/vazio = serve para todos. */
+  fuel: string | null
   versionName: string | null
+  /** Geração (opcional). null/vazio = todas / não aplicável. */
+  generation: string | null
   status: EntityStatus
 }
 
@@ -216,6 +235,20 @@ export interface VehicleFilter {
   year?: string
   engine?: string
   version?: string
+  versionId?: string
+}
+
+/** Linha de aplicação estruturada na vitrine (grupos por montadora). */
+export interface CompatibilityAppLine {
+  model: string
+  engine?: string | null
+  version?: string | null
+  yearLabel?: string | null
+}
+
+export interface CompatibilityAppGroup {
+  maker: string
+  lines: CompatibilityAppLine[]
 }
 
 /** Ordenação do motor de busca (Fase 4). */
@@ -263,6 +296,10 @@ export interface VehicleOptionTree {
   /** Motores por modelo (inclui configs com year NULL). */
   enginesByModel: Record<string, string[]>
   versionsByModel: Record<string, string[]>
+  /** Motores por `model|version` (cascata Versão → Motor). */
+  enginesByModelVersion: Record<string, string[]>
+  /** Anos por `model|version` (cascata Versão → Ano); fallback = yearsByModel. */
+  yearsByModelVersion: Record<string, string[]>
 }
 
 /* Carrinho: fora do runtime MVP (cart_enabled: false). */

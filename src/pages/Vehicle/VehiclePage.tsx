@@ -7,8 +7,8 @@ export function VehiclePage() {
       <p className="mb-2 text-[13px] text-hf-muted">Início / Veículo</p>
       <h1 className="mt-0 mb-2 text-[28px] font-extrabold sm:text-[34px]">Busca por veículo</h1>
       <p className="mb-6 max-w-2xl text-hf-muted">
-        Informe Montadora, Modelo, Ano e/ou Motor — individualmente ou combinados. Nenhum campo é
-        obrigatório.
+        Informe Montadora, Modelo, Versão, Motor e/ou Ano — individualmente ou combinados. Nenhum
+        campo é obrigatório.
       </p>
       <div className="max-w-xl">
         <VehicleSelector compact />

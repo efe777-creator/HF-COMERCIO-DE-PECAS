@@ -1,10 +1,13 @@
-﻿import { Button } from '@/components/common/Button'
+﻿import { PricingRuleFields } from '@/components/admin/prices/PricingRuleFields'
+import { PriceListWorkSurface } from '@/components/admin/prices/PriceListWorkSurface'
+import { AdaptiveWorkspace } from '@/components/admin/workspace/AdaptiveWorkspace'
+import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Loading } from '@/components/common/Loading'
 import { useAuth } from '@/contexts/AuthContext'
+import { useIdSplitTabs } from '@/hooks/useIdSplitTabs'
 import { formatDateTime } from '@/lib/datetime'
 import { PriceImportWizard } from '@/pages/admin/prices/PriceImportWizard'
-import { PriceListQuickAdjustPanel } from '@/pages/admin/prices/PriceListQuickAdjustPanel'
 import {
   adminDeletePriceList,
   adminDuplicatePriceList,
@@ -19,7 +22,7 @@ import {
   type PriceListsOverview,
 } from '@/services/admin/adminPriceListService'
 import type { PricingMethod } from '@/services/pricing/pricingFormulas'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 
 type FormMode = 'closed' | 'create' | 'edit'
@@ -34,6 +37,7 @@ function canManagePricing(role: string | undefined): boolean {
 
 export function AdminPriceListsPage() {
   const { user } = useAuth()
+  const splitTabs = useIdSplitTabs()
   const allowed = canManagePricing(user?.role)
   const [overview, setOverview] = useState<PriceListsOverview>(emptyOverview())
   const [loading, setLoading] = useState(true)
@@ -43,7 +47,6 @@ export function AdminPriceListsPage() {
   const [editing, setEditing] = useState<PriceListOverviewRow | null>(null)
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizardListId, setWizardListId] = useState<string | undefined>(undefined)
-  const [panelListId, setPanelListId] = useState('')
   const [forceWithoutPrice, setForceWithoutPrice] = useState(false)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -56,8 +59,15 @@ export function AdminPriceListsPage() {
   const [listExtraCostPercent, setListExtraCostPercent] = useState('0')
   const [formNotice, setFormNotice] = useState<string | null>(null)
 
-  const formRef = useRef<HTMLFormElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  const focusedList = useMemo(() => {
+    if (!splitTabs.activeId) return null
+    return overview.lists.find((l) => l.id === splitTabs.activeId) ?? null
+  }, [overview.lists, splitTabs.activeId])
+
+  const contextualOpen = splitTabs.hasOpen || formMode !== 'closed'
+  const activeGuideListId = splitTabs.activeId ?? ''
 
   async function reload(opts?: { showPageLoading?: boolean }) {
     const showPageLoading = opts?.showPageLoading ?? false
@@ -72,7 +82,6 @@ export function AdminPriceListsPage() {
     }
   }
 
-  /** KPIs/tabela sem desmontar o painel de consulta. */
   async function reloadOverviewQuiet() {
     setError(null)
     try {
@@ -87,15 +96,16 @@ export function AdminPriceListsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function focusForm() {
+  useEffect(() => {
+    if (formMode === 'closed') return
     window.requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       nameInputRef.current?.focus()
       nameInputRef.current?.select()
     })
-  }
+  }, [formMode])
 
   function openCreate() {
+    splitTabs.closeAll()
     setFormMode('create')
     setEditing(null)
     setName('')
@@ -106,10 +116,10 @@ export function AdminPriceListsPage() {
     setListExtraCostPercent('0')
     setFormNotice(null)
     setAdvancedOpen(false)
-    focusForm()
   }
 
   function openConfigure(list: PriceListOverviewRow) {
+    splitTabs.closeAll()
     setFormMode('edit')
     setEditing(list)
     setName(list.name)
@@ -119,9 +129,15 @@ export function AdminPriceListsPage() {
     setPricingPercent(String(list.pricingPercent ?? 0))
     setListExtraCostPercent(String(list.listExtraCostPercent ?? 0))
     setFormNotice(null)
-    setAdvancedOpen(true)
+    setAdvancedOpen(false)
     setMenuOpenId(null)
-    focusForm()
+  }
+
+  function openListGuide(list: PriceListOverviewRow) {
+    setFormMode('closed')
+    setFormNotice(null)
+    splitTabs.openTab(list.id)
+    setMenuOpenId(null)
   }
 
   function closeForm() {
@@ -129,6 +145,11 @@ export function AdminPriceListsPage() {
     setEditing(null)
     setAdvancedOpen(false)
     setFormNotice(null)
+  }
+
+  function closeContextual() {
+    closeForm()
+    splitTabs.closeAll()
   }
 
   async function onSubmit(e: FormEvent) {
@@ -235,6 +256,7 @@ export function AdminPriceListsPage() {
     try {
       await adminDeletePriceList(list.id)
       if (editing?.id === list.id) closeForm()
+      if (splitTabs.activeId === list.id) splitTabs.closeTab(list.id)
       await reloadOverviewQuiet()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao excluir lista')
@@ -249,22 +271,95 @@ export function AdminPriceListsPage() {
     setMenuOpenId(null)
   }
 
-  return (
+  const formGuide = (
+    <form onSubmit={onSubmit} className="grid gap-3 p-1 md:grid-cols-2">
+      <Input
+        ref={nameInputRef}
+        label={formMode === 'edit' ? 'Configurar lista' : 'Nome da lista'}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <label className="block text-sm">
+        <span className="mb-1 block font-semibold text-hf-ink">Status</span>
+        <select
+          className="w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as PriceListStatus)}
+        >
+          <option value="draft">Rascunho</option>
+          <option value="active">Ativa</option>
+          <option value="inactive">Inativa</option>
+        </select>
+      </label>
+      <label className="block text-sm md:col-span-2">
+        <span className="mb-1 block font-semibold text-hf-ink">Descrição</span>
+        <textarea
+          className="min-h-[72px] w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </label>
+
+      <div className="md:col-span-2">
+        <button
+          type="button"
+          className="text-sm font-semibold text-hf-ink underline"
+          onClick={() => setAdvancedOpen((v) => !v)}
+        >
+          {advancedOpen ? '▾' : '▸'} Avançado — regra de formação
+        </button>
+        {advancedOpen ? (
+          <div className="mt-3 space-y-3">
+            <PricingRuleFields
+              method={pricingMethod}
+              percent={pricingPercent}
+              extraCostPercent={listExtraCostPercent}
+              hidePercentWhenFixed
+              onMethod={setPricingMethod}
+              onPercent={setPricingPercent}
+              onExtraCostPercent={setListExtraCostPercent}
+            />
+            {editing ? (
+              <p className="text-sm text-hf-muted">
+                Preferir a tela completa?{' '}
+                <Link
+                  className="font-semibold text-hf-ink underline"
+                  to={`/admin/precos/${editing.id}?tab=formacao`}
+                >
+                  Abrir formação na lista
+                </Link>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex gap-2 md:col-span-2">
+        <Button type="submit" disabled={busy}>
+          {formMode === 'edit' ? 'Salvar' : 'Criar lista'}
+        </Button>
+        <Button type="button" variant="light" onClick={closeForm} disabled={busy}>
+          Cancelar
+        </Button>
+      </div>
+      {formNotice ? <p className="text-sm text-amber-300 md:col-span-2">{formNotice}</p> : null}
+    </form>
+  )
+
+  const primary = (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-hf-ink">Listas de preços</h1>
+          <h1 className="text-2xl font-extrabold text-hf-ink">Listas de preço</h1>
           <p className="mt-1 max-w-2xl text-sm text-hf-muted">
-            Consulte e ajuste preços da lista selecionada. Para classificar um produto (Categoria /
-            Grupo / Subgrupo), abra o cadastro em{' '}
-            <Link className="font-semibold text-hf-ink underline" to="/admin/produtos">
-              Produtos
+            <strong>Gestão das listas</strong> (criar, status, duplicar, importar). Clique numa
+            linha para abrir a guia de consulta. Abra a lista completa para formação e itens.
+            Formação: custo → adicional % → markup/margem → venda. Não confundir com{' '}
+            <Link className="font-semibold text-hf-ink underline" to="/admin/clientes/listas">
+              Listas B2B
             </Link>{' '}
-            ou gerencie a árvore em{' '}
-            <Link className="font-semibold text-hf-ink underline" to="/admin/categorias">
-              Categorias
-            </Link>
-            .
+            (visibilidade — dentro de Clientes).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -301,138 +396,24 @@ export function AdminPriceListsPage() {
         <button
           type="button"
           className={`font-semibold underline ${
-            overview.withoutPrice > 0 ? 'text-amber-800' : 'text-hf-ink'
+            overview.withoutPrice > 0 ? 'text-amber-300' : 'text-hf-ink'
           }`}
-          onClick={() => setForceWithoutPrice((v) => !v)}
-          title="Filtrar itens sem preço no painel"
+          onClick={() => {
+            setForceWithoutPrice((v) => !v)
+            if (overview.lists[0]) openListGuide(overview.lists[0])
+          }}
+          title="Abrir guia filtrando itens sem preço"
         >
           Sem preço {overview.withoutPrice}
           {forceWithoutPrice ? ' (filtro on)' : ''}
         </button>
       </div>
 
-      {formMode !== 'closed' ? (
-        <form
-          ref={formRef}
-          onSubmit={onSubmit}
-          className={`grid gap-3 rounded-[14px] border bg-hf-surface p-4 md:grid-cols-2 ${
-            formMode === 'edit'
-              ? 'border-hf-yellow-dark ring-2 ring-hf-yellow/40'
-              : 'border-hf-line'
-          }`}
-        >
-          <Input
-            ref={nameInputRef}
-            label={formMode === 'edit' ? 'Configurar lista' : 'Nome da lista'}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <label className="block text-sm">
-            <span className="mb-1 block font-semibold text-hf-ink">Status</span>
-            <select
-              className="w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as PriceListStatus)}
-            >
-              <option value="draft">Rascunho</option>
-              <option value="active">Ativa</option>
-              <option value="inactive">Inativa</option>
-            </select>
-          </label>
-          <label className="block text-sm md:col-span-2">
-            <span className="mb-1 block font-semibold text-hf-ink">Descrição</span>
-            <textarea
-              className="min-h-[72px] w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-
-          <div className="md:col-span-2">
-            <button
-              type="button"
-              className="text-sm font-semibold text-hf-ink underline"
-              onClick={() => setAdvancedOpen((v) => !v)}
-            >
-              {advancedOpen ? '▾' : '▸'} Avançado — regra de formação
-            </button>
-            {advancedOpen ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <label className="block text-sm md:col-span-2">
-                  <span className="mb-1 block font-semibold text-hf-ink">Regra de formação</span>
-                  <select
-                    className="w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2"
-                    value={pricingMethod}
-                    onChange={(e) => setPricingMethod(e.target.value as PricingMethod)}
-                  >
-                    <option value="fixed">Preço fixo (sem fórmula automática)</option>
-                    <option value="markup_on_cost">Markup sobre custo</option>
-                    <option value="margin_on_sell">Margem sobre venda</option>
-                  </select>
-                </label>
-                {pricingMethod !== 'fixed' ? (
-                  <Input
-                    label={pricingMethod === 'markup_on_cost' ? 'Markup (%)' : 'Margem (%)'}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={pricingPercent}
-                    onChange={(e) => setPricingPercent(e.target.value)}
-                    required
-                    hint="Regra de formação de venda — não confundir com adicional de custo."
-                  />
-                ) : null}
-                <Input
-                  label="Adicional de custo (%)"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={listExtraCostPercent}
-                  onChange={(e) => setListExtraCostPercent(e.target.value)}
-                  hint="CUSTO → este % → base de formação → markup/margem. Paralelo a list_extra_cost (R$). Gravação efetiva após migration prepared."
-                />
-                {editing ? (
-                  <p className="text-sm text-hf-muted md:col-span-2">
-                    Preferir a tela completa?{' '}
-                    <Link
-                      className="font-semibold text-hf-ink underline"
-                      to={`/admin/precos/${editing.id}?tab=formacao`}
-                    >
-                      Abrir formação na lista
-                    </Link>
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="flex gap-2 md:col-span-2">
-            <Button type="submit" disabled={busy}>
-              {formMode === 'edit' ? 'Salvar' : 'Criar lista'}
-            </Button>
-            <Button type="button" variant="light" onClick={closeForm} disabled={busy}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {formNotice ? <p className="text-sm text-amber-800">{formNotice}</p> : null}
-      {loading ? <Loading label="Carregando listas…" /> : null}
-
-      {!loading || overview.lists.length > 0 ? (
-        <PriceListQuickAdjustPanel
-          lists={overview.lists}
-          allowed={allowed}
-          changedBy={user?.id ?? null}
-          onItemsChanged={() => void reloadOverviewQuiet()}
-          onListIdChange={setPanelListId}
-          forceWithoutPrice={forceWithoutPrice}
-          onRequestImport={() => openWizard(panelListId || undefined)}
-        />
+      {formNotice && formMode === 'closed' ? (
+        <p className="text-sm text-amber-300">{formNotice}</p>
       ) : null}
+      {loading ? <Loading label="Carregando listas…" /> : null}
 
       <div>
         <h2 className="mb-2 text-lg font-extrabold text-hf-ink">Gerenciar listas</h2>
@@ -465,15 +446,24 @@ export function AdminPriceListsPage() {
                 <tr
                   key={list.id}
                   className={`border-b border-hf-line/70 ${
-                    panelListId === list.id ? 'bg-hf-yellow/15' : ''
+                    activeGuideListId === list.id ? 'border-l-4 border-l-hf-red bg-hf-surface-2' : ''
                   }`}
                 >
                   <td className="px-3 py-2">
-                    <div className="font-semibold text-hf-ink">{list.name}</div>
-                    <div className="text-xs text-hf-muted">
-                      {list.slug}
-                      {list.isDefault ? ' · padrão' : ''}
-                    </div>
+                    <button
+                      type="button"
+                      className="text-left"
+                      onClick={() => openListGuide(list)}
+                    >
+                      <div className="font-semibold text-hf-ink underline-offset-2 hover:underline">
+                        {list.name}
+                      </div>
+                      <div className="text-xs text-hf-muted">
+                        {list.slug}
+                        {list.isDefault ? ' · padrão' : ''}
+                        {list.scope === 'assigned' ? ' · B2B' : ''}
+                      </div>
+                    </button>
                   </td>
                   <td className="px-3 py-2">{priceListStatusLabel(list.status)}</td>
                   <td className="hidden px-3 py-2 md:table-cell">
@@ -491,8 +481,15 @@ export function AdminPriceListsPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="relative flex flex-wrap items-center gap-2">
-                      <Link
+                      <button
+                        type="button"
                         className="text-sm font-extrabold text-hf-ink underline"
+                        onClick={() => openListGuide(list)}
+                      >
+                        Guia
+                      </button>
+                      <Link
+                        className="text-sm font-semibold text-hf-ink underline"
                         to={`/admin/precos/${list.id}?tab=produtos`}
                       >
                         Abrir
@@ -541,7 +538,7 @@ export function AdminPriceListsPage() {
                           </button>
                           <button
                             type="button"
-                            className="block w-full px-2 py-1.5 text-left text-sm font-semibold text-red-700 hover:bg-hf-bg"
+                            className="block w-full px-2 py-1.5 text-left text-sm font-semibold text-hf-danger hover:bg-hf-bg"
                             onClick={() => void onDelete(list)}
                           >
                             Excluir
@@ -567,6 +564,41 @@ export function AdminPriceListsPage() {
       />
     </div>
   )
+
+  return (
+    <AdaptiveWorkspace
+      moduleKey="prices"
+      primary={primary}
+      contextualOpen={contextualOpen}
+      onContextualOpenChange={(open) => {
+        if (!open) closeContextual()
+      }}
+      contextualTitle={
+        formMode !== 'closed'
+          ? formMode === 'create'
+            ? 'Nova lista'
+            : (editing?.name ?? 'Configurar lista')
+          : (focusedList?.name ?? 'Lista de preços')
+      }
+      contextual={
+        contextualOpen ? (
+          formMode !== 'closed' ? (
+            formGuide
+          ) : splitTabs.activeId ? (
+            <PriceListWorkSurface
+              lists={overview.lists}
+              listId={activeGuideListId}
+              allowed={allowed}
+              changedBy={user?.id ?? null}
+              onItemsChanged={() => void reloadOverviewQuiet()}
+              onListIdChange={(id) => splitTabs.selectTab(id)}
+              forceWithoutPrice={forceWithoutPrice}
+              onRequestImport={() => openWizard(activeGuideListId || undefined)}
+              onClose={closeContextual}
+            />
+          ) : null
+        ) : null
+      }
+    />
+  )
 }
-
-

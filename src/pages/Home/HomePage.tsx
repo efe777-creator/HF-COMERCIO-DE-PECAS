@@ -9,6 +9,12 @@ import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { businessConfig } from '@/config/business'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCategories, useFeaturedProducts } from '@/hooks/useCatalog'
+import {
+  campaignProductToCardShape,
+  listActiveCampaignHighlights,
+  type Campaign,
+} from '@/services/admin/adminCampaignService'
+import type { Product } from '@/types'
 import { buildHomeWhatsAppMessage } from '@/lib/whatsapp'
 import { listActiveBrands } from '@/services/brands/brandService'
 import { getVehicleOptions } from '@/services/vehicles/vehicleService'
@@ -23,6 +29,22 @@ export function HomePage() {
   const [q, setQ] = useState('')
   const [brands, setBrands] = useState<{ id: string; name: string; slug: string }[]>([])
   const [makers, setMakers] = useState<string[]>([])
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [campaignProducts, setCampaignProducts] = useState<Product[]>([])
+  const [campaignsLoading, setCampaignsLoading] = useState(true)
+
+  useEffect(() => {
+    void listActiveCampaignHighlights(8)
+      .then(({ campaigns: list, products }) => {
+        setCampaigns(list)
+        setCampaignProducts(products.map((p) => campaignProductToCardShape(p) as Product))
+      })
+      .catch(() => {
+        setCampaigns([])
+        setCampaignProducts([])
+      })
+      .finally(() => setCampaignsLoading(false))
+  }, [])
 
   useEffect(() => {
     void listActiveBrands()
@@ -40,6 +62,10 @@ export function HomePage() {
   }
 
   const loggedIn = Boolean(user)
+  const useCampaignHighlights = campaigns.length > 0
+  const highlightProducts = useCampaignHighlights ? campaignProducts : featured.data
+  const highlightLoading = useCampaignHighlights ? campaignsLoading : featured.loading
+  const highlightError = useCampaignHighlights ? null : featured.error
 
   return (
     <>
@@ -56,7 +82,8 @@ export function HomePage() {
             Encontre a peça certa para o seu negócio
           </h1>
           <p className="mt-3 text-sm text-hf-muted sm:text-base">
-            Catálogo B2B autorizado — sem preço público. Consulte disponibilidade direto com a HF.
+            Catálogo digital B2B — sem preço público. Consulte peças, aplicações e solicite cotação
+            com a HF.
           </p>
           <form onSubmit={onSearch} className="mt-6 flex flex-col gap-2 sm:flex-row">
             <input
@@ -71,20 +98,23 @@ export function HomePage() {
             </Button>
           </form>
           <div className="mt-4 flex flex-wrap gap-2">
-            {loggedIn ? (
-              <Link to="/catalogo">
-                <Button variant="dark">Explorar catálogo</Button>
+            <Link to="/catalogo">
+              <Button variant="dark">Explorar catálogo</Button>
+            </Link>
+            <Link to="/veiculo">
+              <Button variant="outline">Por veículo</Button>
+            </Link>
+            <Link to="/cotacao">
+              <Button variant="outline">Solicitar cotação</Button>
+            </Link>
+            <Link to="/seja-parceiro">
+              <Button variant="outline">Seja parceiro</Button>
+            </Link>
+            {!loggedIn ? (
+              <Link to="/login">
+                <Button variant="primary">Entrar</Button>
               </Link>
-            ) : (
-              <>
-                <Link to="/login">
-                  <Button variant="primary">Entrar</Button>
-                </Link>
-                <Link to="/cadastro">
-                  <Button variant="outline">Solicitar acesso</Button>
-                </Link>
-              </>
-            )}
+            ) : null}
             <WhatsAppButton message={buildHomeWhatsAppMessage()}>Falar com a HF</WhatsAppButton>
           </div>
         </Container>
@@ -149,25 +179,49 @@ export function HomePage() {
         <Container>
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <h2 className="m-0 text-xl font-extrabold text-hf-ink">Destaques</h2>
-              <p className="mt-1 text-sm text-hf-muted">Sem ofertas ou preço — só o catálogo autorizado</p>
+              <h2 className="m-0 text-xl font-extrabold text-hf-ink">
+                {useCampaignHighlights ? 'Campanhas' : 'Destaques'}
+              </h2>
+              <p className="mt-1 text-sm text-hf-muted">
+                {useCampaignHighlights
+                  ? 'Ofertas e destaques comerciais ativos'
+                  : 'Sem preço público — catálogo consultivo HF'}
+              </p>
             </div>
             <Link to="/catalogo" className="text-sm font-semibold text-hf-red-bright">
               Ver catálogo →
             </Link>
           </div>
-          {featured.loading ? <Loading /> : null}
-          {featured.error ? <ErrorState message={featured.error} /> : null}
-          {!featured.loading && featured.data.length === 0 ? (
+          {useCampaignHighlights ? (
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              {campaigns.slice(0, 4).map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-[14px] border border-hf-line bg-hf-surface p-4"
+                >
+                  <h3 className="m-0 font-extrabold text-hf-ink">{c.title}</h3>
+                  {c.description ? <p className="mt-1 mb-0 text-sm text-hf-muted">{c.description}</p> : null}
+                  {c.href ? (
+                    <Link to={c.href.startsWith('/') ? c.href : c.href} className="mt-2 inline-block text-sm font-semibold text-hf-red-bright">
+                      Saiba mais →
+                    </Link>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {highlightLoading ? <Loading /> : null}
+          {highlightError ? <ErrorState message={highlightError} /> : null}
+          {!highlightLoading && highlightProducts.length === 0 ? (
             <EmptyState
               title="Nenhum destaque ainda"
-              description={loggedIn ? 'Publique produtos no admin.' : 'Entre para ver o catálogo autorizado.'}
-              actionLabel={loggedIn ? 'Catálogo' : 'Entrar'}
-              actionTo={loggedIn ? '/catalogo' : '/login'}
+              description="Publique produtos no admin ou cadastre campanhas ativas."
+              actionLabel="Catálogo"
+              actionTo="/catalogo"
             />
           ) : null}
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-            {featured.data.map((p) => (
+            {highlightProducts.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
@@ -220,6 +274,29 @@ export function HomePage() {
             {makers.length === 0 ? (
               <p className="text-sm text-hf-muted">Montadoras aparecerão após o cadastro de veículos.</p>
             ) : null}
+          </div>
+        </Container>
+      </section>
+
+      <section className="border-b border-hf-line bg-hf-bg-2 py-10 sm:py-12">
+        <Container className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-[14px] border border-hf-line bg-hf-surface p-6 text-left">
+            <h2 className="m-0 text-xl font-black text-hf-ink">Solicitar cotação</h2>
+            <p className="mt-2 text-sm text-hf-muted">
+              Informe peças e quantidades. A HF retorna comercialmente — sem checkout online.
+            </p>
+            <Link to="/cotacao" className="mt-4 inline-block">
+              <Button variant="primary">Abrir cotação</Button>
+            </Link>
+          </div>
+          <div className="rounded-[14px] border border-hf-line bg-hf-surface p-6 text-left">
+            <h2 className="m-0 text-xl font-black text-hf-ink">Seja parceiro</h2>
+            <p className="mt-2 text-sm text-hf-muted">
+              Oficinas, autocenters, lojas e distribuidores — cadastro analisado pela HF.
+            </p>
+            <Link to="/seja-parceiro" className="mt-4 inline-block">
+              <Button variant="dark">Quero ser parceiro</Button>
+            </Link>
           </div>
         </Container>
       </section>

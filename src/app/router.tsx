@@ -32,6 +32,15 @@ const AtendimentoPage = lazy(() =>
 const SobrePage = lazy(() =>
   import('@/pages/About/SobrePage').then((m) => ({ default: m.SobrePage })),
 )
+const PrivacidadePage = lazy(() =>
+  import('@/pages/Legal/PrivacidadePage').then((m) => ({ default: m.PrivacidadePage })),
+)
+const CotacaoPage = lazy(() =>
+  import('@/pages/Leads/CotacaoPage').then((m) => ({ default: m.CotacaoPage })),
+)
+const SejaParceiroPage = lazy(() =>
+  import('@/pages/Leads/SejaParceiroPage').then((m) => ({ default: m.SejaParceiroPage })),
+)
 const ProductPage = lazy(() =>
   import('@/pages/Product/ProductPage').then((m) => ({ default: m.ProductPage })),
 )
@@ -49,6 +58,9 @@ const AccountProfilePage = lazy(() =>
 )
 const AccountVehiclesPage = lazy(() =>
   import('@/pages/Account/AccountVehiclesPage').then((m) => ({ default: m.AccountVehiclesPage })),
+)
+const AccountAvisosPage = lazy(() =>
+  import('@/pages/Account/AccountAvisosPage').then((m) => ({ default: m.AccountAvisosPage })),
 )
 const LoginPage = lazy(() =>
   import('@/pages/Login/LoginPage').then((m) => ({ default: m.LoginPage })),
@@ -93,6 +105,16 @@ const AdminProductsPage = lazy(() =>
     default: m.AdminProductsPage,
   })),
 )
+const AdminKitsPage = lazy(() =>
+  import('@/pages/admin/kits/AdminKitsPage').then((m) => ({
+    default: m.AdminKitsPage,
+  })),
+)
+const AdminKitFormPage = lazy(() =>
+  import('@/pages/admin/kits/AdminKitFormPage').then((m) => ({
+    default: m.AdminKitFormPage,
+  })),
+)
 const AdminProductFormPage = lazy(() =>
   import('@/pages/admin/products/AdminProductFormPage').then((m) => ({
     default: m.AdminProductFormPage,
@@ -116,6 +138,11 @@ const AdminHfBundleImportPage = lazy(() =>
 const AdminImportsHubPage = lazy(() =>
   import('@/pages/admin/products/AdminImportsHubPage').then((m) => ({
     default: m.AdminImportsHubPage,
+  })),
+)
+const AdminImageSkuImportPage = lazy(() =>
+  import('@/pages/admin/products/AdminImageSkuImportPage').then((m) => ({
+    default: m.AdminImageSkuImportPage,
   })),
 )
 const AdminSupplierConversionImportPage = lazy(() =>
@@ -158,6 +185,41 @@ const AdminCatalogsPage = lazy(() =>
     default: m.AdminCatalogsPage,
   })),
 )
+const AdminCampaignsPage = lazy(() =>
+  import('@/pages/admin/campaigns/AdminCampaignsPage').then((m) => ({
+    default: m.AdminCampaignsPage,
+  })),
+)
+const AdminLeadsPage = lazy(() =>
+  import('@/pages/admin/leads/AdminLeadsPage').then((m) => ({
+    default: m.AdminLeadsPage,
+  })),
+)
+const AdminCotacoesPage = lazy(() =>
+  import('@/pages/admin/leads/AdminCotacoesPage').then((m) => ({
+    default: m.AdminCotacoesPage,
+  })),
+)
+const AdminFinanceiroLayout = lazy(() =>
+  import('@/pages/admin/financeiro/AdminFinanceiroLayout').then((m) => ({
+    default: m.AdminFinanceiroLayout,
+  })),
+)
+const AdminFinanceiroHomePage = lazy(() =>
+  import('@/pages/admin/financeiro/AdminFinanceiroHomePage').then((m) => ({
+    default: m.AdminFinanceiroHomePage,
+  })),
+)
+const AdminPaymentConditionsPage = lazy(() =>
+  import('@/pages/admin/financeiro/AdminPaymentConditionsPage').then((m) => ({
+    default: m.AdminPaymentConditionsPage,
+  })),
+)
+const AdminComunicacaoPage = lazy(() =>
+  import('@/pages/admin/comunicacao/AdminComunicacaoPage').then((m) => ({
+    default: m.AdminComunicacaoPage,
+  })),
+)
 
 function Suspend({ children }: { children: ReactNode }) {
   return <Suspense fallback={<Loading />}>{children}</Suspense>
@@ -174,25 +236,44 @@ function AdminSuspend({ children }: { children: ReactNode }) {
 const adminChildren = [
   { index: true, element: <AdminDashboardPage /> },
   { path: 'produtos', element: <AdminProductsPage /> },
+  { path: 'produtos/marcas', element: <AdminBrandsPage /> },
   { path: 'produtos/importacoes', element: <AdminImportsHubPage /> },
   { path: 'produtos/importar', element: <AdminProductImportPage /> },
   { path: 'produtos/importar-aplicacoes', element: <AdminApplicationsImportPage /> },
   { path: 'produtos/importar-hf', element: <AdminHfBundleImportPage /> },
+  { path: 'produtos/importar-imagens', element: <AdminImageSkuImportPage /> },
   { path: 'produtos/novo', element: <AdminProductFormPage /> },
   { path: 'produtos/:id', element: <AdminProductFormPage /> },
+  { path: 'kits', element: <AdminKitsPage /> },
+  { path: 'kits/novo', element: <AdminKitFormPage /> },
+  { path: 'kits/:id', element: <AdminKitFormPage /> },
   { path: 'categorias', element: <AdminCategoriesPage /> },
   { path: 'montadoras', element: <AdminManufacturersPage /> },
   { path: 'veiculos', element: <AdminVehiclesPage /> },
-  { path: 'fabricantes', element: <AdminBrandsPage /> },
+  { path: 'fabricantes', element: <Navigate to="/admin/produtos/marcas" replace /> },
   { path: 'fornecedores', element: <AdminSuppliersPage /> },
   { path: 'fornecedores/importar-conversoes', element: <AdminSupplierConversionImportPage /> },
   { path: 'fornecedores/importar-custos', element: <AdminSupplierCostImportPage /> },
   { path: 'precos', element: <AdminPriceListsPage /> },
   { path: 'precos/:id', element: <AdminPriceListDetailPage /> },
-  { path: 'listas', element: <AdminCatalogsPage /> },
   { path: 'clientes', element: <AdminCustomersPage /> },
+  { path: 'clientes/listas', element: <AdminCatalogsPage /> },
+  { path: 'listas', element: <Navigate to="/admin/clientes/listas" replace /> },
   { path: 'grupos', element: <AdminCustomerGroupsPage /> },
   { path: 'operadores', element: <AdminOperatorsPage /> },
+  { path: 'aplicacoes', element: <Navigate to="/admin/produtos" replace /> },
+  {
+    path: 'financeiro',
+    element: <AdminFinanceiroLayout />,
+    children: [
+      { index: true, element: <AdminFinanceiroHomePage /> },
+      { path: 'condicoes', element: <AdminPaymentConditionsPage /> },
+    ],
+  },
+  { path: 'comunicacao', element: <AdminComunicacaoPage /> },
+  { path: 'campanhas', element: <AdminCampaignsPage /> },
+  { path: 'leads', element: <AdminLeadsPage /> },
+  { path: 'cotacoes', element: <AdminCotacoesPage /> },
 ]
 
 const publicChildren = [
@@ -299,6 +380,30 @@ const publicChildren = [
     ),
   },
   {
+    path: 'privacidade',
+    element: (
+      <Suspend>
+        <PrivacidadePage />
+      </Suspend>
+    ),
+  },
+  {
+    path: 'cotacao',
+    element: (
+      <Suspend>
+        <CotacaoPage />
+      </Suspend>
+    ),
+  },
+  {
+    path: 'seja-parceiro',
+    element: (
+      <Suspend>
+        <SejaParceiroPage />
+      </Suspend>
+    ),
+  },
+  {
     path: 'conta',
     element: (
       <Suspend>
@@ -309,6 +414,7 @@ const publicChildren = [
     ),
     children: [
       { index: true, element: <AccountHomePage /> },
+      { path: 'avisos', element: <AccountAvisosPage /> },
       { path: 'perfil', element: <AccountProfilePage /> },
       { path: 'veiculos', element: <AccountVehiclesPage /> },
     ],

@@ -112,6 +112,84 @@ export async function adminCountProductsInCategory(categoryId: string): Promise<
   return count ?? 0
 }
 
+/** Contagem direta por `category_id` (não inclui descendentes). */
+export async function adminCountProductsPerCategory(): Promise<Record<string, number>> {
+  const { data, error } = await getSupabase()
+    .from('products')
+    .select('category_id')
+    .not('category_id', 'is', null)
+  if (error) throw error
+  const out: Record<string, number> = {}
+  for (const row of data ?? []) {
+    const id = (row as { category_id: string | null }).category_id
+    if (!id) continue
+    out[id] = (out[id] ?? 0) + 1
+  }
+  return out
+}
+
+function sortedSiblings(items: Category[], parentId: string | null): Category[] {
+  return items
+    .filter((c) => (c.parentId ?? null) === parentId && c.status !== 'archived')
+    .slice()
+    .sort(
+      (a, b) =>
+        (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name, 'pt-BR'),
+    )
+}
+
+/** Troca ordem com o irmão imediatamente acima/abaixo. */
+export async function adminReorderSiblingCategories(
+  items: Category[],
+  categoryId: string,
+  direction: 'up' | 'down',
+): Promise<void> {
+  const node = items.find((c) => c.id === categoryId)
+  if (!node) throw new Error('Classificação não encontrada')
+  const siblings = sortedSiblings(items, node.parentId ?? null)
+  const idx = siblings.findIndex((s) => s.id === categoryId)
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+  if (idx < 0 || swapIdx < 0 || swapIdx >= siblings.length) return
+
+  const reordered = siblings.slice()
+  const tmp = reordered[idx]!
+  reordered[idx] = reordered[swapIdx]!
+  reordered[swapIdx] = tmp
+
+  const client = getSupabase()
+  for (let i = 0; i < reordered.length; i++) {
+    const { error } = await client
+      .from('product_categories')
+      .update({ sort_order: i })
+      .eq('id', reordered[i]!.id)
+    if (error) throw error
+  }
+}
+
+/**
+ * Exclusão permanente. Bloqueia se houver filhos ou produtos ligados (direto).
+ * Prefira Arquivar para remoção comercial.
+ */
+export async function adminDeleteCategory(id: string, all?: Category[]): Promise<void> {
+  const items = all ?? (await adminListCategories())
+  const node = items.find((c) => c.id === id)
+  if (!node) throw new Error('Classificação não encontrada')
+  const kids = items.filter((c) => c.parentId === id)
+  if (kids.length > 0) {
+    throw new Error(
+      `Não é possível excluir "${node.name}" com ${kids.length} filho(s). Exclua os filhos antes.`,
+    )
+  }
+  const productCount = await adminCountProductsInCategory(id)
+  if (productCount > 0) {
+    throw new Error(
+      `Há ${productCount} produto(s) em "${node.name}". Reclassifique-os antes de excluir.`,
+    )
+  }
+  const { error } = await getSupabase().from('product_categories').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function adminUpsertCategory(input: {
   id?: string
   name: string

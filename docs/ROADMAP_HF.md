@@ -30,5 +30,5 @@
 - [x] App independente; banco/auth/storage próprios
 - [x] Migrations só do necessário (`migrations_hf`)
 - [x] Catálogo + admin + import + RLS
-- [x] Sem runtime comercial FAL (MP/checkout/pedidos)
-- [x] FAL original intacto (somente leitura)
+- [x] Sem runtime comercial externo (MP/checkout/pedidos)
+- [x] Referência externa: somente leitura

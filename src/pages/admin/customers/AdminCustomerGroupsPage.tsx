@@ -12,17 +12,22 @@ import {
   adminListGroupCatalogIds,
   type AdminCatalogList,
 } from '@/services/admin/adminCatalogListService'
+import { adminListPaymentConditions } from '@/services/admin/adminPaymentConditionService'
 import { useEffect, useState, type FormEvent } from 'react'
 
 export function AdminCustomerGroupsPage() {
   const [items, setItems] = useState<AdminCustomerGroup[]>([])
   const [catalogs, setCatalogs] = useState<AdminCatalogList[]>([])
+  const [paymentConditions, setPaymentConditions] = useState<
+    Array<{ id: string; code: string; name: string }>
+  >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<AdminCustomerGroup | null>(null)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [description, setDescription] = useState('')
+  const [paymentConditionId, setPaymentConditionId] = useState('')
   const [catalogId, setCatalogId] = useState('')
   const [assigned, setAssigned] = useState<string[]>([])
 
@@ -31,6 +36,12 @@ export function AdminCustomerGroupsPage() {
     try {
       setItems(await adminListCustomerGroups())
       setCatalogs(await adminListCatalogs())
+      try {
+        const pcs = await adminListPaymentConditions({ status: 'published' })
+        setPaymentConditions(pcs.map((p) => ({ id: p.id, code: p.code, name: p.name })))
+      } catch {
+        setPaymentConditions([])
+      }
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro')
@@ -48,6 +59,7 @@ export function AdminCustomerGroupsPage() {
     setName(g.name)
     setCode(g.code)
     setDescription(g.description ?? '')
+    setPaymentConditionId(g.defaultPaymentConditionId ?? '')
     setAssigned(await adminListGroupCatalogIds(g.id))
   }
 
@@ -56,6 +68,7 @@ export function AdminCustomerGroupsPage() {
     setName('')
     setCode('')
     setDescription('')
+    setPaymentConditionId('')
     setCatalogId('')
     setAssigned([])
   }
@@ -69,6 +82,7 @@ export function AdminCustomerGroupsPage() {
         code,
         description,
         status: editing?.status ?? 'active',
+        defaultPaymentConditionId: paymentConditionId || null,
       })
       reset()
       await reload()
@@ -90,6 +104,21 @@ export function AdminCustomerGroupsPage() {
         <div className="md:col-span-2">
           <Input label="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
+        <label className="block text-xs font-bold text-hf-muted md:col-span-2">
+          Condição de pagamento padrão
+          <select
+            className="mt-1 w-full rounded-[10px] border border-hf-line px-3 py-2 text-sm font-normal text-hf-ink"
+            value={paymentConditionId}
+            onChange={(e) => setPaymentConditionId(e.target.value)}
+          >
+            <option value="">Nenhuma</option>
+            {paymentConditions.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.code} — {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="flex gap-2 md:col-span-2">
           <Button type="submit">{editing ? 'Salvar' : 'Criar grupo'}</Button>
           {editing ? (

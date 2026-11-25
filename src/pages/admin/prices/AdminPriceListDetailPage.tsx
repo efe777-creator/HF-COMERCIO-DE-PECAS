@@ -1,10 +1,15 @@
-﻿import { Button } from '@/components/common/Button'
+﻿import { PriceListConfigTab } from '@/components/admin/prices/PriceListConfigTab'
+import { PriceListFormationControls } from '@/components/admin/prices/PriceListFormationControls'
+import { PriceListFormacaoTab } from '@/components/admin/prices/PriceListFormacaoTab'
+import { PriceListImportsTab } from '@/components/admin/prices/PriceListImportsTab'
+import { PriceListSelectionControls } from '@/components/admin/prices/PriceListSelectionControls'
+import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Loading } from '@/components/common/Loading'
 import { useAuth } from '@/contexts/AuthContext'
-import { datetimeLocalToIso, formatDateTime, isoToDatetimeLocal } from '@/lib/datetime'
+import { datetimeLocalToIso, isoToDatetimeLocal } from '@/lib/datetime'
 import { CODIGO_REFERENCIA_LABEL } from '@/lib/productLabels'
-import { formatMoney, formatMoneyInput, parseMoneyBr } from '@/lib/money'
+import { formatMoney, parseMoneyBr } from '@/lib/money'
 import { PriceImportWizard } from '@/pages/admin/prices/PriceImportWizard'
 import {
   PriceItemPricingModal,
@@ -31,8 +36,8 @@ import {
   adminUpsertPriceList,
   adminUpsertPriceListItem,
   buildPriceListItemsCsv,
-  computeAdjustedPrice,
   filterPriceListItems,
+  isPriceListFormationActive,
   isVirtualPriceListItemId,
   priceListStatusLabel,
   pricingMethodLabel,
@@ -50,7 +55,7 @@ import {
   type PriceOrigin,
 } from '@/services/admin/adminPriceListService'
 import { adminListSuppliers } from '@/services/admin/adminSupplierService'
-import type { PricingMethod } from '@/services/pricing/pricingFormulas'
+import { calculateSellPrice, type PricingMethod } from '@/services/pricing/pricingFormulas'
 import type { Supplier } from '@/types'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -76,9 +81,9 @@ function originCode(o: PriceOrigin): string {
 }
 
 function originClass(o: PriceOrigin): string {
-  if (o === 'calculated') return 'bg-emerald-100 text-emerald-900'
-  if (o === 'imported') return 'bg-sky-100 text-sky-900'
-  return 'bg-amber-100 text-amber-900'
+  if (o === 'calculated') return 'border border-emerald-600/40 bg-emerald-950/50 text-emerald-200'
+  if (o === 'imported') return 'border border-sky-600/40 bg-sky-950/50 text-sky-200'
+  return 'border border-amber-600/40 bg-amber-950/45 text-amber-200'
 }
 
 function pendingLabels(item: PriceListItem): string[] {
@@ -204,37 +209,57 @@ export function AdminPriceListDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [l, its, st, sups, imps, lists] = await Promise.all([
-        adminGetPriceList(id),
+      const l = await adminGetPriceList(id)
+      setList(l)
+      if (!l) {
+        setItems([])
+        return
+      }
+      setRuleMethod(l.pricingMethod)
+      setRulePercent(String(l.pricingPercent))
+      setRuleExtraCostPercent(String(l.listExtraCostPercent ?? 0))
+      setCfgName(l.name)
+      setCfgDescription(l.description ?? '')
+      setCfgStatus(l.status)
+      setCfgScope(l.scope)
+      setCfgPriority(String(l.priority))
+      setCfgDefault(l.isDefault)
+      setCfgValidFrom(isoToDatetimeLocal(l.validFrom))
+      setCfgValidUntil(isoToDatetimeLocal(l.validUntil))
+
+      const [its, st, lists] = await Promise.all([
         adminListPriceListOperationalItems(id),
         adminGetPriceListStats(id),
-        adminListSuppliers(),
-        adminListPriceListImports(id),
         adminListPriceLists(),
       ])
-      const overrideIds = await adminListActiveOverrideProductIds(its.map((i) => i.productId))
-      setList(l)
+      let overrideIds = new Set<string>()
+      try {
+        overrideIds = await adminListActiveOverrideProductIds(its.map((i) => i.productId))
+      } catch {
+        /* badge override opcional */
+      }
       setAllLists(lists)
       setItems(its.map((i) => ({ ...i, hasOverride: overrideIds.has(i.productId) })))
       setStats(st)
-      setSuppliers(sups.filter((s) => s.status === 'active'))
-      setImports(imps)
       setSelectedIds(new Set())
-      if (l) {
-        setRuleMethod(l.pricingMethod)
-        setRulePercent(String(l.pricingPercent))
-        setRuleExtraCostPercent(String(l.listExtraCostPercent ?? 0))
-        setCfgName(l.name)
-        setCfgDescription(l.description ?? '')
-        setCfgStatus(l.status)
-        setCfgScope(l.scope)
-        setCfgPriority(String(l.priority))
-        setCfgDefault(l.isDefault)
-        setCfgValidFrom(isoToDatetimeLocal(l.validFrom))
-        setCfgValidUntil(isoToDatetimeLocal(l.validUntil))
+
+      try {
+        const [sups, imps] = await Promise.all([
+          adminListSuppliers(),
+          adminListPriceListImports(id),
+        ])
+        setSuppliers(sups.filter((s) => s.status === 'active'))
+        setImports(imps)
+      } catch (secondary) {
+        setError(
+          secondary instanceof Error
+            ? `Lista ok; dados auxiliares: ${secondary.message}`
+            : 'Lista ok; falha em dados auxiliares',
+        )
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao carregar')
+      setList(null)
     } finally {
       setLoading(false)
     }
@@ -369,10 +394,14 @@ export function AdminPriceListDetailPage() {
         await adminSetPriceListItemPricing({
           itemId,
           mode: 'apply_rule',
-          extraCost: pricingItem.extraCost,
+          extraCost: result.extraCost,
         })
       } else if (result.mode === 'edit_rule_percent') {
-        void itemId
+        await adminSetPriceListItemPricing({
+          itemId,
+          mode: 'apply_rule',
+          extraCost: result.extraCost,
+        })
         await adminSetCalculatedListPrice({
           priceListId: id,
           productId: pricingItem.productId,
@@ -383,6 +412,7 @@ export function AdminPriceListDetailPage() {
           itemId,
           mode: 'manual',
           price: result.price,
+          extraCost: result.extraCost,
         })
       }
       setPricingItem(null)
@@ -473,7 +503,14 @@ export function AdminPriceListDetailPage() {
       return
     }
     if (!selectedItems.length) return
-    if (!window.confirm(`Definir preço MANUAL ${formatMoney(priceNum)} em ${selectedItems.length} item(ns)?`)) {
+    if (
+      !window.confirm(
+        `Definir preço MANUAL ${formatMoney(priceNum)} em ${selectedItems.length} item(ns)?` +
+          (isPriceListFormationActive(list?.pricingMethod ?? 'fixed')
+            ? '\nEsses itens saem do recálculo da lista até voltarem à regra.'
+            : ''),
+      )
+    ) {
       return
     }
     setBusy(true)
@@ -509,6 +546,133 @@ export function AdminPriceListDetailPage() {
     }
   }
 
+  async function ensureSelectedRealItems() {
+    const virtualIds = selectedItems
+      .filter((i) => isVirtualPriceListItemId(i.id))
+      .map((i) => i.productId)
+    if (virtualIds.length) {
+      await adminSyncProductsOntoPriceList({ priceListId: id, productIds: virtualIds })
+    }
+    const fresh = await adminListPriceListOperationalItems(id)
+    return selectedItems
+      .map((sel) => fresh.find((i) => i.productId === sel.productId))
+      .filter((i): i is PriceListItem => !!i && !isVirtualPriceListItemId(i.id))
+  }
+
+  async function onBulkSelectionMargin(percent: number) {
+    if (!list || !selectedItems.length) return
+    if (!isPriceListFormationActive(list.pricingMethod)) {
+      setError('Ative a formação global (margem/markup) antes de aplicar % na seleção')
+      return
+    }
+    if (
+      !window.confirm(
+        `Aplicar ${percent}% (${pricingMethodLabel(list.pricingMethod)}) e recalcular venda em ${selectedItems.length} item(ns)?`,
+      )
+    ) {
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      const real = await ensureSelectedRealItems()
+      let updated = 0
+      let skipped = 0
+      for (const item of real) {
+        const cost = item.costTotal
+        if (cost == null) {
+          skipped += 1
+          continue
+        }
+        const sell = calculateSellPrice(cost, list.pricingMethod, percent)
+        if (sell == null) {
+          skipped += 1
+          continue
+        }
+        await adminSetCalculatedListPrice({
+          priceListId: id,
+          productId: item.productId,
+          price: sell,
+        })
+        updated += 1
+      }
+      setRuleReport(
+        `Seleção: venda atualizada em ${updated} item(ns); sem custo/cálculo: ${skipped}.`,
+      )
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao aplicar margem na seleção')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onBulkSelectionExtraCost(extraCost: number) {
+    if (!list || !selectedItems.length) return
+    if (
+      !window.confirm(
+        `Definir adicional R$ ${extraCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em ${selectedItems.length} item(ns)?` +
+          (isPriceListFormationActive(list.pricingMethod)
+            ? '\nItens com cálculo ativo terão a venda reaplicada pela regra da lista.'
+            : ''),
+      )
+    ) {
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      const real = await ensureSelectedRealItems()
+      const formationActive = isPriceListFormationActive(list.pricingMethod)
+      for (const item of real) {
+        if (formationActive) {
+          await adminSetPriceListItemPricing({
+            itemId: item.id,
+            mode: 'apply_rule',
+            extraCost,
+          })
+        } else {
+          await adminUpsertPriceListItem({
+            priceListId: id,
+            productId: item.productId,
+            price: item.price,
+            source: item.priceOrigin === 'imported' ? 'import' : 'manual',
+            extraCost,
+            changedBy: user?.id ?? null,
+          })
+        }
+      }
+      setRuleReport(`Adicional aplicado em ${real.length} item(ns) da seleção.`)
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao aplicar adicional na seleção')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onGlobalSaveKeepPrices(input: {
+    method: PricingMethod
+    percent: number
+    extraCostPercent: number
+  }) {
+    setRuleMethod(input.method)
+    setRulePercent(String(input.percent))
+    setRuleExtraCostPercent(String(input.extraCostPercent))
+    await onSaveRuleKeepPrices(input)
+  }
+
+  async function onGlobalApplyToSell(input: {
+    method: PricingMethod
+    percent: number
+    extraCostPercent: number
+  }) {
+    setRuleMethod(input.method)
+    setRulePercent(String(input.percent))
+    setRuleExtraCostPercent(String(input.extraCostPercent))
+    await onApplyMarginToSell(input)
+  }
+
   function onExportSelected() {
     const csv = buildPriceListItemsCsv(selectedItems.length ? selectedItems : visibleItems)
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
@@ -520,13 +684,21 @@ export function AdminPriceListDetailPage() {
     URL.revokeObjectURL(url)
   }
 
-  async function persistRuleOnly(): Promise<string> {
-    const pct = Number(String(rulePercent).replace(',', '.'))
+  async function persistRuleOnly(override?: {
+    method: PricingMethod
+    percent: number
+    extraCostPercent: number
+  }): Promise<string> {
+    const method = override?.method ?? ruleMethod
+    const pct =
+      override?.percent ?? Number(String(rulePercent).replace(',', '.'))
     if (!Number.isFinite(pct) || pct < 0) throw new Error('Percentual inválido')
-    if (ruleMethod === 'margin_on_sell' && pct >= 100) {
+    if (method === 'margin_on_sell' && pct >= 100) {
       throw new Error('Margem sobre venda deve ser menor que 100%')
     }
-    const extraPct = Number(String(ruleExtraCostPercent).replace(',', '.'))
+    const extraPct =
+      override?.extraCostPercent ??
+      Number(String(ruleExtraCostPercent).replace(',', '.'))
     let extraMsg = ''
     if (Number.isFinite(extraPct) && extraPct >= 0) {
       const extra = await adminSaveListExtraCostPercent(id, extraPct)
@@ -539,7 +711,7 @@ export function AdminPriceListDetailPage() {
     }
     await adminSetPriceListPricingRule({
       priceListId: id,
-      pricingMethod: ruleMethod,
+      pricingMethod: method,
       pricingPercent: pct,
       recalculate: false,
     })
@@ -547,18 +719,30 @@ export function AdminPriceListDetailPage() {
   }
 
   /** Salva margem/adicional sem alterar preços de venda. */
-  async function onSaveRuleKeepPrices() {
+  async function onSaveRuleKeepPrices(override?: {
+    method: PricingMethod
+    percent: number
+    extraCostPercent: number
+  }) {
     if (!allowed) return
     setBusy(true)
     setError(null)
     try {
-      const extraMsg = await persistRuleOnly()
+      const method = override?.method ?? ruleMethod
+      const pctLabel = override?.percent ?? rulePercent
+      const extraMsg = await persistRuleOnly(override)
       setRuleReport(
-        `Regra salva (${pricingMethodLabel(ruleMethod)} ${rulePercent}%). Preços de venda NÃO foram alterados.${extraMsg}`,
+        `Regra salva (${pricingMethodLabel(method)} ${pctLabel}%). Preços de venda NÃO foram alterados.${extraMsg}`,
       )
       await reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao salvar regra')
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Falha ao salvar regra'
+      setError(msg || 'Falha ao salvar regra')
     } finally {
       setBusy(false)
     }
@@ -568,16 +752,21 @@ export function AdminPriceListDetailPage() {
    * Salva regra, materializa published com custo na lista (calculated/0),
    * e recalcula venda dos CALCULATED.
    */
-  async function onApplyMarginToSell() {
+  async function onApplyMarginToSell(override?: {
+    method: PricingMethod
+    percent: number
+    extraCostPercent: number
+  }) {
     if (!allowed) return
-    if (ruleMethod === 'fixed') {
+    const method = override?.method ?? ruleMethod
+    if (method === 'fixed') {
       setError('Lista em modo fixo — não há formação por margem/markup')
       return
     }
     setBusy(true)
     setError(null)
     try {
-      const extraMsg = await persistRuleOnly()
+      const extraMsg = await persistRuleOnly(override)
       const sync = await adminMaterializePublishedOntoPriceList({
         priceListId: id,
         onlyWithPrincipalCost: true,
@@ -688,6 +877,7 @@ export function AdminPriceListDetailPage() {
     return (
       <div className="space-y-3">
         <p className="text-red-600">Lista não encontrada.</p>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <Link className="font-semibold text-hf-ink underline" to="/admin/precos">
           ← Voltar às listas de preços
         </Link>
@@ -732,7 +922,9 @@ export function AdminPriceListDetailPage() {
             </div>
           </div>
           <p className="mt-1 text-xs text-hf-muted">
-            Método de formação ≠ origem do preço do item (calculated / imported / manual).
+            Detalhe: formação e itens desta lista (1 preço por SKU no Andar 1). Gestão de listas
+            (criar/duplicar) fica em Listas de preço. Método de formação ≠ origem do item
+            (calculated / imported / manual).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -767,8 +959,10 @@ export function AdminPriceListDetailPage() {
           <button
             key={t.id}
             type="button"
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              tab === t.id ? 'bg-hf-navy text-white' : 'bg-hf-bg text-hf-ink'
+            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+              tab === t.id
+                ? 'border-hf-red bg-hf-red text-white'
+                : 'border-hf-line bg-hf-surface-2 text-hf-ink'
             }`}
             onClick={() => selectTab(t.id)}
           >
@@ -781,33 +975,60 @@ export function AdminPriceListDetailPage() {
 
       {tab === 'produtos' ? (
         <div className="space-y-4">
-          <form
-            onSubmit={(e) => void onAddItem(e)}
-            className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-4"
-          >
-            <div className="md:col-span-4 text-sm text-hf-muted">
-              Adicionar item com origem <strong>MANUAL</strong>.
-            </div>
-            <Input label="Código (SKU)" value={sku} onChange={(e) => setSku(e.target.value)} required />
-            <Input
-              label="Preço"
-              inputMode="decimal"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
-            />
-            <div className="flex items-end">
-              <Button type="submit" disabled={!allowed}>
-                Adicionar
-              </Button>
-            </div>
-          </form>
+          <PriceListFormationControls
+            listId={list.id}
+            listName={list.name}
+            pricingMethod={list.pricingMethod}
+            pricingPercent={list.pricingPercent}
+            listExtraCostPercent={list.listExtraCostPercent}
+            editable
+            allowed={allowed}
+            busy={busy}
+            onSaveKeepPrices={(input) => void onGlobalSaveKeepPrices(input)}
+            onApplyToSell={(input) => void onGlobalApplyToSell(input)}
+          />
+          {ruleReport ? <p className="text-sm text-green-700">{ruleReport}</p> : null}
+
+          {isPriceListFormationActive(list.pricingMethod) ? (
+            <p className="rounded-[10px] border border-hf-line bg-hf-bg px-3 py-2 text-sm text-hf-muted">
+              Novos itens: use <strong>Incluir e calcular</strong> (origem Calculado). Para desligar
+              o cálculo em um pé, abra <strong>Editar</strong> → Fixar preço manual (ou use a
+              seleção).
+            </p>
+          ) : (
+            <form
+              onSubmit={(e) => void onAddItem(e)}
+              className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-4"
+            >
+              <div className="md:col-span-4 text-sm text-hf-muted">
+                Adicionar item com origem <strong>MANUAL</strong> (cálculo desativado).
+              </div>
+              <Input
+                label="Código (SKU)"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                required
+              />
+              <Input
+                label="Preço"
+                inputMode="decimal"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                required
+              />
+              <div className="flex items-end">
+                <Button type="submit" disabled={!allowed}>
+                  Adicionar
+                </Button>
+              </div>
+            </form>
+          )}
 
           <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
             <p className="mb-3 text-sm text-hf-muted">
               Contexto: <strong>{list.name}</strong> · {pricingMethodLabel(list.pricingMethod)}{' '}
-              {pricingRuleLabel(list.pricingMethod, list.pricingPercent)}. Preços exibidos são só desta
-              lista.
+              {pricingRuleLabel(list.pricingMethod, list.pricingPercent)}. Colunas: custo, adicional,
+              margem e venda desta lista.
             </p>
             <form
               className="space-y-3"
@@ -900,7 +1121,7 @@ export function AdminPriceListDetailPage() {
               {visibleItems.length}
             </p>
             {singleMatch ? (
-              <div className="mt-3 rounded-[10px] border border-hf-yellow-dark/40 bg-hf-yellow/20 px-3 py-2 text-sm">
+              <div className="mt-3 rounded-[10px] border border-hf-line border-l-4 border-l-hf-red bg-hf-surface-2 px-3 py-2 text-sm text-hf-ink">
                 Match único · Preço na lista <strong>{list.name}</strong>:{' '}
                 <strong>{formatMoney(singleMatch.price)}</strong>
                 {singleMatch.sku ? (
@@ -910,452 +1131,228 @@ export function AdminPriceListDetailPage() {
             ) : null}
           </div>
 
-          {selectedItems.length > 0 ? (
-            <div className="flex flex-wrap items-end gap-2 rounded-[14px] border border-hf-line bg-hf-surface p-3">
-              <span className="text-sm font-semibold text-hf-ink">
-                {selectedItems.length} selecionado(s)
-              </span>
-              <Button type="button" variant="light" disabled={busy || !allowed} onClick={() => void onBulkApplyRule()}>
-                Incluir e calcular seleção
-              </Button>
-              <Button type="button" variant="light" disabled={busy} onClick={onExportSelected}>
-                Exportar seleção
-              </Button>
-              <Input
-                label="Novo preço MANUAL"
-                inputMode="decimal"
-                value={bulkPrice}
-                onChange={(e) => setBulkPrice(e.target.value)}
-              />
-              <Button type="button" disabled={busy || !allowed} onClick={() => void onBulkSetPrice()}>
-                Definir preço manual
-              </Button>
-              <Button type="button" variant="light" disabled={busy} onClick={() => void onBulkRemove()}>
-                Remover da lista
-              </Button>
-            </div>
-          ) : null}
+          <PriceListSelectionControls
+            selectedCount={selectedItems.length}
+            pricingMethod={list.pricingMethod}
+            allowed={allowed}
+            busy={busy}
+            bulkPrice={bulkPrice}
+            onBulkPrice={setBulkPrice}
+            onApplyRule={() => void onBulkApplyRule()}
+            onSetManualPrice={() => void onBulkSetPrice()}
+            onExport={onExportSelected}
+            onRemove={() => void onBulkRemove()}
+            onApplySelectionMargin={(pct) => void onBulkSelectionMargin(pct)}
+            onApplySelectionExtraCost={(n) => void onBulkSelectionExtraCost(n)}
+          />
 
-          <div className="overflow-x-auto rounded-[14px] border border-hf-line bg-hf-surface">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-hf-line bg-hf-bg text-hf-muted">
-                <tr>
-                  <th className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      onChange={toggleSelectAllVisible}
-                      title="Selecionar todos os resultados filtrados (carregados)"
-                    />
-                  </th>
-                  <th className="px-3 py-2">
-                    <button type="button" onClick={() => toggleSort('description')}>
-                      Produto{sortMark('description')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-2">
-                    <button type="button" onClick={() => toggleSort('sku')}>
-                      {CODIGO_REFERENCIA_LABEL}{sortMark('sku')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-2">
-                    <button type="button" onClick={() => toggleSort('cost')}>
-                      Custo{sortMark('cost')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-2">
-                    <button type="button" onClick={() => toggleSort('markup')}>
-                      Markup{sortMark('markup')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-2">
-                    <button type="button" onClick={() => toggleSort('margin')}>
-                      Margem{sortMark('margin')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-2">
-                    <button type="button" onClick={() => toggleSort('price')}>
-                      Preço{sortMark('price')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-2">
-                    <button type="button" onClick={() => toggleSort('origin')}>
-                      Origem{sortMark('origin')}
-                    </button>
-                  </th>
-                  <th className="px-3 py-2">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-3 py-6 text-center text-hf-muted">
-                      Nenhum item com os filtros atuais.
-                    </td>
-                  </tr>
-                ) : (
-                  visibleItems.map((item) => {
-                    const busyRow = rowBusy === item.id
-                    const isSingleHit = singleMatch?.id === item.id
-                    return (
-                      <tr
-                        key={item.id}
-                        className={`border-b border-hf-line/70 align-top ${
-                          isSingleHit ? 'bg-hf-yellow/25' : ''
-                        }`}
-                      >
-                        <td className="px-3 py-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(item.id)}
-                            onChange={() => toggleSelectOne(item.id)}
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          {item.productName}
-                          {pendingLabels(item).length ? (
-                            <div className="text-xs text-amber-800">
-                              {pendingLabels(item).join(' · ')}
-                            </div>
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-2 font-mono text-xs">{item.sku}</td>
-                        <td className="px-3 py-2">
-                          {item.costTotal != null
-                            ? formatMoney(item.costTotal)
-                            : item.baseCost != null
-                              ? formatMoney(item.baseCost)
-                              : '—'}
-                        </td>
-                        <td className="px-3 py-2">
-                          {item.effectiveMarkupPct != null
-                            ? `${item.effectiveMarkupPct.toFixed(1)}%`
-                            : '—'}
-                        </td>
-                        <td className="px-3 py-2">
-                          {item.effectiveMarginPct != null
-                            ? `${item.effectiveMarginPct.toFixed(1)}%`
-                            : '—'}
-                        </td>
-                        <td className="px-3 py-2 font-semibold">{formatMoney(item.price)}</td>
-                        <td className="px-3 py-2">
-                          <OriginBadge origin={item.priceOrigin} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              className="text-sm font-semibold text-hf-ink underline"
-                              disabled={!allowed || busyRow}
-                              onClick={() => setPricingItem(item)}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="text-sm font-semibold text-red-700 underline"
-                              disabled={busyRow}
-                              onClick={() => void removeItem(item.id)}
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
-
-      {tab === 'formacao' ? (
-        <div className="space-y-4">
-          <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
-            <h2 className="m-0 text-lg font-extrabold text-hf-ink">Regra de formação</h2>
-            <p className="mt-1 text-sm text-hf-muted">
-              Fluxo: CUSTO → adicional de custo (%) → base → markup/margem ou preço fixo → preço
-              final. Formação não altera `price_origin` de itens importados/manuais.{' '}
-              <code className="rounded bg-hf-bg px-1">list_extra_cost</code> (R$) permanece
-              informativo e fora do cálculo.
-            </p>
-            <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              <label className="block text-sm">
-                <span className="mb-1 block text-xs font-extrabold text-hf-muted">
-                  Regra de formação
-                </span>
-                <select
-                  className="w-full rounded-[9px] border border-hf-line px-3 py-3"
-                  value={ruleMethod}
-                  disabled={busy || !allowed}
-                  onChange={(e) => setRuleMethod(e.target.value as PricingMethod)}
-                >
-                  <option value="fixed">Preço fixo (sem fórmula automática)</option>
-                  <option value="markup_on_cost">Markup sobre custo</option>
-                  <option value="margin_on_sell">Margem sobre venda</option>
-                </select>
-              </label>
-              <Input
-                label={ruleMethod === 'markup_on_cost' ? 'Markup (%)' : ruleMethod === 'margin_on_sell' ? 'Margem (%)' : '% (formação)'}
-                value={rulePercent}
-                disabled={busy || !allowed || ruleMethod === 'fixed'}
-                onChange={(e) => setRulePercent(e.target.value)}
-                hint="Percentual da regra de venda — não é adicional de custo."
-              />
-              <Input
-                label="Adicional de custo (%)"
-                value={ruleExtraCostPercent}
-                disabled={busy || !allowed}
-                onChange={(e) => setRuleExtraCostPercent(e.target.value)}
-                hint="Campo paralelo a list_extra_cost (R$). Persistência no banco após migration prepared."
-              />
-              <Input
-                label="list_extra_cost R$ (informativo)"
-                value={formatMoneyInput(list.listExtraCost)}
-                disabled
-                hint="Não entra no cálculo. Não remover / não reinterpretar como %."
-              />
-              <div className="flex flex-wrap items-end gap-2 md:col-span-2">
-                <Button
-                  type="button"
-                  variant="light"
-                  disabled={busy || !allowed}
-                  onClick={() => void onSaveRuleKeepPrices()}
-                >
-                  Salvar margem (manter venda)
-                </Button>
-                <Button
-                  type="button"
-                  disabled={busy || !allowed || ruleMethod === 'fixed'}
-                  onClick={() => void onApplyMarginToSell()}
-                >
-                  Aplicar margem → atualizar venda
-                </Button>
-                <Link
-                  className="pb-3 text-sm font-semibold text-hf-ink underline"
-                  to="/admin/precos"
-                >
-                  Voltar à consulta
-                </Link>
-              </div>
-              <p className="md:col-span-2 text-xs text-hf-muted">
-                Salvar margem: só persiste regra/adicional. Aplicar margem: inclui produtos com custo
-                ainda fora da lista e recalcula só itens CALCULATED (imported/manual ficam iguais).
-              </p>
-            </div>
-            {ruleReport ? <p className="mt-2 text-sm text-green-700">{ruleReport}</p> : null}
-          </div>
-
-          <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
-            <h2 className="text-lg font-extrabold text-hf-ink">Ajuste global (lista inteira)</h2>
-            <p className="mt-1 text-sm text-hf-muted">
-              RPC adjust_price_list_items — distinto da seleção em massa da aba Produtos. Aplica só à
-              lista <strong>{list.name}</strong>. Ex.:{' '}
-              {items[0] ? formatMoney(computeAdjustedPrice(items[0].price, 'percent', 10)) : '—'}
-            </p>
-            <div className="mt-3 grid gap-3 md:grid-cols-4">
-              <select
-                className="rounded-[9px] border border-hf-line px-3 py-3"
-                value={adjustMode}
-                onChange={(e) => setAdjustMode(e.target.value as PriceAdjustMode)}
-              >
-                <option value="percent">Percentual</option>
-                <option value="fixed">Valor fixo</option>
-              </select>
-              <select
-                className="rounded-[9px] border border-hf-line px-3 py-3"
-                value={adjustDirection}
-                onChange={(e) => setAdjustDirection(e.target.value as 'up' | 'down')}
-              >
-                <option value="up">Aumentar</option>
-                <option value="down">Diminuir</option>
-              </select>
-              <Input label="Valor" value={adjustValue} onChange={(e) => setAdjustValue(e.target.value)} />
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  disabled={busy || !allowed}
-                  onClick={() => void onApplyGlobalAdjust()}
-                >
-                  Aplicar a todos
-                </Button>
-              </div>
-            </div>
-            {adjustReport ? <p className="mt-2 text-sm text-green-700">{adjustReport}</p> : null}
-          </div>
-        </div>
-      ) : null}
-
-      {tab === 'importacoes' ? (
-        <div className="space-y-4">
-          <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="m-0 text-lg font-extrabold text-hf-ink">Histórico de importações</h2>
-                <p className="mt-1 text-sm text-hf-muted">Fonte: imports / import_items (kind=price_list).</p>
-              </div>
-              <Button type="button" disabled={!allowed} onClick={() => setWizardOpen(true)}>
-                Nova importação
-              </Button>
-            </div>
-            <div className="mt-3 overflow-x-auto">
+          <div className="rounded-[14px] border border-hf-line bg-hf-surface">
+            <div className="max-h-[min(65dvh,720px)] overflow-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="bg-hf-bg text-hf-muted">
+                <thead className="sticky top-0 z-[1] border-b border-hf-line bg-hf-bg text-hf-muted">
                   <tr>
-                    <th className="px-3 py-2">Data</th>
-                    <th className="px-3 py-2">Arquivo</th>
-                    <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2 text-right">Linhas</th>
-                    <th className="px-3 py-2 text-right">Erros</th>
-                    <th className="px-3 py-2">Ações</th>
+                    <th className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        onChange={toggleSelectAllVisible}
+                        title="Selecionar todos os resultados filtrados (carregados)"
+                      />
+                    </th>
+                    <th className="px-3 py-2">
+                      <button type="button" onClick={() => toggleSort('description')}>
+                        Produto{sortMark('description')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2">
+                      <button type="button" onClick={() => toggleSort('sku')}>
+                        {CODIGO_REFERENCIA_LABEL}
+                        {sortMark('sku')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2">
+                      <button type="button" onClick={() => toggleSort('cost')}>
+                        Custo{sortMark('cost')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2">Adic.</th>
+                    <th className="px-3 py-2">
+                      <button type="button" onClick={() => toggleSort('markup')}>
+                        Markup{sortMark('markup')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2">
+                      <button type="button" onClick={() => toggleSort('margin')}>
+                        Margem{sortMark('margin')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2">
+                      <button type="button" onClick={() => toggleSort('price')}>
+                        Venda{sortMark('price')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2">
+                      <button type="button" onClick={() => toggleSort('origin')}>
+                        Origem{sortMark('origin')}
+                      </button>
+                    </th>
+                    <th className="px-3 py-2">Ação</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {imports.length === 0 ? (
+                  {visibleItems.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-3 py-6 text-center text-hf-muted">
-                        Nenhuma importação registrada para esta lista.
+                      <td colSpan={10} className="px-3 py-6 text-center text-hf-muted">
+                        Nenhum item com os filtros atuais.
                       </td>
                     </tr>
                   ) : (
-                    imports.map((imp) => (
-                      <tr key={imp.id} className="border-b border-hf-line/70">
-                        <td className="px-3 py-2 text-xs">{formatDateTime(imp.createdAt)}</td>
-                        <td className="px-3 py-2">{imp.filename}</td>
-                        <td className="px-3 py-2">{imp.status}</td>
-                        <td className="px-3 py-2 text-right">{imp.totalItems}</td>
-                        <td className="px-3 py-2 text-right">{imp.errorItems}</td>
-                        <td className="px-3 py-2">
-                          <button
-                            type="button"
-                            className="font-semibold text-hf-ink underline"
-                            onClick={() => void openImportDetail(imp.id)}
-                          >
-                            Detalhes
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    visibleItems.map((item) => {
+                      const busyRow = rowBusy === item.id
+                      const isSingleHit = singleMatch?.id === item.id
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`border-b border-hf-line/70 align-top ${
+                            isSingleHit ? 'border-l-4 border-l-hf-red bg-hf-surface-2' : ''
+                          }`}
+                        >
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(item.id)}
+                              onChange={() => toggleSelectOne(item.id)}
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            {item.productName}
+                            {pendingLabels(item).length ? (
+                              <div className="text-xs text-amber-300">
+                                {pendingLabels(item).join(' · ')}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">{item.sku}</td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {item.costTotal != null
+                              ? formatMoney(item.costTotal)
+                              : item.baseCost != null
+                                ? formatMoney(item.baseCost)
+                                : '—'}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {item.extraCost > 0 ? formatMoney(item.extraCost) : '—'}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {item.effectiveMarkupPct != null
+                              ? `${item.effectiveMarkupPct.toFixed(1)}%`
+                              : '—'}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {item.effectiveMarginPct != null
+                              ? `${item.effectiveMarginPct.toFixed(1)}%`
+                              : '—'}
+                          </td>
+                          <td className="px-3 py-2 font-semibold tabular-nums">
+                            {formatMoney(item.price)}
+                          </td>
+                          <td className="px-3 py-2">
+                            <OriginBadge origin={item.priceOrigin} />
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className="text-sm font-semibold text-hf-ink underline"
+                                disabled={!allowed || busyRow}
+                                onClick={() => setPricingItem(item)}
+                              >
+                                {isPriceListFormationActive(list.pricingMethod)
+                                  ? 'Calcular / editar'
+                                  : 'Editar'}
+                              </button>
+                              <button
+                                type="button"
+                                className="text-sm font-semibold text-hf-danger underline"
+                                disabled={busyRow}
+                                onClick={() => void removeItem(item.id)}
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </table>
             </div>
           </div>
-          {importDetail ? (
-            <div className="rounded-[14px] border border-hf-line bg-hf-surface p-4">
-              <h3 className="m-0 font-extrabold text-hf-ink">{importDetail.filename}</h3>
-              <p className="text-sm text-hf-muted">
-                {importDetail.status} · {formatDateTime(importDetail.createdAt)} ·{' '}
-                {importDetail.totalItems} itens
-              </p>
-              <div className="mt-2 max-h-64 overflow-auto text-xs">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-hf-bg text-left">
-                      <th className="px-2 py-1">Linha</th>
-                      <th className="px-2 py-1">Resultado</th>
-                      <th className="px-2 py-1">Payload</th>
-                      <th className="px-2 py-1">Erros</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {importDetail.items.slice(0, 100).map((it) => (
-                      <tr key={it.id}>
-                        <td className="px-2 py-1">{it.lineNumber ?? '—'}</td>
-                        <td className="px-2 py-1">{it.result ?? '—'}</td>
-                        <td className="px-2 py-1 font-mono">
-                          {String(it.payload.sku ?? '')} {String(it.payload.price ?? '')}
-                        </td>
-                        <td className="px-2 py-1 text-red-600">{it.errors.join('; ')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <Button type="button" variant="light" className="mt-2" onClick={() => setImportDetail(null)}>
-                Fechar detalhes
-              </Button>
-            </div>
-          ) : null}
         </div>
       ) : null}
 
+      {tab === 'formacao' ? (
+        <PriceListFormacaoTab
+          list={list}
+          items={items}
+          allowed={allowed}
+          busy={busy}
+          ruleMethod={ruleMethod}
+          rulePercent={rulePercent}
+          ruleExtraCostPercent={ruleExtraCostPercent}
+          adjustMode={adjustMode}
+          adjustDirection={adjustDirection}
+          adjustValue={adjustValue}
+          ruleReport={ruleReport}
+          adjustReport={adjustReport}
+          onRuleMethod={setRuleMethod}
+          onRulePercent={setRulePercent}
+          onRuleExtraCostPercent={setRuleExtraCostPercent}
+          onAdjustMode={setAdjustMode}
+          onAdjustDirection={setAdjustDirection}
+          onAdjustValue={setAdjustValue}
+          onSaveRuleKeepPrices={() => void onSaveRuleKeepPrices()}
+          onApplyMarginToSell={() => void onApplyMarginToSell()}
+          onApplyGlobalAdjust={() => void onApplyGlobalAdjust()}
+        />
+      ) : null}
+
+      {tab === 'importacoes' ? (
+        <PriceListImportsTab
+          allowed={allowed}
+          imports={imports}
+          importDetail={importDetail}
+          onOpenWizard={() => setWizardOpen(true)}
+          onOpenDetail={(importId) => void openImportDetail(importId)}
+          onCloseDetail={() => setImportDetail(null)}
+        />
+      ) : null}
+
       {tab === 'config' ? (
-        <form
-          onSubmit={(e) => void onSaveConfig(e)}
-          className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-2"
-        >
-          <Input label="Nome" value={cfgName} onChange={(e) => setCfgName(e.target.value)} required />
-          <label className="block text-sm">
-            <span className="mb-1 block font-semibold text-hf-ink">Status</span>
-            <select
-              className="w-full rounded-[10px] border border-hf-line px-3 py-2"
-              value={cfgStatus}
-              onChange={(e) => setCfgStatus(e.target.value as PriceListStatus)}
-            >
-              <option value="draft">Rascunho</option>
-              <option value="active">Ativa</option>
-              <option value="inactive">Inativa</option>
-            </select>
-          </label>
-          <label className="block text-sm md:col-span-2">
-            <span className="mb-1 block font-semibold text-hf-ink">Descrição</span>
-            <textarea
-              className="min-h-[72px] w-full rounded-[10px] border border-hf-line px-3 py-2 text-sm"
-              value={cfgDescription}
-              onChange={(e) => setCfgDescription(e.target.value)}
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-semibold text-hf-ink">Escopo</span>
-            <select
-              className="w-full rounded-[10px] border border-hf-line px-3 py-2"
-              value={cfgScope}
-              onChange={(e) => setCfgScope(e.target.value as PriceListScope)}
-            >
-              <option value="public">public</option>
-              <option value="assigned">assigned</option>
-            </select>
-          </label>
-          <Input
-            label="Prioridade"
-            type="number"
-            value={cfgPriority}
-            onChange={(e) => setCfgPriority(e.target.value)}
+        <div className="space-y-2">
+          <PriceListConfigTab
+            busy={busy}
+            cfgName={cfgName}
+            cfgDescription={cfgDescription}
+            cfgStatus={cfgStatus}
+            cfgScope={cfgScope}
+            cfgPriority={cfgPriority}
+            cfgDefault={cfgDefault}
+            cfgValidFrom={cfgValidFrom}
+            cfgValidUntil={cfgValidUntil}
+            onCfgName={setCfgName}
+            onCfgDescription={setCfgDescription}
+            onCfgStatus={setCfgStatus}
+            onCfgScope={setCfgScope}
+            onCfgPriority={setCfgPriority}
+            onCfgDefault={setCfgDefault}
+            onCfgValidFrom={setCfgValidFrom}
+            onCfgValidUntil={setCfgValidUntil}
+            onSubmit={(e) => void onSaveConfig(e)}
           />
-          <Input
-            label="Válida de"
-            type="datetime-local"
-            value={cfgValidFrom}
-            onChange={(e) => setCfgValidFrom(e.target.value)}
-          />
-          <Input
-            label="Válida até"
-            type="datetime-local"
-            value={cfgValidUntil}
-            onChange={(e) => setCfgValidUntil(e.target.value)}
-          />
-          <label className="flex items-center gap-2 text-sm font-semibold text-hf-ink md:col-span-2">
-            <input
-              type="checkbox"
-              checked={cfgDefault}
-              onChange={(e) => setCfgDefault(e.target.checked)}
-            />
-            Lista padrão (fallback)
-          </label>
-          <p className="text-xs text-hf-muted md:col-span-2">
-            Formação de preço (método/%) edita-se na aba Formação — não confundir com origem do
-            item.
-          </p>
-          <div className="flex gap-2 md:col-span-2">
-            <Button type="submit" disabled={busy}>
-              Salvar configuração
-            </Button>
-          </div>
-          {cfgReport ? <p className="text-sm text-green-700 md:col-span-2">{cfgReport}</p> : null}
-        </form>
+          {cfgReport ? <p className="text-sm text-green-700">{cfgReport}</p> : null}
+        </div>
       ) : null}
 
       <PriceItemPricingModal
@@ -1402,7 +1399,7 @@ function StatCard({
   return (
     <div className="rounded-[10px] border border-hf-line bg-hf-bg px-3 py-2">
       <div className="text-[11px] font-extrabold uppercase tracking-wide text-hf-muted">{label}</div>
-      <div className={`text-xl font-extrabold ${warn ? 'text-amber-800' : 'text-hf-ink'}`}>
+      <div className={`text-xl font-extrabold ${warn ? 'text-amber-300' : 'text-hf-ink'}`}>
         {value}
       </div>
     </div>

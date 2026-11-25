@@ -1,4 +1,4 @@
-/** DEMO / MOCK — produtos fictícios. Não são dados reais da FAL. */
+/** DEMO / MOCK — produtos fictícios. Não são dados reais da HF. */
 import type { Product } from '@/types'
 import { MOCK_DISCLAIMER } from './categories'
 

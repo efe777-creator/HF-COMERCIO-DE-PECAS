@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const migration = join(
   process.cwd(),
-  'supabase/migrations_hf/06b_apply_catalog_products_import.sql',
+  'supabase/migrations_hf/22_products_import_autocreate_categories.sql',
 )
 const schema = join(process.cwd(), 'supabase/migrations_hf/02_catalog.sql')
 const helpers = join(
@@ -24,18 +24,18 @@ describe('apply_catalog_products_import — auditoria (migrations_hf)', () => {
     expect(pipe).toMatch(/staff_can_import_catalog/)
   })
 
-  it('rejeita reapply e sem exception when others', () => {
+  it('rejeita reapply; soft-fail por linha com exception when others no loop', () => {
     expect(sql).toMatch(/ja foi processada/)
     const loop = sql.slice(sql.indexOf('for r in'))
-    expect(loop).not.toMatch(/exception\s+when\s+others/i)
+    expect(loop).toMatch(/exception\s+when\s+others/i)
+    expect(loop).toMatch(/v_failed/)
   })
 
-  it('não auto-cria categorias; resolve hierarquia existente e descricoes', () => {
+  it('auto-cria categorias e resolve hierarquia + descricoes', () => {
     expect(sql).toMatch(/short_description/)
-    expect(sql).toMatch(/product_categories/)
+    expect(sql).toMatch(/insert into public\.product_categories/i)
+    expect(sql).toMatch(/categories_created/)
     expect(sql).toMatch(/parent_id/)
-    expect(sql).toMatch(/nao cadastrada/)
-    expect(sql).not.toMatch(/insert into public\.product_categories/i)
   })
 
   it('schema e RPC gravam posicao/lado', () => {

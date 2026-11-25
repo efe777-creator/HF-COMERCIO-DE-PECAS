@@ -100,7 +100,7 @@ async function loadExistingConversions(
 }
 
 /**
- * Preview estrutural + lookup SKU FAL.
+ * Preview estrutural + lookup SKU HF.
  * SKU inexistente = erro (não cria produto).
  * Não grava conversões.
  */
@@ -168,7 +168,7 @@ export async function adminPreviewConversionImport(input: {
     if (lineErrors.length === 0) {
       productId = skuMap.get(sku) ?? null
       if (!productId) {
-        lineErrors.push('Produto não encontrado (SKU FAL inexistente)')
+        lineErrors.push('Produto não encontrado (SKU HF inexistente)')
       } else {
         const bySku = existing.bySupplierSku.has(supplierSku)
         const byProduct = existing.byProductId.has(productId)

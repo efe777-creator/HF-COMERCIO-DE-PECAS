@@ -1,7 +1,7 @@
 /**
  * DEMO / MOCK — árvore de veículos fictícia.
- * Filtros são todos opcionais (Montadora, Modelo, Ano, Motor).
- * Não representa a base real de veículos da FAL.
+ * Cascata: Montadora → Modelo → Versão → Motor → Ano.
+ * Não representa a base real de veículos da HF.
  */
 import type { VehicleOptionTree } from '@/types'
 import { MOCK_DISCLAIMER } from './categories'
@@ -53,6 +53,29 @@ export const mockVehicleTree: VehicleOptionTree = {
     Onix: ['1.0', '1.0 Turbo'],
     Gol: ['1.0', '1.6'],
     Argo: ['1.0', '1.3', '1.8'],
+    HB20: ['1.0', '1.6'],
   },
-  versionsByModel: {},
+  versionsByModel: {
+    HB20: ['Sense', 'Vision', 'Evolution'],
+    Onix: ['LT', 'LTZ'],
+    Gol: ['1.0', '1.6'],
+  },
+  enginesByModelVersion: {
+    'HB20|Sense': ['1.0'],
+    'HB20|Vision': ['1.0', '1.6'],
+    'HB20|Evolution': ['1.0'],
+    'Onix|LT': ['1.0'],
+    'Onix|LTZ': ['1.0', '1.0 Turbo'],
+    'Gol|1.0': ['1.0'],
+    'Gol|1.6': ['1.6'],
+  },
+  yearsByModelVersion: {
+    'HB20|Sense': ['2022', '2021', '2020', '2019'],
+    'HB20|Vision': ['2022', '2021', '2020'],
+    'HB20|Evolution': ['2022', '2021'],
+    'Onix|LT': ['2021', '2020'],
+    'Onix|LTZ': ['2021', '2020'],
+    'Gol|1.0': ['2020', '2019'],
+    'Gol|1.6': ['2020', '2019'],
+  },
 }

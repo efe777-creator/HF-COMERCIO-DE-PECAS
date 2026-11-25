@@ -38,6 +38,9 @@ export type ProductPreviewRow = {
   warnings: string[]
   /** Linhas do arquivo consolidadas neste SKU (HF). */
   sourceLines: number[]
+  createCategoria: boolean
+  createGrupo: boolean
+  createSubgrupo: boolean
 }
 
 export function productFrozenPayload(row: ProductPreviewRow): Record<string, unknown> {
@@ -55,6 +58,9 @@ export function productFrozenPayload(row: ProductPreviewRow): Record<string, unk
     descricao: row.descricao || null,
     product_id: row.productId,
     create_product: row.action === 'create',
+    create_categoria: row.createCategoria,
+    create_grupo: row.createGrupo,
+    create_subgrupo: row.createSubgrupo,
   }
 }
 
@@ -197,6 +203,9 @@ export function consolidateProductRows(
         action: 'error' as const,
         applyable: false,
         message: errors.join(' '),
+        createCategoria: false,
+        createGrupo: false,
+        createSubgrupo: false,
       }
     }
 
@@ -209,6 +218,9 @@ export function consolidateProductRows(
         action === 'create'
           ? 'Novo cadastro (rascunho, indisponível)'
           : 'Será atualizado o cadastro',
+      createCategoria: false,
+      createGrupo: false,
+      createSubgrupo: false,
     }
   })
 }
@@ -229,6 +241,18 @@ function foldCatKey(input: string): string {
     .trim()
 }
 
+/** Sinônimos planilha → nome cadastrado (foldCatKey). */
+const CATEGORY_ALIASES: Record<string, string[]> = {
+  axial: ['axial de direcao'],
+  'axial de direcao': ['axial'],
+  'amortecedores e kits': ['kit amortecedor', 'kits amortecedor'],
+  'kit amortecedor': ['amortecedores e kits'],
+  coxins: ['coxim amortecedor', 'coxins amortecedor'],
+  'coxim amortecedor': ['coxins'],
+  buchas: ['bucha bandeja'],
+  'bucha bandeja': ['buchas'],
+}
+
 function matchCategoryChild(
   cats: ImportCategoryNode[],
   parentId: string | null,
@@ -236,61 +260,100 @@ function matchCategoryChild(
 ): ImportCategoryNode | null {
   const folded = foldCatKey(rawName)
   const slug = toSlug(rawName)
+  const aliasKeys = new Set([folded, ...(CATEGORY_ALIASES[folded] ?? [])])
   return (
-    cats.find(
-      (c) =>
-        c.parentId === parentId &&
-        (foldCatKey(c.name) === folded || c.slug === slug),
-    ) ?? null
+    cats.find((c) => {
+      if (c.parentId !== parentId) return false
+      const cn = foldCatKey(c.name)
+      if (cn === folded || c.slug === slug) return true
+      if (aliasKeys.has(cn)) return true
+      return (CATEGORY_ALIASES[cn] ?? []).includes(folded)
+    }) ?? null
   )
 }
 
 /**
- * Exige categoria/grupo/(subgrupo) já published.
- * Não cria — cadastro sob demanda no admin.
+ * Casa categoria/grupo/subgrupo publicados; se faltar, marca create_* + warning
+ * (RPC cria na apply). Erro duro só se categoria/grupo vazios (já no consolidate).
  */
-export function enforceExistingCategories(
+export function ensureImportCategories(
   rows: ProductPreviewRow[],
   cats: ImportCategoryNode[],
 ): ProductPreviewRow[] {
   return rows.map((row) => {
     if (!row.applyable) return row
 
+    const warnings = [...row.warnings]
+    let createCategoria = false
+    let createGrupo = false
+    let createSubgrupo = false
+
     const root = matchCategoryChild(cats, null, row.categoria)
     if (!root) {
+      createCategoria = true
+      createGrupo = true
+      if (row.subgrupo) createSubgrupo = true
+      warnings.push(`Categoria “${row.categoria}” será criada.`)
+      warnings.push(`Grupo “${row.grupo}” será criado sob “${row.categoria}”.`)
+      if (row.subgrupo) {
+        warnings.push(`Subgrupo “${row.subgrupo}” será criado sob “${row.grupo}”.`)
+      }
       return {
         ...row,
-        action: 'error',
-        applyable: false,
-        message: `Categoria “${row.categoria}” não cadastrada. Cadastre em Admin > Categorias.`,
+        createCategoria,
+        createGrupo,
+        createSubgrupo,
+        warnings,
+        message: `${row.message} · hierarquia nova`,
       }
     }
 
     const grupo = matchCategoryChild(cats, root.id, row.grupo)
     if (!grupo) {
+      createGrupo = true
+      if (row.subgrupo) createSubgrupo = true
+      warnings.push(`Grupo “${row.grupo}” será criado sob “${row.categoria}”.`)
+      if (row.subgrupo) {
+        warnings.push(`Subgrupo “${row.subgrupo}” será criado sob “${row.grupo}”.`)
+      }
       return {
         ...row,
-        action: 'error',
-        applyable: false,
-        message: `Grupo “${row.grupo}” não encontrado sob “${row.categoria}”. Cadastre em Admin > Categorias.`,
+        createCategoria,
+        createGrupo,
+        createSubgrupo,
+        warnings,
+        message: `${row.message} · criará grupo`,
       }
     }
 
     if (row.subgrupo) {
       const sub = matchCategoryChild(cats, grupo.id, row.subgrupo)
       if (!sub) {
+        createSubgrupo = true
+        warnings.push(`Subgrupo “${row.subgrupo}” será criado sob “${row.grupo}”.`)
         return {
           ...row,
-          action: 'error',
-          applyable: false,
-          message: `Subgrupo “${row.subgrupo}” não encontrado sob “${row.grupo}”. Cadastre em Admin > Categorias.`,
+          createCategoria,
+          createGrupo,
+          createSubgrupo,
+          warnings,
+          message: `${row.message} · criará subgrupo`,
         }
       }
     }
 
-    return row
+    return {
+      ...row,
+      createCategoria: false,
+      createGrupo: false,
+      createSubgrupo: false,
+      warnings,
+    }
   })
 }
+
+/** @deprecated use ensureImportCategories */
+export const enforceExistingCategories = ensureImportCategories
 
 /** Split HF: produtos consolidados + linhas de aplicação (uma por linha fonte). */
 export function splitHfMappedRows(

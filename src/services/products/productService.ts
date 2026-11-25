@@ -2,6 +2,10 @@ import { mockProducts } from '@/data/mocks/products'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
 import { attachResolvedPrices } from '@/services/pricing/priceResolutionService'
 import { attachCompatibilitySummaries } from '@/services/products/compatibilitySummary'
+import {
+  attachPrimaryProductImages,
+  attachProductImageGallery,
+} from '@/services/products/productImages'
 import type { Product } from '@/types'
 
 type Named = { name: string; id?: string; slug?: string }
@@ -42,6 +46,7 @@ function mapProduct(row: Record<string, unknown>): Product {
     posicao: (row.posicao as Product['posicao']) ?? null,
     lado: (row.lado as Product['lado']) ?? null,
     attrs: (row.attrs as Record<string, unknown> | null) ?? {},
+    productKind: row.product_kind === 'kit' ? 'kit' : 'item',
     stock: undefined,
   }
 }
@@ -49,7 +54,7 @@ function mapProduct(row: Record<string, unknown>): Product {
 const PRODUCT_SELECT = `
   id, sku, name, slug, description, short_description, price, promo_price, status,
   manufacturer_code, is_available, is_incomplete, category_id, brand_id, supplier_id,
-  posicao, lado, attrs,
+  posicao, lado, attrs, product_kind,
   product_brands ( name ),
   product_categories ( id, name, slug )
 `
@@ -80,71 +85,8 @@ export async function listPublishedProducts(limit = 40): Promise<Product[]> {
     compact: true,
     maxEntries: 4,
   })
-  return attachResolvedPrices(withApps)
-}
-
-/** IDs de produtos compatíveis com filtros parciais de veículo. */
-export async function filterProductIdsByVehicle(filter: {
-  maker?: string | null
-  model?: string | null
-  year?: string | null
-  engine?: string | null
-  version?: string | null
-}): Promise<string[] | null> {
-  const maker = filter.maker?.trim()
-  const model = filter.model?.trim()
-  const year = filter.year?.trim()
-  const engine = filter.engine?.trim()
-  const version = filter.version?.trim()
-  if (!maker && !model && !year && !engine && !version) return null
-
-  if (!isSupabaseConfigured || !supabase) {
-    return mockProducts
-      .filter((p) => {
-        const hay = (p.compatibilitySummary ?? '').toLowerCase()
-        return (
-          (!maker || hay.includes(maker.toLowerCase())) &&
-          (!model || hay.includes(model.toLowerCase())) &&
-          (!year || hay.includes(year)) &&
-          (!engine || hay.includes(engine.toLowerCase())) &&
-          (!version || hay.includes(version.toLowerCase()))
-        )
-      })
-      .map((p) => p.id)
-  }
-
-  // NULL estrito: eq('year', 2012) NÃO inclui year NULL (evita falso positivo).
-  let versionQuery = supabase
-    .from('vehicle_versions')
-    .select('id, year, engine, version_name, manufacturers!inner(name), models!inner(name)')
-    .eq('status', 'active')
-
-  if (year) versionQuery = versionQuery.eq('year', Number(year))
-  if (engine) versionQuery = versionQuery.eq('engine', engine)
-  if (version) versionQuery = versionQuery.eq('version_name', version)
-
-  const { data: versions, error: vErr } = await versionQuery
-  if (vErr) throw vErr
-
-  const versionIds = (versions ?? [])
-    .filter((v) => {
-      const makerName = asNamed(v.manufacturers)?.name
-      const modelName = asNamed(v.models)?.name
-      if (maker && makerName?.toLowerCase() !== maker.toLowerCase()) return false
-      if (model && modelName?.toLowerCase() !== model.toLowerCase()) return false
-      return true
-    })
-    .map((v) => String(v.id))
-
-  if (!versionIds.length) return []
-
-  const { data: apps, error: aErr } = await supabase
-    .from('product_vehicle_compatibility')
-    .select('product_id')
-    .in('vehicle_version_id', versionIds)
-
-  if (aErr) throw aErr
-  return [...new Set((apps ?? []).map((a) => String(a.product_id)))]
+  const withImages = await attachPrimaryProductImages(withApps)
+  return attachResolvedPrices(withImages)
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
@@ -179,12 +121,13 @@ export async function getProductById(id: string): Promise<Product | null> {
     }))
   }
 
-  const [withApps] = await attachCompatibilitySummaries([product], {
+  const withGallery = await attachProductImageGallery(product)
+  const [withApps] = await attachCompatibilitySummaries([withGallery], {
     compact: false,
     maxEntries: 40,
   })
-  const [resolved] = await attachResolvedPrices([withApps ?? product])
-  return resolved ?? withApps ?? product
+  const [resolved] = await attachResolvedPrices([withApps ?? withGallery])
+  return resolved ?? withApps ?? withGallery
 }
 
 /** @deprecated Preferir `searchCatalog` (Fase 4). Mantido como fachada. */

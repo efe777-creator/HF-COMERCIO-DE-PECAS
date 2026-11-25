@@ -22,6 +22,7 @@ type ProductRow = {
   posicao?: string | null
   lado?: string | null
   attrs: Record<string, unknown> | null
+  product_kind?: string | null
   product_brands?: { name: string } | { name: string }[] | null
   product_categories?: { id: string; name: string } | { id: string; name: string }[] | null
 }
@@ -55,50 +56,169 @@ function mapProduct(row: ProductRow): Product {
     posicao: (row.posicao as Product['posicao']) ?? null,
     lado: (row.lado as Product['lado']) ?? null,
     attrs: row.attrs ?? {},
+    productKind: row.product_kind === 'kit' ? 'kit' : 'item',
   }
 }
 
 const SELECT = `
   id, sku, name, slug, description, short_description, brand_id, supplier_id,
   category_id, price, promo_price, status, manufacturer_code, is_incomplete,
-  is_available, posicao, lado, attrs,
+  is_available, posicao, lado, attrs, product_kind,
   product_brands ( name ),
   product_categories ( id, name )
 `
 
-export async function adminListProducts(params?: {
+export const ADMIN_PRODUCTS_PAGE_SIZE = 40
+
+export type AdminListProductsParams = {
   q?: string
   status?: string
+  /** Status ≠ archived (ativos). Ignorado se `status` explícito. */
+  statusNeq?: string
   withoutImage?: boolean
-  /** category_id IN (nó + descendentes). */
+  productKind?: 'item' | 'kit'
   categoryIds?: string[]
-  /** Montadora: produtos com aplicação em vehicle_versions dessa manufacturer. */
+  /** Filtro por aplicação / veículo (montadora). */
   manufacturerId?: string
-}): Promise<Product[]> {
-  let productIdsByMaker: string[] | null = null
-  if (params?.manufacturerId) {
-    const { data: compat, error: compatErr } = await getSupabase()
+  /** Filtro por aplicação / veículo (modelo). */
+  modelId?: string
+  /** Filtro por motorização (texto em vehicle_versions.engine). */
+  engine?: string
+  /**
+   * Busca ampla: peça (nome/SKU/ref/search_document) + refs + termos de carro/aplicação.
+   * Default true. Desligar só se quiser match estrito nome/SKU.
+   */
+  broadSearch?: boolean
+  limit?: number
+  offset?: number
+}
+
+/** IDs extras para q ampla: refs tipadas + PVC (montadora/modelo/motor/combustível/versão). */
+async function resolveBroadSearchProductIds(term: string): Promise<string[]> {
+  const t = term.trim().replace(/[,()"]/g, ' ').trim()
+  if (!t || t.length < 2) return []
+  const sb = getSupabase()
+  const like = `%${t}%`
+  const ids = new Set<string>()
+
+  const [{ data: refs }, { data: makers }, { data: models }, { data: versions }] =
+    await Promise.all([
+      sb.from('product_references').select('product_id').ilike('code', like).limit(80),
+      sb.from('manufacturers').select('id').ilike('name', like).limit(40),
+      sb.from('models').select('id').ilike('name', like).limit(40),
+      sb
+        .from('vehicle_versions')
+        .select('id')
+        .or(`engine.ilike."${like}",fuel.ilike."${like}",version_name.ilike."${like}"`)
+        .limit(80),
+    ])
+
+  for (const r of refs ?? []) ids.add(String(r.product_id))
+
+  const makerIds = (makers ?? []).map((m) => String(m.id))
+  const modelIds = (models ?? []).map((m) => String(m.id))
+  const versionIds = (versions ?? []).map((v) => String(v.id))
+
+  if (makerIds.length) {
+    const { data } = await sb
       .from('product_vehicle_compatibility')
       .select('product_id, vehicle_versions!inner(manufacturer_id)')
-      .eq('vehicle_versions.manufacturer_id', params.manufacturerId)
-    if (compatErr) throw compatErr
-    productIdsByMaker = [
-      ...new Set((compat ?? []).map((r) => String((r as { product_id: string }).product_id))),
-    ]
-    if (productIdsByMaker.length === 0) return []
+      .in('vehicle_versions.manufacturer_id', makerIds)
+      .limit(120)
+    for (const row of data ?? []) ids.add(String((row as { product_id: string }).product_id))
+  }
+  if (modelIds.length) {
+    const { data } = await sb
+      .from('product_vehicle_compatibility')
+      .select('product_id, vehicle_versions!inner(model_id)')
+      .in('vehicle_versions.model_id', modelIds)
+      .limit(120)
+    for (const row of data ?? []) ids.add(String((row as { product_id: string }).product_id))
+  }
+  if (versionIds.length) {
+    const { data } = await sb
+      .from('product_vehicle_compatibility')
+      .select('product_id')
+      .in('vehicle_version_id', versionIds)
+      .limit(120)
+    for (const row of data ?? []) ids.add(String((row as { product_id: string }).product_id))
+  }
+
+  return [...ids]
+}
+
+async function resolveProductIdsByVehicle(params: {
+  manufacturerId?: string
+  modelId?: string
+  engine?: string
+}): Promise<string[] | null> {
+  const hasVehicle =
+    Boolean(params.manufacturerId) || Boolean(params.modelId) || Boolean(params.engine?.trim())
+  if (!hasVehicle) return null
+
+  let q = getSupabase()
+    .from('product_vehicle_compatibility')
+    .select('product_id, vehicle_versions!inner(manufacturer_id, model_id, engine)')
+
+  if (params.manufacturerId) {
+    q = q.eq('vehicle_versions.manufacturer_id', params.manufacturerId)
+  }
+  if (params.modelId) {
+    q = q.eq('vehicle_versions.model_id', params.modelId)
+  }
+  if (params.engine?.trim()) {
+    q = q.ilike('vehicle_versions.engine', params.engine.trim())
+  }
+
+  const { data, error } = await q.limit(500)
+  if (error) throw error
+  return [...new Set((data ?? []).map((r) => String(r.product_id)))]
+}
+
+async function queryProducts(params?: AdminListProductsParams): Promise<Product[]> {
+  const vehicleIds = await resolveProductIdsByVehicle({
+    manufacturerId: params?.manufacturerId,
+    modelId: params?.modelId,
+    engine: params?.engine,
+  })
+  if (vehicleIds && vehicleIds.length === 0) return []
+
+  let broadIds: string[] = []
+  const broad = params?.broadSearch !== false
+  if (broad && params?.q?.trim()) {
+    broadIds = await resolveBroadSearchProductIds(params.q)
   }
 
   let q = getSupabase().from('products').select(SELECT).order('updated_at', { ascending: false })
   if (params?.status) q = q.eq('status', params.status)
+  else if (params?.statusNeq) q = q.neq('status', params.statusNeq)
+  if (params?.productKind) q = q.eq('product_kind', params.productKind)
   if (params?.categoryIds && params.categoryIds.length > 0) {
     q = q.in('category_id', params.categoryIds)
   }
-  if (productIdsByMaker) q = q.in('id', productIdsByMaker)
+  if (vehicleIds) q = q.in('id', vehicleIds)
+
   if (params?.q?.trim()) {
-    const term = params.q.trim()
-    q = q.or(`name.ilike.%${term}%,sku.ilike.%${term}%`)
+    const safe = params.q.trim().replace(/[,()"]/g, ' ').trim()
+    if (safe) {
+      const like = `%${safe}%`
+      const parts = [
+        `name.ilike."${like}"`,
+        `sku.ilike."${like}"`,
+        `manufacturer_code.ilike."${like}"`,
+        `search_document.ilike."${like}"`,
+      ]
+      if (broadIds.length) {
+        parts.push(`id.in.(${broadIds.join(',')})`)
+      }
+      q = q.or(parts.join(','))
+    }
   }
-  const { data, error } = await q.limit(200)
+
+  const limit = params?.limit ?? 200
+  const offset = params?.offset ?? 0
+  q = q.range(offset, offset + limit - 1)
+  const { data, error } = await q
   if (error) throw error
   let list = (data as ProductRow[]).map(mapProduct)
 
@@ -108,6 +228,67 @@ export async function adminListProducts(params?: {
     list = list.filter((p) => !withImg.has(p.id) || p.isIncomplete)
   }
   return list
+}
+
+export async function adminListProducts(params?: AdminListProductsParams): Promise<Product[]> {
+  return queryProducts({ ...params, limit: params?.limit ?? 200, offset: params?.offset ?? 0 })
+}
+
+export async function adminListProductsPage(
+  params?: AdminListProductsParams,
+): Promise<{ items: Product[]; hasMore: boolean }> {
+  const limit = params?.limit ?? ADMIN_PRODUCTS_PAGE_SIZE
+  const offset = params?.offset ?? 0
+  const rows = await queryProducts({ ...params, limit: limit + 1, offset })
+  const hasMore = rows.length > limit
+  return { items: hasMore ? rows.slice(0, limit) : rows, hasMore }
+}
+
+export async function adminSetProductAvailable(id: string, available: boolean): Promise<void> {
+  const { error } = await getSupabase()
+    .from('products')
+    .update({ is_available: available })
+    .eq('id', id)
+  if (error) throw error
+}
+
+/** Kits que usam este item como componente. */
+export async function adminListKitsUsingProduct(
+  componentProductId: string,
+): Promise<
+  {
+    linkId: string
+    kitId: string
+    kitSku: string
+    kitName: string
+    quantity: number
+  }[]
+> {
+  const { data, error } = await getSupabase()
+    .from('product_kit_components')
+    .select(
+      `
+      id,
+      quantity,
+      products!product_kit_components_kit_product_id_fkey ( id, sku, name )
+    `,
+    )
+    .eq('component_product_id', componentProductId)
+  if (error) throw error
+  return (data ?? []).map((row) => {
+    const p = row.products as
+      | { id?: string; sku?: string; name?: string }
+      | { id?: string; sku?: string; name?: string }[]
+      | null
+    const prod = Array.isArray(p) ? p[0] : p
+    return {
+      linkId: String(row.id),
+      kitId: String(prod?.id ?? ''),
+      kitSku: String(prod?.sku ?? ''),
+      kitName: String(prod?.name ?? ''),
+      quantity: Number(row.quantity),
+    }
+  })
 }
 
 export async function adminGetProduct(id: string): Promise<Product | null> {
@@ -145,14 +326,18 @@ export async function adminUpsertProduct(input: {
   lengthCm?: number | null
   /** Mantido por compatibilidade; listas de preço desligadas no MVP B2B. */
   syncBasePromoLists?: boolean
+  productKind?: 'item' | 'kit'
 }): Promise<Product> {
   void input.weightKg
   void input.heightCm
   void input.widthCm
   void input.lengthCm
-  const payload = {
+  const sku = input.sku.trim()
+  const payload: Record<string, unknown> = {
     name: input.name.trim(),
-    sku: input.sku.trim(),
+    sku,
+    // DB live: commercial_ref NOT NULL — espelha SKU (mesmo padrão das RPCs de importação).
+    commercial_ref: sku,
     slug: (input.slug?.trim() || toSlug(input.name)) || toSlug(input.sku),
     category_id: input.categoryId || null,
     brand_id: input.brandId || null,
@@ -178,6 +363,7 @@ export async function adminUpsertProduct(input: {
       .join(' ')
       .toLowerCase(),
   }
+  if (input.productKind) payload.product_kind = input.productKind
 
   const q = getSupabase().from('products')
   const { data, error } = input.id
@@ -200,7 +386,8 @@ export type ReleaseToStoreResult =
   | { ok: false; productId: string; reason: string }
 
 /**
- * Publicar no catálogo (status=published). Preço NÃO é requisito no MVP B2B.
+ * Publicar no catálogo (status=published) e marcar disponível.
+ * Preço NÃO é requisito no MVP B2B.
  */
 export async function adminReleaseProductToStore(input: {
   productId: string
@@ -221,13 +408,12 @@ export async function adminReleaseProductToStore(input: {
         reason: 'Produto precisa estar Publicado (ou marque publicar neste passo)',
       }
     }
-    await adminSetProductStatus(product.id, 'published')
     publishedNow = true
   }
 
   const { error } = await getSupabase()
     .from('products')
-    .update({ status: 'published' })
+    .update({ status: 'published', is_available: true })
     .eq('id', product.id)
   if (error) throw error
 
@@ -300,36 +486,395 @@ export async function adminDeleteReference(id: string) {
   if (error) throw error
 }
 
+export type PvcApplicationPosition = {
+  lado?: 'ESQUERDO' | 'DIREITO' | 'AMBOS' | null
+  posicaoLong?: 'DIANTEIRA' | 'TRASEIRA' | null
+  posicaoVert?: 'SUPERIOR' | 'INFERIOR' | null
+}
+
+export type PvcValidationStatus = 'draft' | 'validated' | 'rejected'
+
+export type AdminApplicationPatch = PvcApplicationPosition & {
+  notes?: string | null
+  yearStart?: number | null
+  yearEnd?: number | null
+  validationStatus?: PvcValidationStatus
+  vehicleVersionId?: string
+}
+
+export type AdminApplicationHubRow = {
+  id: string
+  productId: string
+  productSku: string
+  productName: string
+  yearStart: number | null
+  yearEnd: number | null
+  notes: string | null
+  lado: string | null
+  posicaoLong: string | null
+  posicaoVert: string | null
+  validationStatus: string
+  makerName: string | null
+  modelName: string | null
+  engine: string | null
+  fuel: string | null
+  versionName: string | null
+  versionYear: number | null
+}
+
+function mapApplicationHubRow(raw: Record<string, unknown>): AdminApplicationHubRow {
+  const product = raw.products as
+    | { sku?: string; name?: string; id?: string }
+    | { sku?: string; name?: string; id?: string }[]
+    | null
+  const p = Array.isArray(product) ? product[0] : product
+  const vv = raw.vehicle_versions as
+    | {
+        year?: number | null
+        engine?: string | null
+        fuel?: string | null
+        version_name?: string | null
+        manufacturers?: { name?: string } | { name?: string }[]
+        models?: { name?: string } | { name?: string }[]
+      }
+    | null
+    | undefined
+  const maker = vv?.manufacturers
+  const model = vv?.models
+  const makerName = Array.isArray(maker) ? maker[0]?.name : maker?.name
+  const modelName = Array.isArray(model) ? model[0]?.name : model?.name
+  return {
+    id: String(raw.id),
+    productId: String(raw.product_id ?? p?.id ?? ''),
+    productSku: String(p?.sku ?? ''),
+    productName: String(p?.name ?? ''),
+    yearStart: raw.year_start == null ? null : Number(raw.year_start),
+    yearEnd: raw.year_end == null ? null : Number(raw.year_end),
+    notes: raw.notes == null ? null : String(raw.notes),
+    lado: raw.lado == null ? null : String(raw.lado),
+    posicaoLong: raw.posicao_long == null ? null : String(raw.posicao_long),
+    posicaoVert: raw.posicao_vert == null ? null : String(raw.posicao_vert),
+    validationStatus: String(raw.validation_status ?? 'draft'),
+    makerName: makerName ?? null,
+    modelName: modelName ?? null,
+    engine: vv?.engine ?? null,
+    fuel: vv?.fuel ?? null,
+    versionName: vv?.version_name ?? null,
+    versionYear: vv?.year ?? null,
+  }
+}
+
+const PVC_SELECT = `
+  id, notes, vehicle_version_id, product_id,
+  year_start, year_end, lado, posicao_long, posicao_vert, validation_status,
+  vehicle_versions (
+    id, year, year_start, year_end, engine, fuel, version_name, generation, manufacturer_id, model_id,
+    manufacturers ( id, name ),
+    models ( id, name, production_year_start, production_year_end )
+  )
+`
+
 export async function adminListApplications(productId: string) {
   const { data, error } = await getSupabase()
     .from('product_vehicle_compatibility')
-    .select(
-      `
-      id, notes, vehicle_version_id,
-      vehicle_versions (
-        id, year, engine, version_name,
-        manufacturers ( name ),
-        models ( name )
-      )
-    `,
-    )
+    .select(PVC_SELECT)
     .eq('product_id', productId)
   if (error) throw error
   return data ?? []
 }
 
-export async function adminAddApplication(productId: string, vehicleVersionId: string, notes?: string) {
-  const { error } = await getSupabase().from('product_vehicle_compatibility').insert({
-    product_id: productId,
-    vehicle_version_id: vehicleVersionId,
-    notes: notes?.trim() || null,
-  })
+export async function adminListAllApplications(params?: {
+  q?: string
+  limit?: number
+}): Promise<AdminApplicationHubRow[]> {
+  const limit = params?.limit ?? 200
+  let productIds: string[] | null = null
+  if (params?.q?.trim()) {
+    const term = params.q.trim()
+    const { data: prods, error: prodErr } = await getSupabase()
+      .from('products')
+      .select('id')
+      .or(`name.ilike.%${term}%,sku.ilike.%${term}%`)
+      .limit(80)
+    if (prodErr) throw prodErr
+    productIds = (prods ?? []).map((p) => String(p.id))
+    if (productIds.length === 0) return []
+  }
+
+  let q = getSupabase()
+    .from('product_vehicle_compatibility')
+    .select(
+      `
+      ${PVC_SELECT},
+      products ( id, sku, name )
+    `,
+    )
+    .order('id', { ascending: false })
+    .limit(limit)
+
+  if (productIds) q = q.in('product_id', productIds)
+
+  const { data, error } = await q
   if (error) throw error
+  return (data ?? []).map((row) => mapApplicationHubRow(row as Record<string, unknown>))
+}
+
+export async function adminAddApplication(
+  productId: string,
+  vehicleVersionId: string,
+  input?: {
+    notes?: string
+    yearStart?: number | null
+    yearEnd?: number | null
+    validationStatus?: PvcValidationStatus
+  } & PvcApplicationPosition,
+) {
+  const { error } = await getSupabase().from('product_vehicle_compatibility').upsert(
+    {
+      product_id: productId,
+      vehicle_version_id: vehicleVersionId,
+      notes: input?.notes?.trim() || null,
+      year_start: input?.yearStart ?? null,
+      year_end: input?.yearEnd ?? null,
+      lado: input?.lado ?? null,
+      posicao_long: input?.posicaoLong ?? null,
+      posicao_vert: input?.posicaoVert ?? null,
+      validation_status: input?.validationStatus ?? 'draft',
+    },
+    { onConflict: 'product_id,vehicle_version_id' },
+  )
+  if (error) throw error
+}
+
+export async function adminUpdateApplication(id: string, patch: AdminApplicationPatch): Promise<void> {
+  const payload: Record<string, unknown> = {}
+  if (patch.notes !== undefined) payload.notes = patch.notes?.trim() || null
+  if (patch.yearStart !== undefined) payload.year_start = patch.yearStart
+  if (patch.yearEnd !== undefined) payload.year_end = patch.yearEnd
+  if (patch.lado !== undefined) payload.lado = patch.lado
+  if (patch.posicaoLong !== undefined) payload.posicao_long = patch.posicaoLong
+  if (patch.posicaoVert !== undefined) payload.posicao_vert = patch.posicaoVert
+  if (patch.validationStatus !== undefined) payload.validation_status = patch.validationStatus
+  if (patch.vehicleVersionId !== undefined) {
+    payload.vehicle_version_id = patch.vehicleVersionId.trim()
+  }
+  if (!Object.keys(payload).length) return
+  const { error } = await getSupabase()
+    .from('product_vehicle_compatibility')
+    .update(payload)
+    .eq('id', id)
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('Este produto já possui aplicação para essa configuração veicular')
+    }
+    throw error
+  }
 }
 
 export async function adminRemoveApplication(id: string) {
   const { error } = await getSupabase().from('product_vehicle_compatibility').delete().eq('id', id)
   if (error) throw error
+}
+
+export type AdminKitComponentRow = {
+  id: string
+  kitProductId: string
+  componentProductId: string
+  quantity: number
+  sortOrder: number
+  componentSku: string
+  componentName: string
+}
+
+export async function adminListKitComponents(kitProductId: string): Promise<AdminKitComponentRow[]> {
+  const { data, error } = await getSupabase()
+    .from('product_kit_components')
+    .select(
+      `
+      id, kit_product_id, component_product_id, quantity, sort_order,
+      products!product_kit_components_component_product_id_fkey ( sku, name )
+    `,
+    )
+    .eq('kit_product_id', kitProductId)
+    .order('sort_order')
+  if (error) throw error
+  return (data ?? []).map((row) => {
+    const p = row.products as { sku?: string; name?: string } | { sku?: string; name?: string }[] | null
+    const prod = Array.isArray(p) ? p[0] : p
+    return {
+      id: String(row.id),
+      kitProductId: String(row.kit_product_id),
+      componentProductId: String(row.component_product_id),
+      quantity: Number(row.quantity),
+      sortOrder: Number(row.sort_order ?? 0),
+      componentSku: String(prod?.sku ?? ''),
+      componentName: String(prod?.name ?? ''),
+    }
+  })
+}
+
+async function syncKitPhotosAfterBom(kitProductId: string): Promise<void> {
+  const rows = await adminListKitComponents(kitProductId)
+  const { adminEnsureKitImageFromComponents } = await import('@/services/admin/adminImageService')
+  await adminEnsureKitImageFromComponents(
+    kitProductId,
+    rows.map((r) => r.componentProductId),
+  )
+}
+
+export async function adminAddKitComponent(
+  kitProductId: string,
+  componentProductId: string,
+  quantity = 1,
+): Promise<void> {
+  if (kitProductId === componentProductId) throw new Error('Kit não pode incluir a si mesmo')
+  const qty = Math.max(0.001, Number(quantity) || 1)
+  const existing = await adminListKitComponents(kitProductId)
+  const dup = existing.find((r) => r.componentProductId === componentProductId)
+  if (dup) {
+    await adminUpdateKitComponentQuantity(dup.id, dup.quantity + qty)
+    return
+  }
+  const nextSort =
+    existing.length > 0 ? Math.max(...existing.map((r) => r.sortOrder), -1) + 1 : 0
+  const { error } = await getSupabase().from('product_kit_components').insert({
+    kit_product_id: kitProductId,
+    component_product_id: componentProductId,
+    quantity: qty,
+    sort_order: nextSort,
+  })
+  if (error) throw error
+  await syncKitPhotosAfterBom(kitProductId)
+}
+
+export async function adminUpdateKitComponentQuantity(id: string, quantity: number): Promise<void> {
+  const qty = Math.max(0.001, Number(quantity) || 1)
+  const { data, error } = await getSupabase()
+    .from('product_kit_components')
+    .update({ quantity: qty })
+    .eq('id', id)
+    .select('kit_product_id')
+    .single()
+  if (error) throw error
+  if (data?.kit_product_id) await syncKitPhotosAfterBom(String(data.kit_product_id))
+}
+
+export async function adminRemoveKitComponent(id: string): Promise<void> {
+  const { data, error: getErr } = await getSupabase()
+    .from('product_kit_components')
+    .select('kit_product_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (getErr) throw getErr
+  const { error } = await getSupabase().from('product_kit_components').delete().eq('id', id)
+  if (error) throw error
+  if (data?.kit_product_id) await syncKitPhotosAfterBom(String(data.kit_product_id))
+}
+
+export async function adminSetProductKind(
+  productId: string,
+  productKind: 'item' | 'kit',
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from('products')
+    .update({ product_kind: productKind })
+    .eq('id', productId)
+  if (error) throw error
+}
+
+/** Regra de publicação: ≥2 linhas BOM, ou 1 linha com qty ≥ 2. */
+export function isKitCompositionPublishable(rows: AdminKitComponentRow[]): boolean {
+  if (rows.length >= 2) return true
+  if (rows.length === 1 && rows[0]!.quantity >= 2) return true
+  return false
+}
+
+/**
+ * Copia PVC dos componentes escolhidos para o kit (upsert por vehicle_version_id).
+ * Ação explícita — não herda automaticamente ao mudar o BOM.
+ */
+export async function adminPullKitApplicationsFromComponents(input: {
+  kitProductId: string
+  componentProductIds: string[]
+}): Promise<{ inserted: number; updated: number; skipped: number }> {
+  const kitId = String(input.kitProductId).trim()
+  const componentIds = [
+    ...new Set(input.componentProductIds.map((id) => String(id).trim()).filter(Boolean)),
+  ].filter((id) => id !== kitId)
+  if (!kitId) throw new Error('Kit inválido')
+  if (!componentIds.length) return { inserted: 0, updated: 0, skipped: 0 }
+
+  const { data: existing, error: exErr } = await getSupabase()
+    .from('product_vehicle_compatibility')
+    .select('id, vehicle_version_id')
+    .eq('product_id', kitId)
+  if (exErr) throw exErr
+  const existingByVersion = new Map(
+    (existing ?? []).map((r) => [String(r.vehicle_version_id), String(r.id)]),
+  )
+
+  const { data: sourceRows, error: srcErr } = await getSupabase()
+    .from('product_vehicle_compatibility')
+    .select(
+      'vehicle_version_id, notes, year_start, year_end, lado, posicao_long, posicao_vert, validation_status',
+    )
+    .in('product_id', componentIds)
+  if (srcErr) throw srcErr
+
+  let inserted = 0
+  let updated = 0
+  let skipped = 0
+  const seenVersions = new Set<string>()
+
+  for (const row of sourceRows ?? []) {
+    const versionId = String(row.vehicle_version_id ?? '').trim()
+    if (!versionId) {
+      skipped += 1
+      continue
+    }
+    if (seenVersions.has(versionId)) {
+      skipped += 1
+      continue
+    }
+    seenVersions.add(versionId)
+
+    const payload = {
+      product_id: kitId,
+      vehicle_version_id: versionId,
+      notes: (row.notes as string | null) ?? null,
+      year_start: (row.year_start as number | null) ?? null,
+      year_end: (row.year_end as number | null) ?? null,
+      lado: (row.lado as string | null) ?? null,
+      posicao_long: (row.posicao_long as string | null) ?? null,
+      posicao_vert: (row.posicao_vert as string | null) ?? null,
+      validation_status: (row.validation_status as string | null) ?? 'draft',
+    }
+
+    const existingId = existingByVersion.get(versionId)
+    if (existingId) {
+      const { error } = await getSupabase()
+        .from('product_vehicle_compatibility')
+        .update({
+          notes: payload.notes,
+          year_start: payload.year_start,
+          year_end: payload.year_end,
+          lado: payload.lado,
+          posicao_long: payload.posicao_long,
+          posicao_vert: payload.posicao_vert,
+          validation_status: payload.validation_status,
+        })
+        .eq('id', existingId)
+      if (error) throw error
+      updated += 1
+    } else {
+      const { error } = await getSupabase().from('product_vehicle_compatibility').insert(payload)
+      if (error) throw error
+      inserted += 1
+      existingByVersion.set(versionId, 'new')
+    }
+  }
+
+  return { inserted, updated, skipped }
 }
 
 export async function refreshIncompleteFlag(productId: string) {

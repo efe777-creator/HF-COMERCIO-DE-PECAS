@@ -1,4 +1,4 @@
-﻿create or replace function public.apply_supplier_conversion_import(p_import_id uuid)
+create or replace function public.apply_supplier_conversion_import(p_import_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -81,7 +81,7 @@ begin
       if v_sku is null or v_supplier_sku is null then
         update public.import_items
         set result = 'error',
-            errors = array['SKU FAL ou codigo fornecedor ausente']
+            errors = array['SKU HF ou codigo fornecedor ausente']
         where id = r.id;
         v_failed := v_failed + 1;
         continue;
@@ -96,7 +96,7 @@ begin
       if v_product_id is null then
         update public.import_items
         set result = 'error',
-            errors = array['Produto nao encontrado (SKU FAL inexistente)']
+            errors = array['Produto nao encontrado (SKU HF inexistente)']
         where id = r.id;
         v_failed := v_failed + 1;
         continue;

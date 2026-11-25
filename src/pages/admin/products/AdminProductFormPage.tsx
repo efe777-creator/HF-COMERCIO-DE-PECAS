@@ -1,3 +1,5 @@
+import { ProductApplicationsEditor } from '@/components/admin/applications/ProductApplicationsEditor'
+import { ProductEquivalencesEditor } from '@/components/admin/products/ProductEquivalencesEditor'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Loading } from '@/components/common/Loading'
@@ -9,18 +11,17 @@ import {
   adminSetPrimaryImage,
   adminUploadImage,
 } from '@/services/admin/adminImageService'
-import { adminListManufacturers } from '@/services/admin/adminManufacturerService'
 import {
-  adminAddApplication,
   adminDeleteReference,
   adminGetProduct,
   adminListApplications,
   adminListReferences,
   adminReleaseProductToStore,
-  adminRemoveApplication,
   adminUpsertProduct,
   adminUpsertReference,
 } from '@/services/admin/adminProductService'
+import { adminErrorMessage } from '@/lib/adminErrorMessage'
+import { evaluateReleaseChecklist } from '@/lib/releaseChecklist'
 import {
   adminClearPriceOverride,
   adminGetActivePriceOverride,
@@ -34,7 +35,6 @@ import {
   type ProductListPriceRow,
 } from '@/services/admin/adminPriceListService'
 import { adminListSuppliers } from '@/services/admin/adminSupplierService'
-import { adminListModels, adminListVersions } from '@/services/admin/adminVehicleService'
 import { useAuth } from '@/contexts/AuthContext'
 import { datetimeLocalToIso, isoToDatetimeLocal } from '@/lib/datetime'
 import { entityStatusLabel, productReferenceTypeLabel } from '@/lib/adminLabels'
@@ -47,14 +47,11 @@ import {
 } from '@/lib/productPosicaoLado'
 import type {
   Category,
-  Manufacturer,
   Product,
   ProductBrand,
   ProductImage,
   ProductReference,
   Supplier,
-  VehicleModel,
-  VehicleVersion,
 } from '@/types'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -75,14 +72,14 @@ export function AdminProductFormPage() {
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
   const [status, setStatus] = useState<NonNullable<Product['status']>>('draft')
-  /** Hierarquia: Categoria → Grupo → Subgrupo (folha em products.category_id). State legado L1=catGrupoId. */
-  const [catGrupoId, setCatGrupoId] = useState('')
-  const [catCategoriaId, setCatCategoriaId] = useState('')
+  /** Hierarquia: Categoria → Grupo → Subgrupo (folha em products.category_id). */
+  const [catRootId, setCatRootId] = useState('')
+  const [catGroupId, setCatGroupId] = useState('')
   const [catSubId, setCatSubId] = useState('')
   const [brandId, setBrandId] = useState('')
   const [supplierId, setSupplierId] = useState('')
 
-  const categoryId = catSubId || catCategoriaId || catGrupoId || ''
+  const categoryId = catSubId || catGroupId || catRootId || ''
   /** Preços nas listas — somente leitura (exceto preço inicial Base no novo produto). */
   const [listRows, setListRows] = useState<ProductListPriceRow[]>([])
   /** Espelho products.price / promo_price (não editáveis na UI após criação). */
@@ -109,26 +106,18 @@ export function AdminProductFormPage() {
   const [brands, setBrands] = useState<ProductBrand[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [refs, setRefs] = useState<ProductReference[]>([])
-  const [apps, setApps] = useState<unknown[]>([])
+  const [appsCount, setAppsCount] = useState(0)
   const [images, setImages] = useState<ProductImage[]>([])
 
   const [refCode, setRefCode] = useState('')
   const [refType, setRefType] = useState('manufacturer')
 
-  const [makers, setMakers] = useState<Manufacturer[]>([])
-  const [models, setModels] = useState<VehicleModel[]>([])
-  const [versions, setVersions] = useState<VehicleVersion[]>([])
-  const [makerId, setMakerId] = useState('')
-  const [modelId, setModelId] = useState('')
-  const [versionId, setVersionId] = useState('')
-
   useEffect(() => {
     void (async () => {
-      const [cats, brs, sups, mfrs, lists] = await Promise.all([
+      const [cats, brs, sups, lists] = await Promise.all([
         adminListCategories(),
         adminListBrands(),
         adminListSuppliers(),
-        adminListManufacturers(),
         adminListPriceLists(),
       ])
       // Só published na lista; preserva nós extras (ex. arquivados do produto em edição).
@@ -141,7 +130,6 @@ export function AdminProductFormPage() {
       })
       setBrands(brs.filter((b) => b.status === 'active'))
       setSuppliers(sups.filter((s) => s.status === 'active'))
-      setMakers(mfrs.filter((m) => m.status === 'active'))
       if (isNew) {
         setListRows(
           lists.map((l) => ({
@@ -153,6 +141,16 @@ export function AdminProductFormPage() {
             isDefault: l.isDefault,
             itemId: null,
             price: null,
+            pricingMethod: l.pricingMethod,
+            pricingPercent: l.pricingPercent,
+            listExtraCostPercent: l.listExtraCostPercent ?? 0,
+            extraCost: 0,
+            baseCost: null,
+            costTotal: null,
+            effectiveMarginPct: null,
+            effectiveMarkupPct: null,
+            priceOrigin: null,
+            supplierId: null,
           })),
         )
       }
@@ -166,6 +164,10 @@ export function AdminProductFormPage() {
       try {
         const p = await adminGetProduct(id)
         if (!p) throw new Error('Produto não encontrado')
+        if (p.productKind === 'kit') {
+          navigate(`/admin/kits/${p.id}`, { replace: true })
+          return
+        }
         setProductId(p.id)
         setName(p.name)
         setSku(p.sku)
@@ -179,8 +181,8 @@ export function AdminProductFormPage() {
             path.unshift(cur)
             cur = byId.get(cur)?.parentId ?? null
           }
-          setCatGrupoId(path[0] ?? '')
-          setCatCategoriaId(path[1] ?? '')
+          setCatRootId(path[0] ?? '')
+          setCatGroupId(path[1] ?? '')
           setCatSubId(path[2] ?? '')
           // Garante nós do produto (mesmo arquivados) para edição não “perder” a seleção.
           setCategories((prev) => {
@@ -225,39 +227,44 @@ export function AdminProductFormPage() {
           setOverrideValidUntil('')
         }
         setRefs(await adminListReferences(p.id))
-        setApps(await adminListApplications(p.id))
+        setAppsCount((await adminListApplications(p.id)).length)
         setImages(await adminListImages(p.id))
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erro')
+        setError(adminErrorMessage(e, 'Falha ao carregar o produto.'))
       } finally {
         setLoading(false)
       }
     })()
-  }, [id, isNew])
-
-  useEffect(() => {
-    if (!makerId) {
-      setModels([])
-      return
-    }
-    void adminListModels(makerId).then(setModels)
-  }, [makerId])
-
-  useEffect(() => {
-    if (!modelId) {
-      setVersions([])
-      return
-    }
-    void adminListVersions(modelId).then(setVersions)
-  }, [modelId])
+  }, [id, isNew, navigate])
 
   async function onLiberarNaLoja() {
     if (!productId) return
     const publishIfNeeded = status !== 'published'
+    const checklist = evaluateReleaseChecklist({
+      productId,
+      name,
+      sku,
+      categoryId: categoryId || null,
+      status,
+      hasApplication: appsCount > 0,
+      hasImage: images.length > 0,
+      publishIfNeeded,
+      productKind: 'item',
+      kitCompositionOk: true,
+    })
+    if (!checklist.canRelease) {
+      setError(checklist.summary)
+      return
+    }
+    if (checklist.softWarnings.length) {
+      const warn = checklist.softWarnings.map((w) => w.detail ?? w.label).join('\n')
+      const okWarn = window.confirm(`Avisos do checklist:\n${warn}\n\nContinuar mesmo assim?`)
+      if (!okWarn) return
+    }
     const ok = window.confirm(
       publishIfNeeded
-        ? 'Liberar na loja?\n\n• Publicar o produto (status → published)\n• Exigir preço > 0 na lista padrão/ativa ou avulso\n• Marcar disponível (is_available)\n\nConfirmar?'
-        : 'Liberar na loja?\n\n• Status já publicado\n• Exigir preço > 0 na lista padrão/ativa ou avulso\n• Marcar disponível (is_available)\n\nConfirmar?',
+        ? 'Liberar na loja?\n\n• Publicar o produto (status → published)\n• Marcar disponível (is_available)\n\nConfirmar?'
+        : 'Liberar na loja?\n\n• Status já publicado\n• Marcar disponível (is_available)\n\nConfirmar?',
     )
     if (!ok) return
     setReleasing(true)
@@ -384,7 +391,9 @@ export function AdminProductFormPage() {
       {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
 
       <form onSubmit={saveGeneral} className="space-y-4 rounded-[14px] border border-hf-line bg-hf-surface p-4">
-        <h2 className="font-extrabold text-hf-ink">Geral</h2>
+        <h2 id="identificacao" className="font-extrabold text-hf-ink scroll-mt-4">
+          Identificação
+        </h2>
         <div className="grid gap-3 md:grid-cols-2">
           <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} required />
           <Input
@@ -394,8 +403,11 @@ export function AdminProductFormPage() {
             required
             hint="Campo técnico: sku"
           />
+          <h2 id="classificacao" className="md:col-span-2 scroll-mt-4 pt-2 font-extrabold text-hf-ink">
+            Classificação
+          </h2>
           <fieldset className="text-sm md:col-span-2">
-            <legend className="mb-1 block font-semibold text-hf-ink">Classificação</legend>
+            <legend className="sr-only">Hierarquia de categoria</legend>
             <p className="mb-2 text-xs text-hf-muted">
               Só categorias publicadas. Cadastre novas em Admin → Categorias (ou via importação
               depois de cadastrar a hierarquia).
@@ -405,10 +417,10 @@ export function AdminProductFormPage() {
                 <span className="mb-1 block font-semibold">Categoria</span>
                 <select
                   className="w-full rounded-[10px] border border-hf-line px-3 py-2"
-                  value={catGrupoId}
+                  value={catRootId}
                   onChange={(e) => {
-                    setCatGrupoId(e.target.value)
-                    setCatCategoriaId('')
+                    setCatRootId(e.target.value)
+                    setCatGroupId('')
                     setCatSubId('')
                   }}
                 >
@@ -427,16 +439,16 @@ export function AdminProductFormPage() {
                 <span className="mb-1 block font-semibold">Grupo</span>
                 <select
                   className="w-full rounded-[10px] border border-hf-line px-3 py-2"
-                  value={catCategoriaId}
-                  disabled={!catGrupoId}
+                  value={catGroupId}
+                  disabled={!catRootId}
                   onChange={(e) => {
-                    setCatCategoriaId(e.target.value)
+                    setCatGroupId(e.target.value)
                     setCatSubId('')
                   }}
                 >
                   <option value="">—</option>
                   {categories
-                    .filter((c) => c.parentId === catGrupoId)
+                    .filter((c) => c.parentId === catRootId)
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((c) => (
                       <option key={c.id} value={c.id}>
@@ -450,12 +462,12 @@ export function AdminProductFormPage() {
                 <select
                   className="w-full rounded-[10px] border border-hf-line px-3 py-2"
                   value={catSubId}
-                  disabled={!catCategoriaId}
+                  disabled={!catGroupId}
                   onChange={(e) => setCatSubId(e.target.value)}
                 >
                   <option value="">—</option>
                   {categories
-                    .filter((c) => c.parentId === catCategoriaId)
+                    .filter((c) => c.parentId === catGroupId)
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((c) => (
                       <option key={c.id} value={c.id}>
@@ -466,8 +478,16 @@ export function AdminProductFormPage() {
               </label>
             </div>
           </fieldset>
+          <h2 id="marca" className="md:col-span-2 scroll-mt-4 pt-2 font-extrabold text-hf-ink">
+            Marca (peça)
+          </h2>
           <label className="text-sm">
-            <span className="mb-1 block font-semibold">Fabricante</span>
+            <span className="mb-1 flex flex-wrap items-center justify-between gap-2 font-semibold">
+              Marca da peça
+              <Link className="text-xs font-semibold text-hf-auth-link" to="/admin/produtos/marcas">
+                Gerenciar marcas
+              </Link>
+            </span>
             <select className="w-full rounded-[10px] border border-hf-line px-3 py-2" value={brandId} onChange={(e) => setBrandId(e.target.value)}>
               <option value="">—</option>
               {brands.map((b) => (
@@ -485,10 +505,10 @@ export function AdminProductFormPage() {
             </select>
           </label>
           <fieldset className="text-sm md:col-span-2">
-            <legend className="mb-1 block font-semibold text-hf-ink">Posição</legend>
+            <legend className="mb-1 block font-semibold text-hf-ink">Posição (produto)</legend>
             <p className="mb-2 text-xs text-hf-muted">
-              Pode combinar (ex.: Dianteira + Inferior). Na planilha: DIANT, TRAS, SUPERIOR,
-              INFERIOR ou “DIANT INFERIOR”.
+              Atributo do item (não da aplicação). Pode combinar (ex.: Dianteira + Inferior).
+              Planilha: DIANT, TRAS, SUPERIOR, INFERIOR ou “DIANT INFERIOR”.
             </p>
             <div className="flex flex-wrap gap-3">
               {(
@@ -521,7 +541,7 @@ export function AdminProductFormPage() {
             </div>
           </fieldset>
           <label className="text-sm">
-            <span className="mb-1 block font-semibold">Lado</span>
+            <span className="mb-1 block font-semibold">Lado (produto)</span>
             <select
               className="w-full rounded-[10px] border border-hf-line px-3 py-2"
               value={lado ?? ''}
@@ -533,6 +553,16 @@ export function AdminProductFormPage() {
               <option value="AMBOS">Ambos</option>
             </select>
           </label>
+          <div className="text-sm md:col-span-2">
+            <p className="mb-1 font-semibold">Natureza</p>
+            <p className="m-0 text-hf-muted">
+              Item (SKU unitário). Para montar kit (BOM + fotos dos itens), use{' '}
+              <Link className="font-semibold text-hf-auth-link" to="/admin/kits">
+                Admin → Kits
+              </Link>
+              .
+            </p>
+          </div>
           <label className="text-sm">
             <span className="mb-1 block font-semibold">Status</span>
             <select className="w-full rounded-[10px] border border-hf-line px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value as Product['status'] & string)}>
@@ -543,7 +573,10 @@ export function AdminProductFormPage() {
           </label>
         </div>
 
-        <h2 className="pt-2 font-extrabold text-hf-ink">Precificação</h2>
+        <h2 id="internos" className="scroll-mt-4 pt-2 font-extrabold text-hf-ink">
+          Internos
+        </h2>
+        <p className="m-0 text-sm font-semibold text-hf-muted">Precificação e logística</p>
         <p className="m-0 text-sm text-hf-muted">
           Preços de lista são só leitura aqui. Para alterar, use{' '}
           <Link to="/admin/precos" className="font-semibold text-hf-ink underline">
@@ -551,6 +584,10 @@ export function AdminProductFormPage() {
           </Link>
           . Neste formulário você pode apenas <strong>ativar ou editar o preço avulso</strong> (exceção).
         </p>
+
+        <h2 id="publicacao" className="scroll-mt-4 pt-2 font-extrabold text-hf-ink">
+          Publicação
+        </h2>
         <div className="rounded-[12px] border border-hf-line bg-hf-surface p-3">
           <p className="m-0 text-sm font-extrabold text-hf-ink">Disponibilidade na loja</p>
           <p className="mt-1 text-xs text-hf-muted">
@@ -704,7 +741,7 @@ export function AdminProductFormPage() {
           <Input label="Comprimento (cm)" type="number" step="0.01" min="0" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
         </div>
 
-        <h2 className="pt-2 font-extrabold text-hf-ink">Descrição</h2>
+        <p className="m-0 pt-2 text-sm font-semibold text-hf-ink">Descrição</p>
         <Input label="Descrição curta" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} />
         <label className="block text-sm">
           <span className="mb-1 block font-semibold">Descrição completa</span>
@@ -716,7 +753,16 @@ export function AdminProductFormPage() {
 
       {productId ? (
         <>
-          <section className="space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
+          <section id="equivalencias" className="scroll-mt-4 space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
+            <h2 className="font-extrabold text-hf-ink">Equivalências</h2>
+            <ProductEquivalencesEditor
+              productId={productId}
+              categories={categories}
+              variant="section"
+            />
+          </section>
+
+          <section id="referencias" className="scroll-mt-4 space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
             <h2 className="font-extrabold text-hf-ink">Referências</h2>
             <div className="flex flex-wrap gap-2">
               <Input label="Código" value={refCode} onChange={(e) => setRefCode(e.target.value)} />
@@ -763,68 +809,18 @@ export function AdminProductFormPage() {
             </ul>
           </section>
 
-          <section className="space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
+          <section id="aplicacoes" className="scroll-mt-4 space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
             <h2 className="font-extrabold text-hf-ink">Aplicações</h2>
-            <div className="grid gap-2 md:grid-cols-4">
-              <select className="rounded-[10px] border border-hf-line px-3 py-2" value={makerId} onChange={(e) => setMakerId(e.target.value)}>
-                <option value="">Montadora</option>
-                {makers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-              <select className="rounded-[10px] border border-hf-line px-3 py-2" value={modelId} onChange={(e) => setModelId(e.target.value)}>
-                <option value="">Modelo</option>
-                {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-              <select className="rounded-[10px] border border-hf-line px-3 py-2" value={versionId} onChange={(e) => setVersionId(e.target.value)}>
-                <option value="">Configuração</option>
-                {versions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {[v.year ?? 'ano?', v.engine ?? 'motor?', v.versionName ?? 'versão?'].join(' / ')}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="button"
-                disabled={!versionId}
-                onClick={() =>
-                  void adminAddApplication(productId, versionId)
-                    .then(async () => {
-                      setVersionId('')
-                      setApps(await adminListApplications(productId))
-                    })
-                    .catch((e) => setError(String(e.message ?? e)))
-                }
-              >
-                Vincular
-              </Button>
-            </div>
-            <ul className="space-y-1 text-sm">
-              {apps.map((a) => {
-                const row = a as {
-                  id: string
-                  vehicle_versions?: {
-                    year: number | null
-                    engine: string | null
-                    version_name: string | null
-                    manufacturers?: { name: string } | { name: string }[]
-                    models?: { name: string } | { name: string }[]
-                  }
-                }
-                const vv = row.vehicle_versions
-                const maker = Array.isArray(vv?.manufacturers) ? vv?.manufacturers[0]?.name : vv?.manufacturers?.name
-                const model = Array.isArray(vv?.models) ? vv?.models[0]?.name : vv?.models?.name
-                return (
-                  <li key={row.id} className="flex justify-between border-b border-hf-line py-1">
-                    <span>{[maker, model, vv?.year, vv?.engine, vv?.version_name].filter(Boolean).join(' ')}</span>
-                    <button type="button" className="font-semibold text-hf-danger" onClick={() => void adminRemoveApplication(row.id).then(async () => setApps(await adminListApplications(productId)))}>
-                      Remover
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+            <ProductApplicationsEditor
+              productId={productId}
+              variant="section"
+              onMutated={() => {
+                void adminListApplications(productId).then((rows) => setAppsCount(rows.length))
+              }}
+            />
           </section>
 
-          <section className="space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
+          <section id="imagens" className="scroll-mt-4 space-y-3 rounded-[14px] border border-hf-line bg-hf-surface p-4">
             <h2 className="font-extrabold text-hf-ink">Imagens</h2>
             <input
               type="file"
@@ -858,6 +854,7 @@ export function AdminProductFormPage() {
             </div>
             {!images.length ? <p className="text-sm text-hf-muted">Sem imagem — produto marcado incompleto (cadastro permitido).</p> : null}
           </section>
+
         </>
       ) : null}
     </div>

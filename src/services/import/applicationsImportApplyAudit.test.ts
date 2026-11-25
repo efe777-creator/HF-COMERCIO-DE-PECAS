@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const migration = join(
   process.cwd(),
-  'supabase/migrations_hf/06c_apply_catalog_applications_import.sql',
+  'supabase/migrations_hf/23_apps_import_autocreate_product.sql',
 )
 
 describe('apply_catalog_applications_import — auditoria (migrations_hf)', () => {
@@ -24,12 +24,15 @@ describe('apply_catalog_applications_import — auditoria (migrations_hf)', () =
     expect(sql).toMatch(/ja foi processada/)
   })
 
-  it('nao cria produto — SKU inexistente e erro', () => {
-    expect(sql).toMatch(/produto nao cadastrado/i)
-    expect(sql).not.toMatch(/insert into public\.products/i)
+  it('pode criar produto rascunho e grava engine da motorizacao', () => {
+    expect(sql).toMatch(/insert into public\.products/i)
+    expect(sql).toMatch(/create_product/)
+    expect(sql).toMatch(/v_motorizacao/)
+    expect(sql).toMatch(/v_created_products/)
   })
 
-  it('kind catalog_applications', () => {
+  it('kind catalog_applications + soft-fail por linha', () => {
     expect(sql).toMatch(/catalog_applications/)
+    expect(sql).toMatch(/exception\s+when\s+others/i)
   })
 })
