@@ -66,7 +66,12 @@ Ficha completa (rota dedicada): abas — uma responsabilidade por aba
 | Mobile / estreito | Guia em tela cheia; primary recuperável ao fechar |
 
 **Vivo — hub Produtos:** `/admin/produtos` = lista + guia **full** (`AdaptiveWorkspace` + `GuideStackPanels` + `ProductWorkSurface`; prefs `hf-admin-workspace-v1` / `products`). Edição na guia: identidade, categoria, preços, aplicações, mídia, referências, kits usados. Ficha `/admin/produtos/:id` permanece para Novo e cadastro longo.  
-**Ainda a portar:** Veículos, Preços, Clientes/Listas (mesmo shell). **Não** copiar CSS/classes de terceiros.
+**Vivo — hub Kits:** shell Adaptive (`kits`).  
+**Vivo — Central de Finanças:** `/admin/financeiro` = menu (Visão geral · Condições · Entradas/Saídas/Ajustes em breve); condições em `/admin/financeiro/condicoes` (Adaptive: Identidade · Agenda · Meios · Disponibilidade · Simular + Liberar); sem ficha full nesta base.  
+**Vivo — Clientes B2B:** `/admin/clientes` Adaptive (`customers`); guia Identidade · Contato · Endereço · Comercial (lista assigned + condições) · Acesso · Crédito (placeholder); BrasilAPI CNPJ + ViaCEP; ver `HF_CLIENTES_CADASTRO_PLANO.md`.  
+**Vivo — Central de Comunicação:** `/admin/comunicacao` Adaptive (`comunicacao`); avisos in-app de acesso B2B; conta `/conta/avisos`; ver `HF_COMUNICACAO_PLANO.md`. WhatsApp Cloud fora deste ciclo.  
+**Vivo — Preços:** `/admin/precos` Adaptive (hub + ficha).  
+**Ainda a portar:** Veículos, Listas B2B de catálogo (visibilidade — distinto de lista de preço). **Não** copiar CSS/classes de terceiros.
 
 ### Anti-padrões (proibidos)
 
@@ -108,6 +113,7 @@ Adaptado do vocabulário fonte (guia), com copy B2B HF:
 | Consultar esta peça | CTA PDP → WhatsApp (Fase 1) |
 | Listas de preço | Label nav admin (staff); não “preços” solto na vitrine |
 | Catálogo / Listas B2B | Listas de visibilidade cliente/grupo (não confundir com preço) |
+| Finanças / Financeiro | Hub admin de **condições de pagamento** (agenda + meios ±); não é títulos/A/R (Andar 4) nem pedidos |
 
 ---
 
@@ -119,6 +125,7 @@ Modelo (ajustar ao domínio HF; não copiar abas de kit/pay de referência sem n
 |---------|----------------|
 | Produto | Geral \| Mídia \| Aplicações \| Referências \| (Precificação staff) \| Fornecedor |
 | Lista de preço | Produtos \| Formação \| Importações \| Configuração |
+| Finanças (condição) | Identidade \| Agenda \| Meios \| Disponibilidade \| Simular (+ Liberar) |
 | Cliente B2B | Dados \| Usuários \| Listas de catálogo \| Notas |
 | Veículo (mestre) | Modelo \| Versões \| (Integrações futuras) |
 

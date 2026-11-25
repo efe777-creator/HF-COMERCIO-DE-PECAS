@@ -1,6 +1,39 @@
 import { features } from '@/config/features'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
+import { getCurrentCustomerId } from '@/services/customers/customerService'
 import type { Product } from '@/types'
+
+async function resolveAssignedListPrices(
+  productIds: string[],
+  customerId: string,
+): Promise<Map<string, { amount: number; priceListId: string }>> {
+  const map = new Map<string, { amount: number; priceListId: string }>()
+  if (!supabase || !productIds.length) return map
+
+  const { data: cust, error: cErr } = await supabase
+    .from('customers')
+    .select('assigned_price_list_id, status')
+    .eq('id', customerId)
+    .maybeSingle()
+  if (cErr || !cust || cust.status !== 'active' || !cust.assigned_price_list_id) {
+    return map
+  }
+
+  const listId = String(cust.assigned_price_list_id)
+  const { data: items, error: iErr } = await supabase
+    .from('price_list_items')
+    .select('product_id, price')
+    .eq('price_list_id', listId)
+    .in('product_id', productIds)
+  if (iErr) return map
+
+  for (const row of items ?? []) {
+    const amount = Number(row.price)
+    if (!Number.isFinite(amount) || amount <= 0) continue
+    map.set(String(row.product_id), { amount, priceListId: listId })
+  }
+  return map
+}
 
 export type PriceSource = 'override' | 'list' | 'default'
 
@@ -86,16 +119,6 @@ const BASE_LIST_ID = 'a1111111-1111-1111-1111-111111111101'
 /** Anexa resolvedPrice / listPrice / resolvedPriceListId aos produtos. */
 export async function attachResolvedPrices(products: Product[]): Promise<Product[]> {
   if (!products.length) return products
-  // MVP HF: sem módulo de preços — não chama RPCs/tabelas inexistentes
-  if (!features.price_enabled) {
-    return products.map((p) => ({
-      ...p,
-      listPrice: p.price,
-      resolvedPrice: p.promoPrice ?? p.price,
-      resolvedPriceListId: null,
-      priceSource: 'default' as const,
-    }))
-  }
   if (!isSupabaseConfigured || !supabase) {
     return products.map((p) => ({
       ...p,
@@ -103,10 +126,84 @@ export async function attachResolvedPrices(products: Product[]): Promise<Product
       resolvedPrice: p.promoPrice ?? p.price,
       resolvedPriceListId: null,
       priceSource: 'default' as const,
+      priceVisible: false,
     }))
   }
 
-  const resolved = await resolveProductPrices(products.map((p) => p.id))
+  let customerId: string | null = null
+  try {
+    customerId = await getCurrentCustomerId()
+  } catch {
+    customerId = null
+  }
+
+  // Preço público off: só cliente B2B com lista assigned vê preço (consulta direta, sem RPC).
+  if (!features.price_enabled) {
+    if (!customerId) {
+      return products.map((p) => ({
+        ...p,
+        listPrice: p.price,
+        resolvedPrice: p.promoPrice ?? p.price,
+        resolvedPriceListId: null,
+        priceSource: 'default' as const,
+        priceVisible: false,
+      }))
+    }
+    const assigned = await resolveAssignedListPrices(
+      products.map((p) => p.id),
+      customerId,
+    )
+    return products.map((p) => {
+      const hit = assigned.get(p.id)
+      if (!hit) {
+        return {
+          ...p,
+          listPrice: p.price,
+          resolvedPrice: p.promoPrice ?? p.price,
+          resolvedPriceListId: null,
+          priceSource: 'default' as const,
+          priceVisible: false,
+        }
+      }
+      return {
+        ...p,
+        listPrice: hit.amount,
+        resolvedPrice: hit.amount,
+        resolvedPriceListId: hit.priceListId,
+        priceSource: 'list' as const,
+        priceVisible: true,
+        price: hit.amount,
+        promoPrice: null,
+      }
+    })
+  }
+
+  let resolved = new Map<string, ResolvedPrice>()
+  try {
+    resolved = await resolveProductPrices(
+      products.map((p) => p.id),
+      customerId,
+    )
+  } catch {
+    // RPC pode não existir neste projeto — fallback assigned.
+    if (customerId) {
+      const assigned = await resolveAssignedListPrices(
+        products.map((p) => p.id),
+        customerId,
+      )
+      for (const [id, hit] of assigned) {
+        resolved.set(id, {
+          productId: id,
+          amount: hit.amount,
+          priceListId: hit.priceListId,
+          priceListSlug: 'assigned',
+          usedOverride: false,
+          usedDefaultFallback: false,
+          priceSource: 'list',
+        })
+      }
+    }
+  }
 
   const { data: baseItems } = await supabase
     .from('price_list_items')
@@ -131,6 +228,7 @@ export async function attachResolvedPrices(products: Product[]): Promise<Product
       resolvedPrice,
       resolvedPriceListId: r?.priceListId ?? null,
       priceSource: r?.priceSource,
+      priceVisible: true,
       promoPrice:
         resolvedPrice < listPrice - 0.001
           ? resolvedPrice

@@ -31,6 +31,8 @@ const catalogLinks: AdminNavLink[] = [
 ]
 
 const commercialLinks: AdminNavLink[] = [
+  { to: '/admin/financeiro', label: 'Finanças' },
+  { to: '/admin/comunicacao', label: 'Central de Comunicação' },
   { to: '/admin/campanhas', label: 'Campanhas' },
   { to: '/admin/cotacoes', label: 'Cotações (leads)' },
   { to: '/admin/leads', label: 'Leads (inbox)' },

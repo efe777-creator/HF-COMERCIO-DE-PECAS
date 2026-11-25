@@ -16,6 +16,8 @@ export type WorkspaceModuleKey =
   | 'prices'
   | 'customers'
   | 'categories'
+  | 'financeiro'
+  | 'comunicacao'
 
 const WORKSPACE_MODULE_KEYS: readonly WorkspaceModuleKey[] = [
   'products',
@@ -24,6 +26,8 @@ const WORKSPACE_MODULE_KEYS: readonly WorkspaceModuleKey[] = [
   'prices',
   'customers',
   'categories',
+  'financeiro',
+  'comunicacao',
 ] as const
 
 export type WorkspaceModulePrefs = {

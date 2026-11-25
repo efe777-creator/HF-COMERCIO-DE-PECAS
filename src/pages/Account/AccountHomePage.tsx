@@ -1,10 +1,14 @@
 import { WhatsAppButton } from '@/components/common/WhatsAppButton'
+import { PaymentConditionsNotice } from '@/components/payment/PaymentConditionsNotice'
 import { useAuth } from '@/contexts/AuthContext'
 import { buildAccessPendingWhatsAppMessage, buildHomeWhatsAppMessage } from '@/lib/whatsapp'
 import { isStaffRole } from '@/services/admin/staffService'
+import { countUnreadCustomerNotifications } from '@/services/communication/communicationService'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 const cards = [
+  { to: '/conta/avisos', title: 'Avisos', desc: 'Comunicados da HF sobre seu acesso' },
   { to: '/conta/perfil', title: 'Perfil', desc: 'Nome, telefone e dados da conta' },
   { to: '/catalogo', title: 'Meu catálogo', desc: 'Peças autorizadas para sua empresa' },
   { to: '/veiculo', title: 'Aplicações', desc: 'Buscar por montadora e modelo' },
@@ -16,6 +20,21 @@ export function AccountHomePage() {
   const b2bActive = Boolean(user?.customerId && user.customerStatus === 'active')
   const pending = user?.customerStatus === 'pending'
   const suspended = user?.customerStatus === 'suspended'
+  const [unreadAvisos, setUnreadAvisos] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    void countUnreadCustomerNotifications()
+      .then((n) => {
+        if (alive) setUnreadAvisos(n)
+      })
+      .catch(() => {
+        if (alive) setUnreadAvisos(0)
+      })
+    return () => {
+      alive = false
+    }
+  }, [user?.customerId, user?.customerStatus])
 
   return (
     <div className="rounded-hf border border-hf-line bg-hf-surface p-5">
@@ -77,6 +96,16 @@ export function AccountHomePage() {
         </p>
       ) : null}
 
+      {b2bActive ? (
+        <PaymentConditionsNotice
+          audience="customer"
+          customerId={user?.customerId}
+          className="mt-4"
+        />
+      ) : (
+        <PaymentConditionsNotice audience="guest" className="mt-4" />
+      )}
+
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {cards.map((c) => (
           <Link
@@ -84,7 +113,14 @@ export function AccountHomePage() {
             to={c.to}
             className="rounded-[12px] border border-hf-line p-4 transition hover:border-hf-red"
           >
-            <h3 className="m-0 font-extrabold text-hf-ink">{c.title}</h3>
+            <h3 className="m-0 font-extrabold text-hf-ink">
+              {c.title}
+              {c.to === '/conta/avisos' && unreadAvisos > 0 ? (
+                <span className="ml-2 rounded-full bg-hf-red px-2 py-0.5 text-[11px] font-bold text-white">
+                  {unreadAvisos}
+                </span>
+              ) : null}
+            </h3>
             <p className="mb-0 mt-1 text-sm text-hf-muted">{c.desc}</p>
           </Link>
         ))}

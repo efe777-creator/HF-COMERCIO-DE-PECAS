@@ -40,6 +40,42 @@ export async function adminListImages(productId: string): Promise<ProductImage[]
   return (data as Row[]).map(map)
 }
 
+/** Mapa productId → URL da imagem principal (ou primeira). */
+export async function adminPrimaryImageUrlMap(
+  productIds: string[],
+): Promise<Record<string, string>> {
+  const ids = [...new Set(productIds.map((id) => String(id).trim()).filter(Boolean))]
+  if (!ids.length) return {}
+  const { data, error } = await getSupabase()
+    .from('product_images')
+    .select('product_id, storage_path, is_primary, sort_order')
+    .in('product_id', ids)
+    .order('sort_order')
+  if (error) throw error
+  const best = new Map<string, { path: string; primary: boolean; sort: number }>()
+  for (const row of data ?? []) {
+    const pid = String(row.product_id)
+    const path = String(row.storage_path)
+    const primary = Boolean(row.is_primary)
+    const sort = Number(row.sort_order ?? 0)
+    const cur = best.get(pid)
+    if (!cur) {
+      best.set(pid, { path, primary, sort })
+      continue
+    }
+    if (primary && !cur.primary) {
+      best.set(pid, { path, primary, sort })
+      continue
+    }
+    if (primary === cur.primary && sort < cur.sort) {
+      best.set(pid, { path, primary, sort })
+    }
+  }
+  const out: Record<string, string> = {}
+  for (const [pid, v] of best) out[pid] = publicUrl(v.path)
+  return out
+}
+
 export async function adminUploadImage(productId: string, file: File, alt?: string) {
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
   const path = `${productId}/${crypto.randomUUID()}.${ext}`

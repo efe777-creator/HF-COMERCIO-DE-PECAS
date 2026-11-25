@@ -254,7 +254,7 @@ Ver CRITERIOS_DE_ACEITE.md e HOMOLOGACAO.md. Gate: P0/P1/D1 + jornadas P0 (**sem
 | ID | Tema | Situação |
 |----|------|----------|
 | D-02 | Preços públicos | Não aprovado |
-| D-03 | Preço por cliente | Futuro B2B |
+| D-03 | Preço por cliente | **Parcial** (2026-11-25): lista `assigned` + `priceVisible` B2B; portal/checkout ainda futuro |
 | D-04…08 | Fontes/campos/equivalência/leads/validadores | Pendente |
 | **D7** | Estoque/NF no Andar 2: Sidicom/manual vs HF? | Abrir com dono antes do PRD Andar 2 |
 | D-10…14 | SLA, analytics, retenção, kits, refs | Pendente |

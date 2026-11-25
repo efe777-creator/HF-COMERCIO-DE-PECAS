@@ -1,395 +1,185 @@
+import { CustomerWorkSurface } from '@/components/admin/customers/CustomerWorkSurface'
+import { GuideStackPanels } from '@/components/admin/workspace/GuideStackPanels'
+import { AdaptiveWorkspace } from '@/components/admin/workspace/AdaptiveWorkspace'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Loading } from '@/components/common/Loading'
+import { useIdSplitTabs } from '@/hooks/useIdSplitTabs'
+import { BR_UF_OPTIONS } from '@/lib/brMacroRegion'
+import { formatCnpj } from '@/lib/cnpj'
 import {
-  adminLinkUserToCustomer,
   adminListB2bCustomers,
   adminListCustomerGroups,
-  adminListCustomerUsers,
   adminSetCustomerStatus,
-  adminSetCustomerUserPrimary,
-  adminUnlinkUserFromCustomer,
-  adminUpsertB2bCustomer,
   type AdminB2bCustomer,
   type AdminCustomerGroup,
-  type AdminCustomerUserLink,
-  type CustomerStatus,
 } from '@/services/admin/adminB2bCustomerService'
-import {
-  adminAssignCatalogToCustomer,
-  adminListCatalogs,
-  adminListCustomerCatalogIds,
-  type AdminCatalogList,
-} from '@/services/admin/adminCatalogListService'
-import {
-  adminSearchUsers,
-  type AdminOperatorUserRow,
-} from '@/services/admin/adminOperatorsService'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const STATUSES: CustomerStatus[] = ['pending', 'active', 'suspended', 'inactive']
-
 export function AdminCustomersPage() {
+  const [q, setQ] = useState('')
+  const [status, setStatus] = useState('')
+  const [uf, setUf] = useState('')
   const [items, setItems] = useState<AdminB2bCustomer[]>([])
   const [groups, setGroups] = useState<AdminCustomerGroup[]>([])
-  const [catalogs, setCatalogs] = useState<AdminCatalogList[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
-  const [editing, setEditing] = useState<AdminB2bCustomer | null>(null)
-  const [legalName, setLegalName] = useState('')
-  const [tradeName, setTradeName] = useState('')
-  const [cnpj, setCnpj] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
-  const [status, setStatus] = useState<CustomerStatus>('pending')
-  const [groupId, setGroupId] = useState('')
-  const [catalogId, setCatalogId] = useState('')
-  const [assignedCatalogs, setAssignedCatalogs] = useState<string[]>([])
-  const [linkedUsers, setLinkedUsers] = useState<AdminCustomerUserLink[]>([])
-  const [userQuery, setUserQuery] = useState('')
-  const [userHits, setUserHits] = useState<AdminOperatorUserRow[]>([])
-  const [userSearching, setUserSearching] = useState(false)
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null)
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false)
+  const splitTabs = useIdSplitTabs()
 
-  async function reload() {
+  const reload = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
-      const [customers, g, c] = await Promise.all([
-        adminListB2bCustomers(),
+      const [customers, g] = await Promise.all([
+        adminListB2bCustomers({
+          q: q.trim() || undefined,
+          status: status || undefined,
+          state: uf || undefined,
+        }),
         adminListCustomerGroups(),
-        adminListCatalogs(),
       ])
       setItems(customers)
       setGroups(g)
-      setCatalogs(c)
-      setError(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao carregar clientes')
+      setError(e instanceof Error ? e.message : 'Erro ao listar clientes')
     } finally {
       setLoading(false)
     }
-  }
+  }, [q, status, uf])
 
   useEffect(() => {
     void reload()
-  }, [])
+  }, [reload])
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return items
-    return items.filter(
-      (c) =>
-        c.legalName.toLowerCase().includes(q) ||
-        (c.tradeName ?? '').toLowerCase().includes(q) ||
-        (c.cnpj ?? '').includes(q) ||
-        (c.email ?? '').toLowerCase().includes(q),
-    )
-  }, [items, search])
-
-  async function startEdit(c: AdminB2bCustomer) {
-    setEditing(c)
-    setLegalName(c.legalName)
-    setTradeName(c.tradeName ?? '')
-    setCnpj(c.cnpj ?? '')
-    setEmail(c.email ?? '')
-    setPhone(c.phone ?? '')
-    setWhatsapp(c.whatsapp ?? '')
-    setStatus(c.status)
-    setGroupId(c.groupId ?? '')
-    setUserQuery('')
-    setUserHits([])
-    const [cats, users] = await Promise.all([
-      adminListCustomerCatalogIds(c.id),
-      adminListCustomerUsers(c.id),
-    ])
-    setAssignedCatalogs(cats)
-    setLinkedUsers(users)
+  function patch(c: AdminB2bCustomer) {
+    setItems((prev) => {
+      const i = prev.findIndex((p) => p.id === c.id)
+      if (i < 0) return [c, ...prev]
+      const next = prev.slice()
+      next[i] = c
+      return next
+    })
   }
 
-  function resetForm() {
-    setEditing(null)
-    setLegalName('')
-    setTradeName('')
-    setCnpj('')
-    setEmail('')
-    setPhone('')
-    setWhatsapp('')
-    setStatus('pending')
-    setGroupId('')
-    setCatalogId('')
-    setAssignedCatalogs([])
-    setLinkedUsers([])
-    setUserQuery('')
-    setUserHits([])
+  function openGuide(id: string) {
+    setQuickCreateOpen(false)
+    splitTabs.openTab(id)
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    try {
-      await adminUpsertB2bCustomer({
-        id: editing?.id,
-        legalName,
-        tradeName,
-        cnpj,
-        email,
-        phone,
-        whatsapp,
-        status,
-        groupId: groupId || null,
-      })
-      resetForm()
-      await reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao salvar')
+  function openQuickCreate() {
+    splitTabs.closeAll()
+    setQuickCreateOpen(true)
+  }
+
+  function closeContextual() {
+    setQuickCreateOpen(false)
+    splitTabs.closeAll()
+  }
+
+  function guideLabel(id: string) {
+    if (splitTabs.openIds.includes(id)) {
+      if (splitTabs.openIds.length > 1 && splitTabs.activeId !== id) return '+ Guia'
+      return 'Na guia'
     }
+    return 'Abrir guia'
   }
 
-  async function searchUsers() {
-    const q = userQuery.trim()
-    if (q.length < 2) {
-      setError('Digite ao menos 2 caracteres (e-mail, nome ou username)')
-      return
-    }
-    setUserSearching(true)
+  async function setStatusAction(id: string, next: 'active' | 'suspended') {
+    setStatusBusyId(id)
+    setError(null)
     try {
-      setUserHits(await adminSearchUsers(q))
-      setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha na busca de usuários')
+      await adminSetCustomerStatus(id, next)
+      setItems((prev) => prev.map((c) => (c.id === id ? { ...c, status: next } : c)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao alterar status')
     } finally {
-      setUserSearching(false)
+      setStatusBusyId(null)
     }
   }
 
-  async function refreshLinks(customerId: string) {
-    setLinkedUsers(await adminListCustomerUsers(customerId))
-  }
+  const contextualOpen = quickCreateOpen || splitTabs.hasOpen
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="m-0 text-2xl font-extrabold text-hf-ink">Clientes B2B</h1>
-          <p className="mt-1 text-sm text-hf-muted">
-            Listas B2B (visibilidade de catálogo) ficam dentro de Clientes — não confundir com
-            Listas de preço.
+  const contextualTitle = useMemo(() => {
+    if (quickCreateOpen) return 'Novo cliente'
+    const id = splitTabs.activeId
+    if (!id) return 'Cliente'
+    const c = items.find((x) => x.id === id)
+    return c?.tradeName || c?.legalName || 'Cliente'
+  }, [items, splitTabs.activeId, quickCreateOpen])
+
+  const primary = (
+    <div className="space-y-3 sm:space-y-4" data-admin-clientes-hub>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="m-0 text-xl font-extrabold text-hf-ink sm:text-2xl">Clientes B2B</h1>
+          <p className="mt-1 mb-0 max-w-2xl text-xs text-hf-muted sm:text-sm">
+            Lista + guia (duplo clique). CNPJ BrasilAPI · endereço ViaCEP · UF/região.
           </p>
         </div>
-        <Link to="/admin/clientes/listas">
-          <Button type="button" variant="light">
-            Listas B2B
+        <div className="flex flex-wrap gap-2">
+          <Link to="/admin/clientes/listas">
+            <Button type="button" variant="light" size="sm">
+              Listas B2B
+            </Button>
+          </Link>
+          <Button type="button" size="sm" onClick={openQuickCreate}>
+            Novo na guia
           </Button>
-        </Link>
+        </div>
       </div>
-      <p className="text-sm text-hf-muted">
-        Cadastro de empresas. Status controla acesso. Associe grupo, catálogos e usuários de login.
-      </p>
 
       <form
-        onSubmit={onSubmit}
-        className="grid gap-3 rounded-[14px] border border-hf-line bg-hf-surface p-4 md:grid-cols-2"
+        className="flex flex-col gap-2 rounded-[14px] border border-hf-line bg-hf-surface p-2.5 sm:flex-row sm:flex-wrap sm:items-end sm:p-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void reload()
+        }}
       >
-        <Input label="Razão social" value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
-        <Input label="Nome fantasia" value={tradeName} onChange={(e) => setTradeName(e.target.value)} />
-        <Input label="CNPJ" value={cnpj} onChange={(e) => setCnpj(e.target.value)} />
-        <Input label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Input label="Telefone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <Input label="WhatsApp" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
-        <label className="block text-sm">
-          <span className="mb-1 block font-semibold text-hf-ink">Status</span>
-          <select
-            className="w-full rounded-[10px] border border-hf-line px-3 py-2"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as CustomerStatus)}
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-semibold text-hf-ink">Grupo</span>
-          <select
-            className="w-full rounded-[10px] border border-hf-line px-3 py-2"
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-          >
-            <option value="">—</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="flex flex-wrap gap-2 md:col-span-2">
-          <Button type="submit">{editing ? 'Salvar cliente' : 'Criar cliente'}</Button>
-          {editing ? (
-            <Button type="button" variant="light" onClick={resetForm}>
-              Cancelar
-            </Button>
-          ) : null}
+        <div className="min-w-0 flex-1 sm:min-w-[160px]">
+          <Input
+            label="Buscar"
+            placeholder="Razão, CNPJ, cidade…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </div>
-        {editing ? (
-          <>
-            <div className="md:col-span-2 rounded-[10px] border border-hf-line bg-hf-bg p-3">
-              <p className="m-0 text-sm font-semibold text-hf-ink">Catálogos do cliente</p>
-              <p className="mt-1 text-xs text-hf-muted">
-                Atuais: {assignedCatalogs.length ? assignedCatalogs.length : 'nenhum'}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <select
-                  className="rounded-[10px] border border-hf-line px-3 py-2 text-sm"
-                  value={catalogId}
-                  onChange={(e) => setCatalogId(e.target.value)}
-                >
-                  <option value="">Selecionar catálogo…</option>
-                  {catalogs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  type="button"
-                  variant="light"
-                  disabled={!catalogId}
-                  onClick={() => {
-                    void (async () => {
-                      if (!editing || !catalogId) return
-                      await adminAssignCatalogToCustomer(editing.id, catalogId)
-                      setAssignedCatalogs(await adminListCustomerCatalogIds(editing.id))
-                      setCatalogId('')
-                    })()
-                  }}
-                >
-                  Associar catálogo
-                </Button>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 rounded-[10px] border border-hf-line bg-hf-bg p-3">
-              <p className="m-0 text-sm font-semibold text-hf-ink">Usuários vinculados (login)</p>
-              <p className="mt-1 text-xs text-hf-muted">
-                Conta Auth ↔ empresa via customer_users. Só usuários ACTIVE + cliente ACTIVE veem o
-                catálogo.
-              </p>
-              {linkedUsers.length ? (
-                <ul className="mt-2 space-y-2">
-                  {linkedUsers.map((u) => (
-                    <li
-                      key={u.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
-                    >
-                      <div>
-                        <div className="font-semibold text-hf-ink">
-                          {u.fullName || u.username || u.profileId.slice(0, 8)}
-                          {u.isPrimary ? (
-                            <span className="ml-2 text-xs font-bold text-hf-success">principal</span>
-                          ) : null}
-                        </div>
-                        <div className="text-xs text-hf-muted">
-                          {u.email ?? '—'} · {u.username ?? 'sem username'} · {u.status}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {!u.isPrimary ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="light"
-                            onClick={() => {
-                              void (async () => {
-                                if (!editing) return
-                                await adminSetCustomerUserPrimary(editing.id, u.id)
-                                await refreshLinks(editing.id)
-                              })()
-                            }}
-                          >
-                            Principal
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="light"
-                          onClick={() => {
-                            void (async () => {
-                              if (!editing) return
-                              await adminUnlinkUserFromCustomer(u.id)
-                              await refreshLinks(editing.id)
-                            })()
-                          }}
-                        >
-                          Desvincular
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-xs text-hf-muted">Nenhum usuário vinculado.</p>
-              )}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Input
-                  label="Buscar usuário"
-                  value={userQuery}
-                  onChange={(e) => setUserQuery(e.target.value)}
-                  placeholder="e-mail, nome ou username…"
-                />
-                <div className="flex items-end">
-                  <Button type="button" variant="light" disabled={userSearching} onClick={() => void searchUsers()}>
-                    {userSearching ? 'Buscando…' : 'Buscar'}
-                  </Button>
-                </div>
-              </div>
-              {userHits.length ? (
-                <ul className="mt-2 space-y-1">
-                  {userHits.map((hit) => {
-                    const already = linkedUsers.some((u) => u.profileId === hit.id)
-                    return (
-                      <li
-                        key={hit.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
-                      >
-                        <span>
-                          {hit.email ?? hit.username ?? hit.id.slice(0, 8)}
-                          {hit.fullName ? ` · ${hit.fullName}` : ''}
-                        </span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={already}
-                          onClick={() => {
-                            void (async () => {
-                              if (!editing) return
-                              await adminLinkUserToCustomer({
-                                customerId: editing.id,
-                                profileId: hit.id,
-                                isPrimary: linkedUsers.length === 0,
-                              })
-                              await refreshLinks(editing.id)
-                              setUserHits((prev) => prev.filter((h) => h.id !== hit.id))
-                            })()
-                          }}
-                        >
-                          {already ? 'Já vinculado' : 'Vincular'}
-                        </Button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              ) : null}
-            </div>
-          </>
-        ) : null}
+        <label className="block min-w-0 text-sm sm:min-w-[120px]">
+          <span className="mb-1 block text-xs font-extrabold text-hf-muted">Status</span>
+          <select
+            className="w-full rounded-[9px] border border-hf-line bg-hf-surface px-3 py-3 text-hf-ink"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="">Todos</option>
+            <option value="pending">pending</option>
+            <option value="active">active</option>
+            <option value="suspended">suspended</option>
+            <option value="inactive">inactive</option>
+          </select>
+        </label>
+        <label className="block min-w-0 text-sm sm:min-w-[90px]">
+          <span className="mb-1 block text-xs font-extrabold text-hf-muted">UF</span>
+          <select
+            className="w-full rounded-[9px] border border-hf-line bg-hf-surface px-3 py-3 text-hf-ink"
+            value={uf}
+            onChange={(e) => setUf(e.target.value)}
+          >
+            <option value="">Todas</option>
+            {BR_UF_OPTIONS.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" variant="light" size="sm">
+          Filtrar
+        </Button>
       </form>
 
-      <Input label="Buscar" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Razão, CNPJ, e-mail…" />
       {error ? <p className="text-sm text-hf-danger">{error}</p> : null}
       {loading ? <Loading /> : null}
 
@@ -399,51 +189,142 @@ export function AdminCustomersPage() {
             <tr>
               <th className="px-3 py-2">Cliente</th>
               <th className="px-3 py-2">CNPJ</th>
+              <th className="hidden px-3 py-2 sm:table-cell">Cidade / UF</th>
+              <th className="hidden px-3 py-2 md:table-cell">Região</th>
               <th className="px-3 py-2">Grupo</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c) => (
-              <tr key={c.id} className="border-t border-hf-line">
-                <td className="px-3 py-2">
-                  <div className="font-semibold text-hf-ink">{c.legalName}</div>
-                  <div className="text-xs text-hf-muted">{c.email}</div>
-                </td>
-                <td className="px-3 py-2 font-mono text-xs">{c.cnpj}</td>
-                <td className="px-3 py-2">{c.groupName ?? '—'}</td>
-                <td className="px-3 py-2">{c.status}</td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-1">
-                    <Button type="button" variant="light" size="sm" onClick={() => void startEdit(c)}>
-                      Editar
-                    </Button>
-                    {c.status !== 'active' ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => void adminSetCustomerStatus(c.id, 'active').then(reload)}
-                      >
-                        Ativar
-                      </Button>
+            {items.map((c) => {
+              const label = c.tradeName || c.legalName
+              const cityUf = [c.address?.city, c.address?.state].filter(Boolean).join(' / ')
+              return (
+                <tr
+                  key={c.id}
+                  className="border-t border-hf-line hover:bg-hf-bg/40"
+                  onDoubleClick={() => openGuide(c.id)}
+                >
+                  <td className="px-3 py-2">
+                    <div className="font-semibold text-hf-ink">{label}</div>
+                    {c.tradeName && c.tradeName !== c.legalName ? (
+                      <div className="text-xs text-hf-muted">{c.legalName}</div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    {c.cnpj ? formatCnpj(c.cnpj) : '—'}
+                  </td>
+                  <td className="hidden px-3 py-2 text-xs sm:table-cell">{cityUf || '—'}</td>
+                  <td className="hidden px-3 py-2 md:table-cell">
+                    {c.address?.macroRegion ? (
+                      <span className="rounded-full bg-hf-bg px-2 py-0.5 text-[10px] font-bold">
+                        {c.address.macroRegion}
+                      </span>
                     ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-xs">{c.groupName ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs">{c.status}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap gap-1">
                       <Button
                         type="button"
                         variant="light"
                         size="sm"
-                        onClick={() => void adminSetCustomerStatus(c.id, 'suspended').then(reload)}
+                        onClick={() => openGuide(c.id)}
                       >
-                        Suspender
+                        {guideLabel(c.id)}
                       </Button>
-                    )}
-                  </div>
+                      {c.status !== 'active' ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={statusBusyId === c.id}
+                          onClick={() => void setStatusAction(c.id, 'active')}
+                        >
+                          Ativar
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="light"
+                          size="sm"
+                          disabled={statusBusyId === c.id}
+                          onClick={() => void setStatusAction(c.id, 'suspended')}
+                        >
+                          Suspender
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+            {!loading && items.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-3 py-6 text-center text-sm text-hf-muted">
+                  Nenhum cliente encontrado.
                 </td>
               </tr>
-            ))}
+            ) : null}
           </tbody>
         </table>
       </div>
     </div>
+  )
+
+  const contextual = contextualOpen ? (
+    quickCreateOpen ? (
+      <CustomerWorkSurface
+        customerId={null}
+        groups={groups}
+        onClose={() => setQuickCreateOpen(false)}
+        onSaved={(c) => {
+          patch(c)
+          setQuickCreateOpen(false)
+          splitTabs.openTab(c.id)
+          void reload()
+        }}
+      />
+    ) : (
+      <GuideStackPanels
+        ids={splitTabs.openIds}
+        meta={splitTabs.openIds.map((id) => {
+          const c = items.find((x) => x.id === id)
+          return {
+            id,
+            label: c?.tradeName || c?.legalName || id.slice(0, 8),
+            statusLabel: c?.status,
+          }
+        })}
+        onCloseTab={splitTabs.closeTab}
+        render={(id) => (
+          <CustomerWorkSurface
+            customerId={id}
+            groups={groups}
+            onClose={() => splitTabs.closeTab(id)}
+            onSaved={(c) => {
+              patch(c)
+              void reload()
+            }}
+          />
+        )}
+      />
+    )
+  ) : null
+
+  return (
+    <AdaptiveWorkspace
+      moduleKey="customers"
+      primary={primary}
+      contextual={contextual}
+      contextualOpen={contextualOpen}
+      onContextualOpenChange={(open) => {
+        if (!open) closeContextual()
+      }}
+      contextualTitle={contextualTitle}
+    />
   )
 }

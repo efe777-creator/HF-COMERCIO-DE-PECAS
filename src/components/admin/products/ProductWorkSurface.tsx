@@ -5,6 +5,7 @@ import {
   pathToCascadeValue,
   type CategoryCascadeValue,
 } from '@/components/admin/CategoryCascadeSelects'
+import { AdminProductKitSection } from '@/components/admin/kits/AdminProductKitSection'
 import { ProductEquivalencesEditor } from '@/components/admin/products/ProductEquivalencesEditor'
 import { ProductGuidePricingPanel } from '@/components/admin/products/ProductGuidePricingPanel'
 import { Button } from '@/components/common/Button'
@@ -25,19 +26,15 @@ import {
   adminUploadImage,
 } from '@/services/admin/adminImageService'
 import {
-  adminAddKitComponent,
   adminDeleteReference,
   adminGetProduct,
-  adminListKitComponents,
   adminListKitsUsingProduct,
-  adminListProducts,
   adminListReferences,
   adminRemoveKitComponent,
   adminSetProductAvailable,
   adminUpdateKitComponentQuantity,
   adminUpsertProduct,
   adminUpsertReference,
-  type AdminKitComponentRow,
 } from '@/services/admin/adminProductService'
 import type { Category, Product, ProductImage, ProductReference } from '@/types'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
@@ -132,11 +129,6 @@ export function ProductWorkSurface({
     { linkId: string; kitId: string; kitSku: string; kitName: string; quantity: number }[]
   >([])
   const [kitQtyEdits, setKitQtyEdits] = useState<Record<string, string>>({})
-  const [bomRows, setBomRows] = useState<AdminKitComponentRow[]>([])
-  const [bomQtyEdits, setBomQtyEdits] = useState<Record<string, string>>({})
-  const [kitSearch, setKitSearch] = useState('')
-  const [kitHits, setKitHits] = useState<Product[]>([])
-  const [kitAddQty, setKitAddQty] = useState('1')
 
   const selectMenu = useCallback((id: ProductGuideMenuId) => {
     setMenu(id)
@@ -197,35 +189,8 @@ export function ProductWorkSurface({
           setKitQtyEdits(q)
         })
         .catch((e) => setError(String(e.message ?? e)))
-      if (product.productKind === 'kit') {
-        void adminListKitComponents(product.id)
-          .then((rows) => {
-            setBomRows(rows)
-            const q: Record<string, string> = {}
-            for (const r of rows) q[r.id] = String(r.quantity)
-            setBomQtyEdits(q)
-          })
-          .catch((e) => setError(String(e.message ?? e)))
-      } else {
-        setBomRows([])
-      }
     }
   }, [menu, product?.id, product?.productKind])
-
-  useEffect(() => {
-    if (menu !== 'kits' || product?.productKind !== 'kit') return
-    const term = kitSearch.trim()
-    if (term.length < 2) {
-      setKitHits([])
-      return
-    }
-    const t = setTimeout(() => {
-      void adminListProducts({ q: term, productKind: 'item', limit: 12 })
-        .then(setKitHits)
-        .catch(() => setKitHits([]))
-    }, 250)
-    return () => clearTimeout(t)
-  }, [kitSearch, menu, product?.productKind])
 
   if (bulkPanel && !focused) {
     return <div className="space-y-3">{bulkPanel}</div>
@@ -309,15 +274,6 @@ export function ProductWorkSurface({
     const q: Record<string, string> = {}
     for (const r of rows) q[r.linkId] = String(r.quantity)
     setKitQtyEdits(q)
-  }
-
-  async function reloadBom() {
-    if (product!.productKind !== 'kit') return
-    const rows = await adminListKitComponents(product!.id)
-    setBomRows(rows)
-    const q: Record<string, string> = {}
-    for (const r of rows) q[r.id] = String(r.quantity)
-    setBomQtyEdits(q)
   }
 
   return (
@@ -614,196 +570,115 @@ export function ProductWorkSurface({
 
         {menu === 'kits' ? (
           <div className="space-y-3">
-            <div className="space-y-2">
-              <p className="m-0 text-[10px] font-bold uppercase tracking-wide text-hf-muted">
-                Usado em kits
-              </p>
-              {kitUsage.length === 0 ? (
-                <p className="m-0 text-xs text-hf-muted">Este item não entra em nenhum kit.</p>
-              ) : (
-                <ul className="m-0 space-y-2 p-0 list-none text-xs">
-                  {kitUsage.map((k) => (
-                    <li
-                      key={k.linkId}
-                      className="flex flex-wrap items-end justify-between gap-2 border-b border-hf-line pb-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="m-0 font-bold">
-                          {k.kitSku} · {k.kitName}
-                        </p>
-                        <div className="mt-1 flex flex-wrap items-end gap-2">
-                          <Input
-                            label="Qtd neste kit"
-                            value={kitQtyEdits[k.linkId] ?? String(k.quantity)}
-                            onChange={(e) =>
-                              setKitQtyEdits((prev) => ({ ...prev, [k.linkId]: e.target.value }))
-                            }
-                          />
-                          <Button
-                            type="button"
-                            variant="light"
-                            disabled={saving}
-                            onClick={() => {
-                              const qty = Number(
-                                String(kitQtyEdits[k.linkId] ?? k.quantity).replace(',', '.'),
-                              )
-                              if (!Number.isFinite(qty) || qty <= 0) {
-                                setError('Quantidade inválida')
-                                return
-                              }
-                              setSaving(true)
-                              void adminUpdateKitComponentQuantity(k.linkId, qty)
-                                .then(async () => {
-                                  await reloadKitUsage()
-                                  setMessage('Quantidade no kit atualizada.')
-                                })
-                                .catch((e) => setError(String(e.message ?? e)))
-                                .finally(() => setSaving(false))
-                            }}
-                          >
-                            Salvar qtd
-                          </Button>
-                          <button
-                            type="button"
-                            className="pb-2 font-semibold text-hf-danger"
-                            onClick={() => {
-                              if (!window.confirm(`Remover este item do kit ${k.kitSku}?`)) return
-                              void adminRemoveKitComponent(k.linkId)
-                                .then(async () => {
-                                  await reloadKitUsage()
-                                  setMessage('Removido do kit.')
-                                })
-                                .catch((e) => setError(String(e.message ?? e)))
-                            }}
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      </div>
-                      <Link
-                        className="font-semibold text-hf-auth-link"
-                        to={`/admin/kits/${k.kitId}`}
-                      >
-                        Abrir kit
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
             {product.productKind === 'kit' ? (
-              <div className="space-y-2 border-t border-hf-line pt-2">
-                <p className="m-0 text-[10px] font-bold uppercase tracking-wide text-hf-muted">
-                  Composição deste kit
+              <div className="space-y-2">
+                <p className="m-0 rounded-[8px] border border-hf-line bg-hf-bg px-2 py-1.5 text-xs text-hf-muted">
+                  Controle principal na tela Kits.{' '}
+                  <Link className="font-semibold text-hf-auth-link" to={`/admin/kits/${product.id}`}>
+                    Abrir ficha do kit
+                  </Link>
+                  {' · '}
+                  <Link className="font-semibold text-hf-auth-link" to="/admin/kits">
+                    Hub Kits
+                  </Link>
                 </p>
-                <ul className="m-0 space-y-2 p-0 list-none text-xs">
-                  {bomRows.map((r) => (
-                    <li
-                      key={r.id}
-                      className="flex flex-wrap items-end gap-2 border-b border-hf-line pb-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="m-0 font-bold">
-                          {r.componentSku} · {r.componentName}
-                        </p>
-                      </div>
-                      <Input
-                        label="Qtd"
-                        value={bomQtyEdits[r.id] ?? String(r.quantity)}
-                        onChange={(e) =>
-                          setBomQtyEdits((prev) => ({ ...prev, [r.id]: e.target.value }))
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="light"
-                        disabled={saving}
-                        onClick={() => {
-                          const qty = Number(
-                            String(bomQtyEdits[r.id] ?? r.quantity).replace(',', '.'),
-                          )
-                          if (!Number.isFinite(qty) || qty <= 0) {
-                            setError('Quantidade inválida')
-                            return
-                          }
-                          setSaving(true)
-                          void adminUpdateKitComponentQuantity(r.id, qty)
-                            .then(async () => {
-                              await reloadBom()
-                              setMessage('Componente atualizado.')
-                            })
-                            .catch((e) => setError(String(e.message ?? e)))
-                            .finally(() => setSaving(false))
-                        }}
-                      >
-                        Salvar
-                      </Button>
-                      <button
-                        type="button"
-                        className="pb-2 font-semibold text-hf-danger"
-                        onClick={() => {
-                          if (!window.confirm('Remover componente do kit?')) return
-                          void adminRemoveKitComponent(r.id)
-                            .then(async () => {
-                              await reloadBom()
-                              setMessage('Componente removido.')
-                            })
-                            .catch((e) => setError(String(e.message ?? e)))
-                        }}
-                      >
-                        Remover
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <Input
-                  label="Buscar item para adicionar"
-                  value={kitSearch}
-                  onChange={(e) => setKitSearch(e.target.value)}
-                  placeholder="SKU ou nome…"
+                <AdminProductKitSection
+                  kitProductId={product.id}
+                  compact
+                  onError={setError}
+                  onMessage={setMessage}
                 />
-                <Input
-                  label="Qtd"
-                  value={kitAddQty}
-                  onChange={(e) => setKitAddQty(e.target.value)}
-                />
-                {kitHits.length > 0 ? (
-                  <ul className="m-0 max-h-28 space-y-1 overflow-y-auto p-0 list-none text-xs">
-                    {kitHits.map((hit) => (
-                      <li key={hit.id} className="flex justify-between gap-2 border-b border-hf-line py-1">
-                        <span>
-                          <strong>{hit.sku}</strong> · {hit.name}
-                        </span>
-                        <button
-                          type="button"
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="m-0 text-[10px] font-bold uppercase tracking-wide text-hf-muted">
+                  Usado em kits
+                </p>
+                <p className="m-0 text-[11px] text-hf-muted">
+                  Kits que já selecionaram este item na composição. Para montar kit novo, use a tela
+                  Kits → Composição (seletor do cadastro).
+                </p>
+                {kitUsage.length === 0 ? (
+                  <p className="m-0 text-xs text-hf-muted">Este item não entra em nenhum kit.</p>
+                ) : (
+                  <ul className="m-0 space-y-2 p-0 list-none text-xs">
+                    {kitUsage.map((k) => (
+                      <li
+                        key={k.linkId}
+                        className="flex flex-wrap items-end justify-between gap-2 border-b border-hf-line pb-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="m-0 font-bold">
+                            {k.kitSku} · {k.kitName}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-end gap-2">
+                            <Input
+                              label="Qtd neste kit"
+                              value={kitQtyEdits[k.linkId] ?? String(k.quantity)}
+                              onChange={(e) =>
+                                setKitQtyEdits((prev) => ({
+                                  ...prev,
+                                  [k.linkId]: e.target.value,
+                                }))
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="light"
+                              disabled={saving}
+                              onClick={() => {
+                                const qty = Number(
+                                  String(kitQtyEdits[k.linkId] ?? k.quantity).replace(',', '.'),
+                                )
+                                if (!Number.isFinite(qty) || qty <= 0) {
+                                  setError('Quantidade inválida')
+                                  return
+                                }
+                                setSaving(true)
+                                void adminUpdateKitComponentQuantity(k.linkId, qty)
+                                  .then(async () => {
+                                    await reloadKitUsage()
+                                    setMessage('Quantidade no kit atualizada.')
+                                  })
+                                  .catch((e) => setError(String(e.message ?? e)))
+                                  .finally(() => setSaving(false))
+                              }}
+                            >
+                              Salvar qtd
+                            </Button>
+                            <button
+                              type="button"
+                              className="pb-2 font-semibold text-hf-danger"
+                              onClick={() => {
+                                if (!window.confirm(`Remover este item do kit ${k.kitSku}?`))
+                                  return
+                                void adminRemoveKitComponent(k.linkId)
+                                  .then(async () => {
+                                    await reloadKitUsage()
+                                    setMessage('Removido do kit.')
+                                  })
+                                  .catch((e) => setError(String(e.message ?? e)))
+                              }}
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        </div>
+                        <Link
                           className="font-semibold text-hf-auth-link"
-                          onClick={() => {
-                            const qty = Number(String(kitAddQty).replace(',', '.')) || 1
-                            setSaving(true)
-                            void adminAddKitComponent(product.id, hit.id, qty)
-                              .then(async () => {
-                                setKitSearch('')
-                                setKitHits([])
-                                await reloadBom()
-                                setMessage('Componente adicionado.')
-                              })
-                              .catch((e) => setError(String(e.message ?? e)))
-                              .finally(() => setSaving(false))
-                          }}
+                          to={`/admin/kits/${k.kitId}`}
                         >
-                          + Adicionar
-                        </button>
+                          Abrir kit
+                        </Link>
                       </li>
                     ))}
                   </ul>
-                ) : null}
+                )}
+                <Link to="/admin/kits" className="text-xs font-semibold text-hf-auth-link">
+                  Abrir tela Kits →
+                </Link>
               </div>
-            ) : null}
-
-            <Link to="/admin/kits" className="text-xs font-semibold text-hf-auth-link">
-              Hub Kits →
-            </Link>
+            )}
           </div>
         ) : null}
       </div>

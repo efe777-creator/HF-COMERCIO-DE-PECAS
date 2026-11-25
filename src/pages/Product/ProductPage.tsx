@@ -4,11 +4,16 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { Loading } from '@/components/common/Loading'
 import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import { Container } from '@/components/layout/Container'
+import { PaymentConditionsNotice } from '@/components/payment/PaymentConditionsNotice'
+import { PaymentMethodPricesBlock } from '@/components/payment/PaymentMethodPricesBlock'
+import { useAuth } from '@/contexts/AuthContext'
 import { CompatibilityAppsBlock } from '@/components/product/CompatibilityAppsBlock'
+import { CompatibilityStateBadge } from '@/components/product/CompatibilityStateBadge'
 import { PdpAccordion } from '@/components/product/PdpAccordion'
 import { PdpPurchaseBar } from '@/components/product/PdpPurchaseBar'
 import { ProductGallery } from '@/components/product/ProductGallery'
 import { features } from '@/config/features'
+import { useProductCompatVerdicts } from '@/hooks/useProductCompatVerdicts'
 import { toCommercialTitleCase } from '@/lib/entityNormalize'
 import {
   joinProductDescription,
@@ -33,13 +38,16 @@ import {
 } from '@/services/products/kitCompositionStoreService'
 import { listEquivalentProducts } from '@/services/products/equivalenceLinksService'
 import { getProductById } from '@/services/products/productService'
-import type { CompatibilityAppGroup, Product } from '@/types'
+import type { CompatibilityAppGroup, Product, VehicleFilter } from '@/types'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 export function ProductPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const { user } = useAuth()
+  const b2bActive = Boolean(user?.customerId && user.customerStatus === 'active')
   const [product, setProduct] = useState<Product | null>(null)
   const [appGroups, setAppGroups] = useState<CompatibilityAppGroup[]>([])
   const [equivalents, setEquivalents] = useState<Product[]>([])
@@ -103,6 +111,26 @@ export function ProductPage() {
     () => buildPdpCatalogFilterLink(appGroups.map((g) => g.maker)),
     [appGroups],
   )
+
+  const fitFilter: VehicleFilter | null = useMemo(() => {
+    const maker = params.get('maker')?.trim() || ''
+    const model = params.get('model')?.trim() || ''
+    const year = params.get('year')?.trim() || ''
+    const engine = params.get('engine')?.trim() || ''
+    const version = params.get('version')?.trim() || ''
+    if (!maker && !model && !year && !engine && !version) return null
+    return {
+      maker: maker || undefined,
+      model: model || undefined,
+      year: year || undefined,
+      engine: engine || undefined,
+      version: version || undefined,
+    }
+  }, [params])
+
+  const productIds = useMemo(() => (product?.id ? [product.id] : []), [product?.id])
+  const { verdicts } = useProductCompatVerdicts(productIds, fitFilter)
+  const pdpVerdict = product?.id ? verdicts.get(product.id) : undefined
 
   if (loading) {
     return (
@@ -231,6 +259,24 @@ export function ProductPage() {
             {AJUDA_APLICACAO_TEXT}
           </p>
 
+          {b2bActive && current?.id ? (
+            <div className="mt-3">
+              <PaymentMethodPricesBlock
+                productId={current.id}
+                customerId={user?.customerId}
+                fallbackBasePrice={
+                  current.priceVisible || features.price_enabled
+                    ? (current.resolvedPrice ?? current.price)
+                    : null
+                }
+              />
+            </div>
+          ) : (
+            <div className="mt-3">
+              <PaymentConditionsNotice audience="guest" />
+            </div>
+          )}
+
           <div className="mt-4 flex flex-col gap-2">
             {features.quotation_enabled ? (
               <Link
@@ -312,6 +358,13 @@ export function ProductPage() {
                 defaultOpen: current.productKind !== 'kit',
                 children: (
                   <div className="space-y-3">
+                    {pdpVerdict ? (
+                      <CompatibilityStateBadge
+                        verdict={pdpVerdict}
+                        variant="pdp"
+                        showHint
+                      />
+                    ) : null}
                     <CompatibilityAppsBlock
                       variant="pdp"
                       groups={appGroups}

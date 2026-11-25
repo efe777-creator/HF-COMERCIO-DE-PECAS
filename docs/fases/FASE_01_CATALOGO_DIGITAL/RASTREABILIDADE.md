@@ -40,6 +40,6 @@ Legenda: **OK** · **PARCIAL** · **GAP** · **WAIVER_POS_GATE** · **OPCIONAL**
 | RF-033 | D1 registrada | Visão + PRD | **OK** | Published aberto |
 | RF-034 | D5 Sidicom | Pacote pronto | **OPCIONAL** | Fora do Gate |
 | RF-035 | SKUs estáveis | products | **OK** | — |
-| RF-036 | Sem preço público | price_enabled=false | **OK** | Vitrine |
+| RF-036 | Sem preço público | price_enabled=false (+ B2B assigned → priceVisible) | **OK** guest; D-03 parcial B2B | Vitrine |
 
 **DB verify 2026-11-24:** `customer_vehicles` RLS; 49 published; 384 PVC; fix `handle_new_user` (mig 13).

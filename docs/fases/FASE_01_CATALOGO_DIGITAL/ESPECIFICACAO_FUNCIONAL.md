@@ -87,7 +87,7 @@ CRUD + vínculo códigos/custos via import quando houver.
 
 ### 2.6 Preços (staff)
 
-Listas e itens — **não** ligar na vitrine (`price_enabled=false`).
+Listas e itens — **não** ligar preço público (`price_enabled=false`). Exceção: cliente B2B active com lista `assigned` e item na lista → `priceVisible` no card/PDP.
 
 ### 2.7 B2B cadastro
 

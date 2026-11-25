@@ -14,7 +14,7 @@
 | `customer_login_enabled` | true | Usada com catálogo específico em `B2bCatalogRoute` |
 | `customer_specific_catalog_enabled` | **false** | **false** = published livre (sem login / sem lista por cliente) |
 | `ecommerce_enabled` | false | Sem wiring de rotas |
-| `price_enabled` | false | Vitrine sem preço; `attachResolvedPrices` / resolução condicionada |
+| `price_enabled` | false | Guest sem preço; B2B assigned → `priceVisible` (D-03 parcial) |
 | `inventory_enabled` | false | Sem UI/serviço |
 | `quotation_enabled` | false | Sem UI |
 | `orders_enabled` | false | Sem rotas |

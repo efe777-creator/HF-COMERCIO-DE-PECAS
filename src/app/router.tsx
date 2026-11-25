@@ -59,6 +59,9 @@ const AccountProfilePage = lazy(() =>
 const AccountVehiclesPage = lazy(() =>
   import('@/pages/Account/AccountVehiclesPage').then((m) => ({ default: m.AccountVehiclesPage })),
 )
+const AccountAvisosPage = lazy(() =>
+  import('@/pages/Account/AccountAvisosPage').then((m) => ({ default: m.AccountAvisosPage })),
+)
 const LoginPage = lazy(() =>
   import('@/pages/Login/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
@@ -197,6 +200,26 @@ const AdminCotacoesPage = lazy(() =>
     default: m.AdminCotacoesPage,
   })),
 )
+const AdminFinanceiroLayout = lazy(() =>
+  import('@/pages/admin/financeiro/AdminFinanceiroLayout').then((m) => ({
+    default: m.AdminFinanceiroLayout,
+  })),
+)
+const AdminFinanceiroHomePage = lazy(() =>
+  import('@/pages/admin/financeiro/AdminFinanceiroHomePage').then((m) => ({
+    default: m.AdminFinanceiroHomePage,
+  })),
+)
+const AdminPaymentConditionsPage = lazy(() =>
+  import('@/pages/admin/financeiro/AdminPaymentConditionsPage').then((m) => ({
+    default: m.AdminPaymentConditionsPage,
+  })),
+)
+const AdminComunicacaoPage = lazy(() =>
+  import('@/pages/admin/comunicacao/AdminComunicacaoPage').then((m) => ({
+    default: m.AdminComunicacaoPage,
+  })),
+)
 
 function Suspend({ children }: { children: ReactNode }) {
   return <Suspense fallback={<Loading />}>{children}</Suspense>
@@ -239,6 +262,15 @@ const adminChildren = [
   { path: 'grupos', element: <AdminCustomerGroupsPage /> },
   { path: 'operadores', element: <AdminOperatorsPage /> },
   { path: 'aplicacoes', element: <Navigate to="/admin/produtos" replace /> },
+  {
+    path: 'financeiro',
+    element: <AdminFinanceiroLayout />,
+    children: [
+      { index: true, element: <AdminFinanceiroHomePage /> },
+      { path: 'condicoes', element: <AdminPaymentConditionsPage /> },
+    ],
+  },
+  { path: 'comunicacao', element: <AdminComunicacaoPage /> },
   { path: 'campanhas', element: <AdminCampaignsPage /> },
   { path: 'leads', element: <AdminLeadsPage /> },
   { path: 'cotacoes', element: <AdminCotacoesPage /> },
@@ -382,6 +414,7 @@ const publicChildren = [
     ),
     children: [
       { index: true, element: <AccountHomePage /> },
+      { path: 'avisos', element: <AccountAvisosPage /> },
       { path: 'perfil', element: <AccountProfilePage /> },
       { path: 'veiculos', element: <AccountVehiclesPage /> },
     ],

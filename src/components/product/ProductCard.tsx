@@ -12,6 +12,7 @@ import {
   productMediaImgClassCard,
 } from '@/components/product/ProductMediaFrame'
 import { features } from '@/config/features'
+import { formatMoney } from '@/lib/money'
 import { toCommercialTitleCase } from '@/lib/entityNormalize'
 import {
   FABRICANTE_LABEL,
@@ -170,7 +171,18 @@ export function ProductCard({
         summary={product.compatibilitySummary}
         emptyLabel={product.productKind === 'kit' ? KIT_APPS_EMPTY_LABEL : undefined}
       />
-      {features.price_enabled ? null : (
+      {product.priceVisible || features.price_enabled ? (
+        <div className="space-y-0.5">
+          <p className="m-0 text-sm font-extrabold text-hf-ink">
+            {formatMoney(product.resolvedPrice ?? product.promoPrice ?? product.price)}
+          </p>
+          {product.priceVisible && !features.price_enabled ? (
+            <p className="m-0 truncate text-[11px] font-semibold text-hf-muted">
+              Preço da sua lista B2B
+            </p>
+          ) : null}
+        </div>
+      ) : (
         <p className="m-0 text-sm font-semibold text-hf-ink">Consultar disponibilidade</p>
       )}
 

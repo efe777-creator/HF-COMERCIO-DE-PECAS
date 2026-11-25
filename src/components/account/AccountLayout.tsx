@@ -6,6 +6,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom'
 
 const links = [
   { to: '/conta', label: 'Início', end: true },
+  { to: '/conta/avisos', label: 'Avisos' },
   { to: '/conta/perfil', label: 'Perfil' },
   { to: '/conta/veiculos', label: 'Meus veículos' },
 ]

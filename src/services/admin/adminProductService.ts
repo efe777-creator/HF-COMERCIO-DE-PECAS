@@ -332,9 +332,12 @@ export async function adminUpsertProduct(input: {
   void input.heightCm
   void input.widthCm
   void input.lengthCm
+  const sku = input.sku.trim()
   const payload: Record<string, unknown> = {
     name: input.name.trim(),
-    sku: input.sku.trim(),
+    sku,
+    // DB live: commercial_ref NOT NULL — espelha SKU (mesmo padrão das RPCs de importação).
+    commercial_ref: sku,
     slug: (input.slug?.trim() || toSlug(input.name)) || toSlug(input.sku),
     category_id: input.categoryId || null,
     brand_id: input.brandId || null,
@@ -784,6 +787,94 @@ export function isKitCompositionPublishable(rows: AdminKitComponentRow[]): boole
   if (rows.length >= 2) return true
   if (rows.length === 1 && rows[0]!.quantity >= 2) return true
   return false
+}
+
+/**
+ * Copia PVC dos componentes escolhidos para o kit (upsert por vehicle_version_id).
+ * Ação explícita — não herda automaticamente ao mudar o BOM.
+ */
+export async function adminPullKitApplicationsFromComponents(input: {
+  kitProductId: string
+  componentProductIds: string[]
+}): Promise<{ inserted: number; updated: number; skipped: number }> {
+  const kitId = String(input.kitProductId).trim()
+  const componentIds = [
+    ...new Set(input.componentProductIds.map((id) => String(id).trim()).filter(Boolean)),
+  ].filter((id) => id !== kitId)
+  if (!kitId) throw new Error('Kit inválido')
+  if (!componentIds.length) return { inserted: 0, updated: 0, skipped: 0 }
+
+  const { data: existing, error: exErr } = await getSupabase()
+    .from('product_vehicle_compatibility')
+    .select('id, vehicle_version_id')
+    .eq('product_id', kitId)
+  if (exErr) throw exErr
+  const existingByVersion = new Map(
+    (existing ?? []).map((r) => [String(r.vehicle_version_id), String(r.id)]),
+  )
+
+  const { data: sourceRows, error: srcErr } = await getSupabase()
+    .from('product_vehicle_compatibility')
+    .select(
+      'vehicle_version_id, notes, year_start, year_end, lado, posicao_long, posicao_vert, validation_status',
+    )
+    .in('product_id', componentIds)
+  if (srcErr) throw srcErr
+
+  let inserted = 0
+  let updated = 0
+  let skipped = 0
+  const seenVersions = new Set<string>()
+
+  for (const row of sourceRows ?? []) {
+    const versionId = String(row.vehicle_version_id ?? '').trim()
+    if (!versionId) {
+      skipped += 1
+      continue
+    }
+    if (seenVersions.has(versionId)) {
+      skipped += 1
+      continue
+    }
+    seenVersions.add(versionId)
+
+    const payload = {
+      product_id: kitId,
+      vehicle_version_id: versionId,
+      notes: (row.notes as string | null) ?? null,
+      year_start: (row.year_start as number | null) ?? null,
+      year_end: (row.year_end as number | null) ?? null,
+      lado: (row.lado as string | null) ?? null,
+      posicao_long: (row.posicao_long as string | null) ?? null,
+      posicao_vert: (row.posicao_vert as string | null) ?? null,
+      validation_status: (row.validation_status as string | null) ?? 'draft',
+    }
+
+    const existingId = existingByVersion.get(versionId)
+    if (existingId) {
+      const { error } = await getSupabase()
+        .from('product_vehicle_compatibility')
+        .update({
+          notes: payload.notes,
+          year_start: payload.year_start,
+          year_end: payload.year_end,
+          lado: payload.lado,
+          posicao_long: payload.posicao_long,
+          posicao_vert: payload.posicao_vert,
+          validation_status: payload.validation_status,
+        })
+        .eq('id', existingId)
+      if (error) throw error
+      updated += 1
+    } else {
+      const { error } = await getSupabase().from('product_vehicle_compatibility').insert(payload)
+      if (error) throw error
+      inserted += 1
+      existingByVersion.set(versionId, 'new')
+    }
+  }
+
+  return { inserted, updated, skipped }
 }
 
 export async function refreshIncompleteFlag(productId: string) {

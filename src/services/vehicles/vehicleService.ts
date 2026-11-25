@@ -1,8 +1,46 @@
 import { mockVehicleTree } from '@/data/mocks/vehicles'
 import { expandYearsForSelector } from '@/lib/vehicleAppYear'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
+import type { VehicleCatalogEntry } from '@/services/search/interpretSearchQuery'
 import { buildYearsByModelFromSources } from '@/services/vehicles/buildYearsByModel'
 import type { VehicleFilter, VehicleOptionTree } from '@/types'
+
+const VEHICLE_CATALOG_TTL_MS = 60_000
+let vehicleCatalogCache: { at: number; entries: VehicleCatalogEntry[] } | null = null
+
+/** Monta entradas maker×model(+versions) a partir da árvore pública — sem inventar combinações. */
+export function buildVehicleCatalogEntriesFromTree(
+  tree: VehicleOptionTree,
+): VehicleCatalogEntry[] {
+  const entries: VehicleCatalogEntry[] = []
+  const seen = new Set<string>()
+  for (const [maker, models] of Object.entries(tree.modelsByMaker)) {
+    for (const model of models) {
+      const key = `${maker.toLowerCase()}|${model.toLowerCase()}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      const versions = tree.versionsByModel[model] ?? []
+      entries.push({
+        maker,
+        model,
+        versions: versions.length ? [...versions] : undefined,
+      })
+    }
+  }
+  return entries
+}
+
+/** Distinct maker+model(+versions) para o interpretador de busca. Cache curto. */
+export async function listVehicleCatalogEntries(): Promise<VehicleCatalogEntry[]> {
+  const now = Date.now()
+  if (vehicleCatalogCache && now - vehicleCatalogCache.at < VEHICLE_CATALOG_TTL_MS) {
+    return vehicleCatalogCache.entries
+  }
+  const tree = await getVehicleOptions()
+  const entries = buildVehicleCatalogEntriesFromTree(tree)
+  vehicleCatalogCache = { at: now, entries }
+  return entries
+}
 
 function relationName(value: unknown): string | undefined {
   if (!value) return undefined

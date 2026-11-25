@@ -53,11 +53,13 @@
 | `fabricantes` | → redirect `produtos/marcas` | Compat |
 | `aplicacoes` | → redirect `produtos` | Aplicações só na ficha do produto |
 | `fornecedores` (+ imports) | AdminSuppliers* | Cadastro; imports via hub |
-| `precos` (+ `:id`) | AdminPriceLists* | Catálogo staff |
-| `clientes` | AdminCustomersPage | Clientes; botão Listas B2B |
-| `clientes/listas` | AdminCatalogsPage | Nested; **sem** sidebar |
+| `precos` (+ `:id`) | AdminPriceLists* | Catálogo staff (Adaptive) |
+| `clientes` | AdminCustomersPage | B2B; Comercial = lista assigned + condições |
+| `clientes/listas` | AdminCatalogsPage | Catálogos de visibilidade; **sem** sidebar |
 | `listas` | → redirect `clientes/listas` | Compat |
 | `grupos` | AdminCustomerGroupsPage | Clientes |
+| `financeiro` | AdminFinanceiro* | Hub Finanças |
+| `financeiro/condicoes` | AdminPaymentConditionsPage | Condições (agenda + meios) |
 | `campanhas` / `leads` / `cotacoes` | Admin* | Comercial |
 | `operadores` | AdminOperatorsPage | Sistema |
 

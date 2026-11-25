@@ -132,6 +132,8 @@ export interface Product {
   resolvedPriceListId?: string | null
   /** Origem da resolução (F6B.1). */
   priceSource?: 'override' | 'list' | 'default'
+  /** true = exibir preço na vitrine (público ou B2B com lista assigned). */
+  priceVisible?: boolean
   /** Quantidade: só mocks/admin. Loja pública usa `available`. */
   stock?: number
   /** Disponibilidade pública (sem quantidade). */

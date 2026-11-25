@@ -39,7 +39,7 @@ status (visibilidade) ≠ preço ≠ estoque ≠ pedido
 `imports`, `import_items`, `import_profiles` (+ RPCs `apply_*`)
 
 ### B2B (cadastro)
-`customers`, `customer_users`, `customer_groups`, `catalogs`, `catalog_products`, `customer_group_catalogs`, `customer_catalogs`
+`customers` (+ `assigned_price_list_id`, endereço principal), `customer_users`, `customer_groups`, `catalogs`, `catalog_products`, `customer_group_catalogs`, `customer_catalogs`, `customer_payment_conditions` (N:N; vazio = AVISTA), `payment_conditions` (+ installments/methods)
 
 ### Preço (staff only)
 `price_lists`, `price_list_items`, `price_change_history`

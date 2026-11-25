@@ -194,6 +194,11 @@ export function pricingMethodLabel(method: PricingMethod): string {
   return 'Fixo'
 }
 
+/** Formação ativa = markup ou margem (não fixo). */
+export function isPriceListFormationActive(method: PricingMethod): boolean {
+  return method === 'markup_on_cost' || method === 'margin_on_sell'
+}
+
 /** Regra exibida na tabela (não confundir com price_origin). */
 export function pricingRuleLabel(method: PricingMethod, percent: number): string {
   if (method === 'fixed') return '—'
@@ -270,10 +275,18 @@ async function selectPriceListsWithPercentFallback<T>(
   execute: (columns: string) => PromiseLike<{ data: T; error: PgErr }>,
 ): Promise<{ data: T; error: PgErr }> {
   const first = await execute(LIST_SELECT)
-  if (!first.error || !isMissingListExtraCostPercentColumn(first.error)) {
-    return first
+  if (!first.error) return first
+  // Prepared column: qualquer falha no SELECT estendido → tenta base.
+  // (PostgREST às vezes omite o nome da coluna no body; maybeSingle ≠ list.)
+  if (
+    isMissingListExtraCostPercentColumn(first.error) ||
+    String(first.error.message ?? '').length === 0 ||
+    first.error.code === 'PGRST204' ||
+    first.error.code === '42703'
+  ) {
+    return execute(LIST_SELECT_BASE)
   }
-  return execute(LIST_SELECT_BASE)
+  return first
 }
 
 function mapList(row: Record<string, unknown>, itemCount?: number): PriceList {
@@ -1133,15 +1146,52 @@ export async function adminSetPriceListPricingRule(input: {
   roundingMode?: string
   recalculate?: boolean
 }): Promise<Record<string, unknown>> {
-  const { data, error } = await getSupabase().rpc('set_price_list_pricing_rule', {
+  const sb = getSupabase()
+  const { data, error } = await sb.rpc('set_price_list_pricing_rule', {
     p_price_list_id: input.priceListId,
     p_pricing_method: input.pricingMethod,
     p_pricing_percent: input.pricingPercent,
     p_rounding_mode: input.roundingMode ?? 'two_decimals',
     p_recalculate: input.recalculate ?? true,
   })
-  if (error) throw error
-  return (data ?? {}) as Record<string, unknown>
+  if (!error) return (data ?? {}) as Record<string, unknown>
+
+  const msg = `${error.message ?? ''} ${error.code ?? ''}`.toLowerCase()
+  const rpcMissing =
+    error.code === 'PGRST202' ||
+    msg.includes('could not find the function') ||
+    msg.includes('schema cache')
+  if (!rpcMissing) throw error
+
+  // Fallback: migration F8.1-E ainda não aplicada no remoto — update direto (RLS staff).
+  const { error: upErr } = await sb
+    .from('price_lists')
+    .update({
+      pricing_method: input.pricingMethod,
+      pricing_percent: input.pricingPercent,
+      rounding_mode: input.roundingMode ?? 'two_decimals',
+    })
+    .eq('id', input.priceListId)
+  if (upErr) throw upErr
+
+  let recalc: Record<string, unknown> = { updated: 0, skipped: true, fallback: 'direct_update' }
+  if (input.recalculate !== false && input.pricingMethod !== 'fixed') {
+    try {
+      recalc = (await adminRecalculatePriceListItems({
+        priceListId: input.priceListId,
+        dryRun: false,
+      })) as unknown as Record<string, unknown>
+    } catch {
+      recalc = { updated: 0, skipped: true, fallback: 'direct_update', recalc_unavailable: true }
+    }
+  }
+  return {
+    ok: true,
+    pricing_method: input.pricingMethod,
+    pricing_percent: input.pricingPercent,
+    recalculate: recalc,
+    fallback: 'direct_update',
+  }
 }
 
 export async function adminRecalculatePriceListItems(input: {
@@ -1185,14 +1235,73 @@ export async function adminSetPriceListItemPricing(input: {
   price?: number | null
   extraCost?: number | null
 }): Promise<Record<string, unknown>> {
-  const { data, error } = await getSupabase().rpc('set_price_list_item_pricing', {
+  const sb = getSupabase()
+  const { data, error } = await sb.rpc('set_price_list_item_pricing', {
     p_item_id: input.itemId,
     p_mode: input.mode,
     p_price: input.price ?? null,
     p_extra_cost: input.extraCost ?? null,
   })
-  if (error) throw error
-  return (data ?? {}) as Record<string, unknown>
+  if (!error) return (data ?? {}) as Record<string, unknown>
+
+  const msg = `${error.message ?? ''} ${error.code ?? ''}`.toLowerCase()
+  const rpcMissing =
+    error.code === 'PGRST202' ||
+    msg.includes('could not find the function') ||
+    msg.includes('schema cache')
+  if (!rpcMissing) throw error
+
+  // Fallback sem RPC: update direto no item (staff).
+  const { data: row, error: readErr } = await sb
+    .from('price_list_items')
+    .select('id, price_list_id, product_id, price, extra_cost, price_origin')
+    .eq('id', input.itemId)
+    .maybeSingle()
+  if (readErr) throw readErr
+  if (!row) throw new Error('Item da lista não encontrado')
+
+  const patch: Record<string, unknown> = {}
+  if (input.extraCost != null) patch.extra_cost = input.extraCost
+
+  if (input.mode === 'manual') {
+    if (input.price == null || !(Number(input.price) >= 0)) {
+      throw new Error('Preço manual inválido')
+    }
+    patch.price = input.price
+    patch.price_origin = 'manual'
+    patch.calculated_price = null
+  } else {
+    // apply_rule: precisa da lista + custo — usa previewCalculatedPrice no caller
+    // aqui só marca origem calculated se preço já veio no input
+    if (input.price != null && Number(input.price) >= 0) {
+      patch.price = input.price
+      patch.price_origin = 'calculated'
+      patch.calculated_price = input.price
+    } else {
+      const list = await adminGetPriceList(String(row.price_list_id))
+      if (!list) throw new Error('Lista não encontrada')
+      if (list.pricingMethod === 'fixed') {
+        throw new Error('Lista em modo fixo — não há regra para aplicar')
+      }
+      const items = await adminListPriceListOperationalItems(String(row.price_list_id))
+      const hit = items.find((i) => i.id === input.itemId)
+      const cost =
+        hit?.costTotal ??
+        (hit?.baseCost != null
+          ? hit.baseCost + Number(input.extraCost ?? hit.extraCost ?? 0)
+          : null)
+      if (cost == null) throw new Error('Sem custo para aplicar a regra')
+      const sell = calculateSellPrice(cost, list.pricingMethod, list.pricingPercent)
+      if (sell == null) throw new Error('Não foi possível calcular o preço')
+      patch.price = sell
+      patch.price_origin = 'calculated'
+      patch.calculated_price = sell
+    }
+  }
+
+  const { error: upErr } = await sb.from('price_list_items').update(patch).eq('id', input.itemId)
+  if (upErr) throw upErr
+  return { ok: true, fallback: 'direct_update', ...patch }
 }
 
 /** Define preço formado (origem calculated) sem passar pela regra % da lista. */

@@ -1,6 +1,7 @@
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Container } from '@/components/layout/Container'
+import { PaymentConditionsNotice } from '@/components/payment/PaymentConditionsNotice'
 import { createLead } from '@/services/leads/leadService'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -80,6 +81,7 @@ export function SejaParceiroPage() {
         Oficinas, autocenters, lojas e distribuidores. Seu cadastro fica com status pendente até a
         HF analisar.
       </p>
+      <PaymentConditionsNotice audience="guest" className="mt-4" />
       <form onSubmit={onSubmit} className="mt-6 space-y-3">
         <Input label="Responsável *" value={contactName} onChange={(e) => setContactName(e.target.value)} required />
         <Input label="Empresa *" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
