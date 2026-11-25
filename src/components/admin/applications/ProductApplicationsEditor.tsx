@@ -197,7 +197,7 @@ export function ProductApplicationsEditor({
 
   useEffect(() => {
     void adminListApplications(productId)
-      .then((rows) => setApps(rows as ProductAppRow[]))
+      .then((rows) => setApps(rows as unknown as ProductAppRow[]))
       .catch((e) => setError(String(e.message ?? e)))
   }, [productId])
 
@@ -248,7 +248,7 @@ export function ProductApplicationsEditor({
   }, [matching, versionId])
 
   async function reload() {
-    setApps((await adminListApplications(productId)) as ProductAppRow[])
+    setApps((await adminListApplications(productId)) as unknown as ProductAppRow[])
     onMutated?.()
   }
 

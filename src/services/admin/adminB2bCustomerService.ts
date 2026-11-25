@@ -221,7 +221,9 @@ export async function adminListB2bCustomers(opts?: {
       .order('created_at', { ascending: false })
       .limit(400)
     if (!res.error) {
-      const rows = (res.data ?? []).map((c) => mapCustomerRow(c as Record<string, unknown>))
+      const rows = (res.data ?? []).map((c) =>
+        mapCustomerRow(c as unknown as Record<string, unknown>),
+      )
       return filterCustomers(rows, opts)
     }
     lastError = res.error
@@ -307,7 +309,11 @@ export async function adminGetB2bCustomer(id: string): Promise<AdminB2bCustomer>
     const { data, error } = await sb.from('customers').select(select).eq('id', id).single()
     if (!error && data) {
       const paymentConditionIds = await adminListCustomerPaymentConditionIds(id)
-      return mapCustomerRow(data as Record<string, unknown>, undefined, paymentConditionIds)
+      return mapCustomerRow(
+        data as unknown as Record<string, unknown>,
+        undefined,
+        paymentConditionIds,
+      )
     }
   }
   throw new Error('Cliente não encontrado')

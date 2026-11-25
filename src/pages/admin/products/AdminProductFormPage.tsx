@@ -141,6 +141,16 @@ export function AdminProductFormPage() {
             isDefault: l.isDefault,
             itemId: null,
             price: null,
+            pricingMethod: l.pricingMethod,
+            pricingPercent: l.pricingPercent,
+            listExtraCostPercent: l.listExtraCostPercent ?? 0,
+            extraCost: 0,
+            baseCost: null,
+            costTotal: null,
+            effectiveMarginPct: null,
+            effectiveMarkupPct: null,
+            priceOrigin: null,
+            supplierId: null,
           })),
         )
       }

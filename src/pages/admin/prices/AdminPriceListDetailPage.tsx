@@ -7,7 +7,7 @@ import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Loading } from '@/components/common/Loading'
 import { useAuth } from '@/contexts/AuthContext'
-import { datetimeLocalToIso, formatDateTime, isoToDatetimeLocal } from '@/lib/datetime'
+import { datetimeLocalToIso, isoToDatetimeLocal } from '@/lib/datetime'
 import { CODIGO_REFERENCIA_LABEL } from '@/lib/productLabels'
 import { formatMoney, parseMoneyBr } from '@/lib/money'
 import { PriceImportWizard } from '@/pages/admin/prices/PriceImportWizard'
@@ -506,7 +506,7 @@ export function AdminPriceListDetailPage() {
     if (
       !window.confirm(
         `Definir preço MANUAL ${formatMoney(priceNum)} em ${selectedItems.length} item(ns)?` +
-          (isPriceListFormationActive(list?.pricingMethod)
+          (isPriceListFormationActive(list?.pricingMethod ?? 'fixed')
             ? '\nEsses itens saem do recálculo da lista até voltarem à regra.'
             : ''),
       )
