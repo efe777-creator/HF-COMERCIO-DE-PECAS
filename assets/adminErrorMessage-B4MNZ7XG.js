@@ -1,0 +1,1 @@
+function e(e,t){if(e instanceof Error){let t=e.message.trim();if(t)return t}if(e&&typeof e==`object`&&`message`in e){let t=String(e.message??``).trim();if(t)return t}return typeof e==`string`&&e.trim()?e.trim():t}export{e as t};

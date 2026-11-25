@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-D3jfb0Ew.js";import{AdminLeadsPage as t}from"./AdminLeadsPage-BB3bZq4e.js";var n=e();function r(){return(0,n.jsx)(t,{defaultKind:`quote`,title:`Cotações (tipo de lead)`})}export{r as AdminCotacoesPage};

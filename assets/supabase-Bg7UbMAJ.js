@@ -1,0 +1,1 @@
+var e=!1;function t(){throw Error(`Supabase não está configurado. Copie .env.example para .env e preencha as chaves anon.`)}export{e as n,t};

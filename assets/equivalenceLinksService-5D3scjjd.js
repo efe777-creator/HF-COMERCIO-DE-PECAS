@@ -1,0 +1,11 @@
+import{a as e,n as t}from"./jsx-runtime-D3jfb0Ew.js";import{n}from"./supabase-Bg7UbMAJ.js";import{t as r}from"./productService-33afMJXN.js";import{l as i,s as a}from"./ProductMediaFrame-BBidD8Xh.js";function o(e){if(!e)return null;if(Array.isArray(e)){let t=e[0];return t?.name?t:null}let t=e;return t.name?t:null}async function s(e){let t=new Map,r=[...new Set(e.filter(Boolean))];if(!r.length||!n||1)return t;for(let e=0;e<r.length;e+=100){let n=r.slice(e,e+100),{data:i,error:a}=await null.from(`product_vehicle_compatibility`).select(`
+        product_id,
+        year_start,
+        year_end,
+        vehicle_version_id,
+        vehicle_versions (
+          year, engine, version_name,
+          manufacturers ( name ),
+          models ( name )
+        )
+      `).in(`product_id`,n);if(a)throw a;for(let e of i??[]){let n=String(e.product_id),r=e.vehicle_versions,i=Array.isArray(r)?r[0]:r,a={maker:o(i?.manufacturers)?.name??null,model:o(i?.models)?.name??null,yearStart:e.year_start==null?null:Number(e.year_start),yearEnd:e.year_end==null?null:Number(e.year_end),versionYear:i?.year??null,engine:i?.engine??null,versionName:i?.version_name??null,vehicleVersionId:e.vehicle_version_id?String(e.vehicle_version_id):null};if(!a.maker&&!a.model)continue;let s=t.get(n)??[];s.push(a),t.set(n,s)}}return t}var c=e(t(),1);function l(e,t){let n=(0,c.useMemo)(()=>i(t),[t]),r=(0,c.useMemo)(()=>[...new Set(e.filter(Boolean))].sort().join(`|`),[e]),[o,l]=(0,c.useState)(!1),[u,d]=(0,c.useState)(()=>new Map);return(0,c.useEffect)(()=>{if(!n||!r){d(new Map),l(!1);return}let e=r.split(`|`).filter(Boolean),t=!1;return l(!0),s(e).then(r=>{if(t)return;let i=new Map;for(let t of e)i.set(t,a(n,r.get(t)??[]));d(i)}).catch(()=>{if(t)return;let r=new Map;for(let t of e)r.set(t,a(n,[]));d(r)}).finally(()=>{t||l(!1)}),()=>{t=!0}},[n,r]),{loading:o,verdicts:u}}async function u(e){return[]}async function d(e){return new Map}async function f(e,t=12){let n=await u(e);if(!n.length)return[];let i=[];for(let e of n.slice(0,t))try{let t=await r(e);t&&i.push(t)}catch{}return i}export{d as n,l as r,f as t};
