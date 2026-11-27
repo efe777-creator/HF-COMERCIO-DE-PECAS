@@ -67,18 +67,23 @@ export async function createLead(input: CreateLeadInput): Promise<{ id: string }
 
   if (error) throw error
 
+  const uuidRe =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   const items = input.items?.filter((i) => i.productId || i.skuSnapshot || i.nameSnapshot) ?? []
   if (items.length > 0) {
     const { error: itemsError } = await getSupabase().from('lead_items').insert(
-      items.map((item, index) => ({
-        lead_id: leadId,
-        product_id: item.productId || null,
-        sku_snapshot: item.skuSnapshot || null,
-        name_snapshot: item.nameSnapshot || null,
-        quantity: item.quantity && item.quantity > 0 ? item.quantity : 1,
-        notes: item.notes || null,
-        sort_order: index,
-      })),
+      items.map((item, index) => {
+        const rawId = item.productId?.trim() || ''
+        return {
+          lead_id: leadId,
+          product_id: rawId && uuidRe.test(rawId) ? rawId : null,
+          sku_snapshot: item.skuSnapshot || null,
+          name_snapshot: item.nameSnapshot || null,
+          quantity: item.quantity && item.quantity > 0 ? item.quantity : 1,
+          notes: item.notes || null,
+          sort_order: index,
+        }
+      }),
     )
     if (itemsError) throw itemsError
   }
