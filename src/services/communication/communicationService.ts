@@ -2,6 +2,7 @@ import {
   communicationCopyForKind,
   kindForCustomerStatus,
   type AccessNotificationKind,
+  type QuoteNotificationKind,
 } from '@/lib/communicationCopy'
 import { getSupabase } from '@/lib/supabase'
 
@@ -114,6 +115,119 @@ export async function emitAccessNotification(opts: EmitAccessOptions): Promise<A
   if (delErr) throw delErr
 
   return notification
+}
+
+async function insertNotificationWithDeliveries(opts: {
+  kind: AccessNotificationKind | QuoteNotificationKind
+  customerId?: string | null
+  profileId?: string | null
+  bodyOverride?: string | null
+  hrefOverride?: string | null
+}): Promise<AppNotification> {
+  const copy = communicationCopyForKind(opts.kind)
+  const href = opts.hrefOverride?.trim() || copy.href
+  const sb = getSupabase()
+  const sourceEventId = crypto.randomUUID()
+  const notificationId = crypto.randomUUID()
+  const createdAt = new Date().toISOString()
+
+  // UUID no client: emit de cotação pode ser anon (sem SELECT pós-insert).
+  const { error } = await sb.from('app_notifications').insert({
+    id: notificationId,
+    audience: copy.audience,
+    customer_id: opts.customerId ?? null,
+    profile_id: opts.profileId ?? null,
+    kind: copy.kind,
+    title: copy.title,
+    body: opts.bodyOverride?.trim() || copy.body,
+    href,
+    category: copy.category,
+    severity: copy.severity,
+    actionable: copy.actionable,
+    source_event_id: sourceEventId,
+  })
+
+  if (error) throw error
+
+  const notification: AppNotification = {
+    id: notificationId,
+    audience: copy.audience,
+    customerId: opts.customerId ?? null,
+    profileId: opts.profileId ?? null,
+    kind: copy.kind,
+    title: copy.title,
+    body: opts.bodyOverride?.trim() || copy.body,
+    href,
+    category: copy.category,
+    severity: copy.severity,
+    actionable: copy.actionable,
+    sourceEventId,
+    readAt: null,
+    createdAt,
+  }
+
+  const deliveryBase = {
+    source_event_id: sourceEventId,
+    notification_id: notification.id,
+    recipient_profile_id: opts.profileId ?? null,
+    customer_id: opts.customerId ?? null,
+    kind: copy.kind,
+    audience: copy.audience,
+  }
+
+  const { error: delErr } = await sb.from('notification_deliveries').insert([
+    {
+      ...deliveryBase,
+      channel: 'in_app',
+      status: 'sent',
+      attempts: 1,
+      sent_at: createdAt,
+      provider_ref: null,
+    },
+    {
+      ...deliveryBase,
+      channel: 'whatsapp',
+      status: 'skipped',
+      attempts: 0,
+      last_error: 'whatsapp_cloud_not_in_this_cycle',
+      provider_ref: null,
+    },
+  ])
+  if (delErr) throw delErr
+  return notification
+}
+
+export type EmitQuoteOptions = {
+  leadId: string
+  customerId?: string | null
+  profileId?: string | null
+  companyLabel?: string | null
+  itemCount: number
+}
+
+/** Avisos após createLead(quote). Sem Graph API. */
+export async function emitQuoteNotifications(opts: EmitQuoteOptions): Promise<void> {
+  const proto = opts.leadId.slice(0, 8)
+  const label = opts.companyLabel?.trim()
+  const staffBody = label
+    ? `${label} enviou cotação (${opts.itemCount} item(ns)). Protocolo ${proto}.`
+    : `Nova cotação com ${opts.itemCount} item(ns). Protocolo ${proto}.`
+
+  await insertNotificationWithDeliveries({
+    kind: 'quote_requested',
+    customerId: opts.customerId ?? null,
+    bodyOverride: staffBody,
+    hrefOverride: `/admin/pedidos/cotacoes?lead=${opts.leadId}`,
+  })
+
+  if (opts.customerId || opts.profileId) {
+    await insertNotificationWithDeliveries({
+      kind: 'quote_sent',
+      customerId: opts.customerId ?? null,
+      profileId: opts.profileId ?? null,
+      bodyOverride: `Recebemos sua cotação (protocolo ${proto}). O time comercial retorna em breve.`,
+    })
+  }
 }
 
 async function customerAudienceFilter() {

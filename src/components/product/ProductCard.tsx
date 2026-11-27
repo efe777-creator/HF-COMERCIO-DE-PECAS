@@ -1,6 +1,5 @@
 import { Badge } from '@/components/common/Badge'
 import { Button } from '@/components/common/Button'
-import { WhatsAppButton } from '@/components/common/WhatsAppButton'
 import {
   CompatibilityAppsBlock,
   prioritizeCompatibilityGroupsForVehicle,
@@ -20,11 +19,11 @@ import {
   KIT_APPS_EMPTY_LABEL,
 } from '@/lib/productLabels'
 import { formatLadoLabel, formatPosicaoLabel } from '@/lib/productPosicaoLado'
-import { buildProductWhatsAppMessage } from '@/lib/whatsapp'
+import { addToQuoteBasket } from '@/lib/quoteBasket'
 import type { CompatibilityVerdict } from '@/services/compatibility/compatibilityEngine'
 import { resolveCardSeal } from '@/services/compatibility/compatibilityEngine'
 import type { Product, VehicleFilter } from '@/types'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 /**
@@ -44,9 +43,27 @@ export function ProductCard({
   equivalentSkus?: string[]
 }) {
   const navigate = useNavigate()
+  const [quoteCta, setQuoteCta] = useState<'idle' | 'flash' | 'ver'>('idle')
   const displayName = toCommercialTitleCase(product.name)
   const brandName = product.brand ? toCommercialTitleCase(product.brand) : null
   const productHref = `/produto/${product.id}`
+
+  function handleAddToQuote(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (quoteCta === 'ver') {
+      navigate('/cotacao')
+      return
+    }
+    addToQuoteBasket({
+      productId: product.id,
+      sku: product.sku,
+      name: product.name,
+      quantity: 1,
+    })
+    setQuoteCta('flash')
+    window.setTimeout(() => setQuoteCta('ver'), 900)
+  }
 
   const seal = verdict ? resolveCardSeal(verdict) : null
   const showSeal = Boolean(verdict && seal && (seal.kind !== 'hide' || seal.label))
@@ -197,14 +214,20 @@ export function ProductCard({
             Ver produto
           </Button>
         </Link>
-        {!incompatible ? (
-          <WhatsAppButton
+        {!incompatible && features.quotation_enabled ? (
+          <Button
+            type="button"
+            variant="outline"
             size="sm"
             fullWidth
-            message={buildProductWhatsAppMessage({ name: product.name, sku: product.sku })}
+            onClick={handleAddToQuote}
           >
-            Consultar
-          </WhatsAppButton>
+            {quoteCta === 'flash'
+              ? 'Adicionado'
+              : quoteCta === 'ver'
+                ? 'Ver cotação'
+                : 'Adicionar à cotação'}
+          </Button>
         ) : null}
       </div>
     </article>

@@ -4,6 +4,8 @@ import { NavBar } from './NavBar'
 import { SearchBar } from './SearchBar'
 import { MobileDrawer } from './MobileDrawer'
 import { Container } from '@/components/layout/Container'
+import { features } from '@/config/features'
+import { useQuoteBasket } from '@/hooks/useQuoteBasket'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -13,6 +15,7 @@ const mobileLinks = [
   { to: '/categorias', label: 'Categorias' },
   { to: '/marcas', label: 'Marcas' },
   { to: '/veiculo', label: 'Aplicações' },
+  { to: '/cotacao', label: 'Cotação' },
   { to: '/sobre', label: 'Sobre a HF' },
   { to: '/atendimento', label: 'Atendimento' },
   { to: '/conta', label: 'Minha conta' },
@@ -20,6 +23,7 @@ const mobileLinks = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { count } = useQuoteBasket()
 
   return (
     <header className="sticky top-0 z-[100] border-b border-hf-line bg-hf-bg/92 backdrop-blur-md">
@@ -39,6 +43,20 @@ export function Header() {
           <SearchBar />
         </div>
         <div className="flex items-center justify-end gap-2 lg:gap-4">
+          {features.quotation_enabled ? (
+            <Link
+              to="/cotacao"
+              className="relative inline-flex items-center rounded-[10px] border border-hf-line bg-hf-surface px-2.5 py-2 text-sm font-extrabold text-hf-ink hover:border-hf-red"
+              aria-label={count > 0 ? `Cotação com ${count} itens` : 'Cotação'}
+            >
+              Cotação
+              {count > 0 ? (
+                <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-hf-red px-1.5 text-[11px] font-bold text-white">
+                  {count > 99 ? '99+' : count}
+                </span>
+              ) : null}
+            </Link>
+          ) : null}
           <AccountButton />
         </div>
       </Container>
@@ -54,6 +72,7 @@ export function Header() {
               onClick={() => setMenuOpen(false)}
             >
               {item.label}
+              {item.to === '/cotacao' && count > 0 ? ` (${count})` : ''}
             </Link>
           ))}
         </nav>

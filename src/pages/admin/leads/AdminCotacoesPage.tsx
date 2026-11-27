@@ -1,5 +1,6 @@
-import { AdminLeadsPage } from '@/pages/admin/leads/AdminLeadsPage'
+import { Navigate } from 'react-router-dom'
 
+/** @deprecated Use /admin/pedidos/cotacoes — redirect de compatibilidade. */
 export function AdminCotacoesPage() {
-  return <AdminLeadsPage defaultKind="quote" title="Cotações (tipo de lead)" />
+  return <Navigate to="/admin/pedidos/cotacoes" replace />
 }

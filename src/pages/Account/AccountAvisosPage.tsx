@@ -1,6 +1,11 @@
 import { Button } from '@/components/common/Button'
 import { Loading } from '@/components/common/Loading'
-import { communicationCtaLabel, isAccessNotificationKind } from '@/lib/communicationCopy'
+import {
+  communicationCtaLabel,
+  isAccessNotificationKind,
+  isQuoteNotificationKind,
+  type CommunicationKind,
+} from '@/lib/communicationCopy'
 import {
   listCustomerNotifications,
   markAllCustomerNotificationsRead,
@@ -113,9 +118,10 @@ export function AccountAvisosPage() {
       ) : (
         <ul className="mt-4 mb-0 list-none space-y-2 p-0">
           {items.map((n) => {
-            const cta = isAccessNotificationKind(n.kind)
-              ? communicationCtaLabel(n.kind)
-              : 'Ver conta'
+            const cta =
+              isAccessNotificationKind(n.kind) || isQuoteNotificationKind(n.kind)
+                ? communicationCtaLabel(n.kind as CommunicationKind)
+                : 'Ver conta'
             return (
               <li
                 key={n.id}

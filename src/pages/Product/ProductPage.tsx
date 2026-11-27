@@ -30,7 +30,8 @@ import {
   VER_MENOS_DESCRICAO_LABEL,
 } from '@/lib/productLabels'
 import { buildProductSpecRows } from '@/lib/productSpecs'
-import { buildNotFoundWhatsAppMessage, buildProductWhatsAppMessage } from '@/lib/whatsapp'
+import { addToQuoteBasket, replaceQuoteBasketWithItem } from '@/lib/quoteBasket'
+import { buildNotFoundWhatsAppMessage } from '@/lib/whatsapp'
 import { loadCompatibilityGroups } from '@/services/products/compatibilitySummary'
 import {
   loadStoreKitComposition,
@@ -55,6 +56,7 @@ export function ProductPage() {
   const [loading, setLoading] = useState(true)
   const [descOpen, setDescOpen] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [quoteFlash, setQuoteFlash] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -161,12 +163,6 @@ export function ProductPage() {
   const categoryHref = current.categorySlug
     ? `/categoria/${encodeURIComponent(current.categorySlug)}`
     : null
-  const waMessage = buildProductWhatsAppMessage({
-    name: current.name,
-    sku: current.sku,
-    productUrl: typeof window !== 'undefined' ? window.location.href : undefined,
-  })
-
   function goBack() {
     if (window.history.length > 1) navigate(-1)
     else navigate('/catalogo')
@@ -183,7 +179,7 @@ export function ProductPage() {
   }
 
   return (
-    <Container maxWidth="pdp" className="py-2 pb-24 sm:py-3 lg:pb-8">
+    <Container maxWidth="pdp" className="py-2 pb-[calc(56px+56px+env(safe-area-inset-bottom))] sm:py-3 lg:pb-8">
       <button
         type="button"
         onClick={goBack}
@@ -279,17 +275,49 @@ export function ProductPage() {
 
           <div className="mt-4 flex flex-col gap-2">
             {features.quotation_enabled ? (
-              <Link
-                to={`/cotacao?sku=${encodeURIComponent(current.sku)}&name=${encodeURIComponent(current.name)}&productId=${encodeURIComponent(current.id)}`}
-              >
-                <Button fullWidth variant="primary" type="button">
-                  Solicitar cotação
+              <>
+                <Button
+                  fullWidth
+                  variant="primary"
+                  type="button"
+                  disabled={quoteFlash}
+                  onClick={() => {
+                    addToQuoteBasket({
+                      productId: current.id,
+                      sku: current.sku,
+                      name: current.name,
+                      quantity: 1,
+                    })
+                    setQuoteFlash(true)
+                    window.setTimeout(() => {
+                      navigate('/cotacao')
+                    }, 450)
+                  }}
+                >
+                  {quoteFlash ? 'Adicionado…' : 'Adicionar à cotação'}
                 </Button>
-              </Link>
+                <Button
+                  fullWidth
+                  variant="outline"
+                  type="button"
+                  disabled={quoteFlash}
+                  onClick={() => {
+                    replaceQuoteBasketWithItem({
+                      productId: current.id,
+                      sku: current.sku,
+                      name: current.name,
+                      quantity: 1,
+                    })
+                    setQuoteFlash(true)
+                    window.setTimeout(() => {
+                      navigate('/cotacao?only=1')
+                    }, 450)
+                  }}
+                >
+                  Cotar só este
+                </Button>
+              </>
             ) : null}
-            <WhatsAppButton fullWidth message={waMessage}>
-              Consultar esta peça
-            </WhatsAppButton>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
@@ -474,12 +502,7 @@ export function ProductPage() {
         </div>
       </div>
 
-      <PdpPurchaseBar
-        sku={current.sku}
-        name={current.name}
-        productId={current.id}
-        whatsappMessage={waMessage}
-      />
+      <PdpPurchaseBar sku={current.sku} name={current.name} productId={current.id} />
     </Container>
   )
 }

@@ -195,9 +195,19 @@ const AdminLeadsPage = lazy(() =>
     default: m.AdminLeadsPage,
   })),
 )
-const AdminCotacoesPage = lazy(() =>
-  import('@/pages/admin/leads/AdminCotacoesPage').then((m) => ({
-    default: m.AdminCotacoesPage,
+const AdminPedidosLayout = lazy(() =>
+  import('@/pages/admin/pedidos/AdminPedidosLayout').then((m) => ({
+    default: m.AdminPedidosLayout,
+  })),
+)
+const AdminPedidosHomePage = lazy(() =>
+  import('@/pages/admin/pedidos/AdminPedidosHomePage').then((m) => ({
+    default: m.AdminPedidosHomePage,
+  })),
+)
+const AdminPedidosCotacoesPage = lazy(() =>
+  import('@/pages/admin/pedidos/AdminPedidosCotacoesPage').then((m) => ({
+    default: m.AdminPedidosCotacoesPage,
   })),
 )
 const AdminFinanceiroLayout = lazy(() =>
@@ -271,9 +281,17 @@ const adminChildren = [
     ],
   },
   { path: 'comunicacao', element: <AdminComunicacaoPage /> },
+  {
+    path: 'pedidos',
+    element: <AdminPedidosLayout />,
+    children: [
+      { index: true, element: <AdminPedidosHomePage /> },
+      { path: 'cotacoes', element: <AdminPedidosCotacoesPage /> },
+    ],
+  },
   { path: 'campanhas', element: <AdminCampaignsPage /> },
   { path: 'leads', element: <AdminLeadsPage /> },
-  { path: 'cotacoes', element: <AdminCotacoesPage /> },
+  { path: 'cotacoes', element: <Navigate to="/admin/pedidos/cotacoes" replace /> },
 ]
 
 const publicChildren = [
