@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-D3jfb0Ew.js";import{D as t}from"./index-BN0qKigD.js";var n=e();function r(){return(0,n.jsx)(t,{to:`/cadastro-comercial`,replace:!0})}export{r as SejaParceiroPage};
