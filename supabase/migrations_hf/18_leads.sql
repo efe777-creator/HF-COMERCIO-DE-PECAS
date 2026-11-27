@@ -48,7 +48,7 @@ alter table public.lead_items enable row level security;
 
 drop policy if exists leads_anon_insert on public.leads;
 create policy leads_anon_insert on public.leads
-  for insert to anon, authenticated
+  for insert
   with check (true);
 
 drop policy if exists leads_staff_select on public.leads;
@@ -64,13 +64,8 @@ create policy leads_staff_update on public.leads
 
 drop policy if exists lead_items_anon_insert on public.lead_items;
 create policy lead_items_anon_insert on public.lead_items
-  for insert to anon, authenticated
-  with check (
-    exists (
-      select 1 from public.leads l
-      where l.id = lead_id
-    )
-  );
+  for insert
+  with check (true);
 
 drop policy if exists lead_items_staff_select on public.lead_items;
 create policy lead_items_staff_select on public.lead_items

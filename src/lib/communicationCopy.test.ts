@@ -34,10 +34,24 @@ describe('communicationCopy', () => {
   it('cta labels', () => {
     expect(communicationCtaLabel('access_pending')).toBe('Abrir clientes')
     expect(communicationCtaLabel('access_granted')).toBe('Ver conta')
+    expect(communicationCtaLabel('quote_requested')).toBe('Abrir cotações')
   })
 
   it('guards kind', () => {
     expect(isAccessNotificationKind('access_granted')).toBe(true)
     expect(isAccessNotificationKind('order_status')).toBe(false)
+  })
+
+  it('maps quote kinds', () => {
+    expect(communicationCopyForKind('quote_requested')).toMatchObject({
+      title: 'Nova cotação recebida',
+      href: '/admin/pedidos/cotacoes',
+      audience: 'staff',
+    })
+    expect(communicationCopyForKind('quote_sent')).toMatchObject({
+      title: 'Cotação enviada',
+      href: '/conta/avisos',
+      audience: 'customer',
+    })
   })
 })

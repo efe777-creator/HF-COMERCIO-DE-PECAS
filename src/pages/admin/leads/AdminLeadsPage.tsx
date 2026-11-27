@@ -60,7 +60,7 @@ export function AdminLeadsPage({ defaultKind = 'all', title = 'Leads (inbox)' }:
       <h1 className="m-0 text-2xl font-extrabold text-hf-ink">{title}</h1>
       {defaultKind === 'all' ? (
         <p className="m-0 text-sm text-hf-muted">
-          Inbox geral de contatos. Cotação é um tipo de lead — use o filtro ou a tela Cotações.
+          Inbox geral de contatos. Cotação é um tipo de lead — use o filtro ou a Central de Pedidos.
         </p>
       ) : null}
       {error ? <p className="text-sm text-hf-danger">{error}</p> : null}

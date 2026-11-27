@@ -3,7 +3,12 @@ import { AdaptiveWorkspace } from '@/components/admin/workspace/AdaptiveWorkspac
 import { Button } from '@/components/common/Button'
 import { Loading } from '@/components/common/Loading'
 import { useIdSplitTabs } from '@/hooks/useIdSplitTabs'
-import { communicationCtaLabel, isAccessNotificationKind } from '@/lib/communicationCopy'
+import {
+  communicationCtaLabel,
+  isAccessNotificationKind,
+  isQuoteNotificationKind,
+  type CommunicationKind,
+} from '@/lib/communicationCopy'
 import {
   listStaffNotifications,
   markNotificationRead,
@@ -47,7 +52,9 @@ function NotificationGuide({
   }
 
   const cta =
-    isAccessNotificationKind(item.kind) ? communicationCtaLabel(item.kind) : 'Abrir'
+    isAccessNotificationKind(item.kind) || isQuoteNotificationKind(item.kind)
+      ? communicationCtaLabel(item.kind as CommunicationKind)
+      : 'Abrir'
 
   return (
     <div className="space-y-4 p-1" data-admin-comunicacao-guide>
@@ -139,7 +146,7 @@ export function AdminComunicacaoPage() {
             Central de Comunicação
           </h1>
           <p className="mt-1 mb-0 max-w-2xl text-xs text-hf-muted sm:text-sm">
-            Avisos in-app de acesso B2B. WhatsApp Cloud fica para o próximo ciclo.
+            Avisos in-app (acesso B2B e cotações). WhatsApp Cloud fica para o próximo ciclo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

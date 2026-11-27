@@ -1,7 +1,7 @@
 # HF — Central de Comunicação (Andar 1)
 
 **Data:** 2026-11-25  
-**Escopo:** só HF. Avisos **in-app** ligados à liberação de acesso B2B. Sem WhatsApp Cloud, OTP, pedido ou FAL.
+**Escopo:** só HF. Avisos **in-app** de acesso B2B e cotações da cesta. Sem WhatsApp Cloud, OTP, checkout ou FAL.
 
 ## Nome
 
@@ -17,18 +17,20 @@ CTA `wa.me` (`VITE_WHATSAPP_NUMBER`) permanece fora deste módulo.
 
 | Agora | Depois |
 |-------|--------|
-| Kinds `access_pending` / `access_granted` / `access_suspended` | `quote_replied`, `order_*`, `payment_due` |
+| Kinds `access_*` + `quote_requested` / `quote_sent` | `quote_replied`, `order_*`, `payment_due` |
 | Canal `in_app` | WhatsApp Cloud (template UTILITY) |
 | Delivery log com `whatsapp=skipped` | Envio Graph API + webhook |
 | Lista admin + avisos na conta | Preferências, broadcast, push |
 
 ## Kinds ativos
 
-| Kind | Audience | Disparo |
-|------|----------|---------|
-| `access_pending` | staff | cliente `pending` |
-| `access_granted` | customer | staff ativa |
-| `access_suspended` | customer | staff suspende |
+| Kind | Audience | Disparo | Destino href |
+|------|----------|---------|--------------|
+| `access_pending` | staff | cliente `pending` | `/admin/comunicacao` |
+| `access_granted` | customer | staff ativa | `/conta/avisos` |
+| `access_suspended` | customer | staff suspende | `/conta/avisos` |
+| `quote_requested` | staff | envio cesta `/cotacao` | `/admin/pedidos/cotacoes` (+ `?lead=`) |
+| `quote_sent` | customer | envio cesta (logado) | `/conta/avisos` |
 
 ## Nota UX
 
@@ -45,6 +47,7 @@ Shell Adaptive `moduleKey=comunicacao` no admin (lista + guia). Conta: lista com
 | Staff ativa cliente | `access_granted` em `/conta/avisos` |
 | Staff suspende | `access_suspended` |
 | Novo pending (create) | `access_pending` em `/admin/comunicacao` |
+| Envio cotação | `quote_requested` staff → Central de Pedidos; `quote_sent` se logado |
 | Marcar lido | some do contador |
 | Rede | zero chamada WhatsApp/Graph |
 | Vitest | `communicationCopy` kind → título/href |

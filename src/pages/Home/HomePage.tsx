@@ -105,7 +105,7 @@ export function HomePage() {
               <Button variant="outline">Por veículo</Button>
             </Link>
             <Link to="/cotacao">
-              <Button variant="outline">Solicitar cotação</Button>
+              <Button variant="outline">Cotação</Button>
             </Link>
             <Link to="/seja-parceiro">
               <Button variant="outline">Seja parceiro</Button>
@@ -281,9 +281,9 @@ export function HomePage() {
       <section className="border-b border-hf-line bg-hf-bg-2 py-10 sm:py-12">
         <Container className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-[14px] border border-hf-line bg-hf-surface p-6 text-left">
-            <h2 className="m-0 text-xl font-black text-hf-ink">Solicitar cotação</h2>
+            <h2 className="m-0 text-xl font-black text-hf-ink">Cotação</h2>
             <p className="mt-2 text-sm text-hf-muted">
-              Informe peças e quantidades. A HF retorna comercialmente — sem checkout online.
+              Monte a cesta com peças e quantidades. A HF retorna comercialmente — sem checkout online.
             </p>
             <Link to="/cotacao" className="mt-4 inline-block">
               <Button variant="primary">Abrir cotação</Button>

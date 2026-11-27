@@ -33,9 +33,12 @@ export async function createLead(input: CreateLeadInput): Promise<{ id: string }
   const messageParts = [input.message?.trim() || '']
   if (input.businessType) messageParts.push(`Tipo de negócio: ${input.businessType}`)
 
-  const { data, error } = await getSupabase()
+  // UUID no client: anon pode INSERT mas não SELECT (RLS) — evita .select() pós-insert.
+  const leadId = crypto.randomUUID()
+  const { error } = await getSupabase()
     .from('leads')
     .insert({
+      id: leadId,
       kind: input.kind,
       status: 'new',
       contact_name: name,
@@ -48,11 +51,8 @@ export async function createLead(input: CreateLeadInput): Promise<{ id: string }
       message: messageParts.filter(Boolean).join('\n') || null,
       source: input.source || 'site',
     })
-    .select('id')
-    .single()
 
   if (error) throw error
-  const leadId = data.id as string
 
   const items = input.items?.filter((i) => i.productId || i.skuSnapshot || i.nameSnapshot) ?? []
   if (items.length > 0) {

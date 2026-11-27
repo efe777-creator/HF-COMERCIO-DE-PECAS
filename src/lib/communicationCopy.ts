@@ -5,20 +5,24 @@ export type AccessNotificationKind =
   | 'access_granted'
   | 'access_suspended'
 
+export type QuoteNotificationKind = 'quote_requested' | 'quote_sent'
+
+export type CommunicationKind = AccessNotificationKind | QuoteNotificationKind
+
 export type CommunicationAudience = 'customer' | 'staff'
 
 export type CommunicationCopy = {
-  kind: AccessNotificationKind
+  kind: CommunicationKind
   audience: CommunicationAudience
   title: string
   body: string
   href: string
-  category: 'acesso'
-  severity: 'importante' | 'acao_necessaria'
+  category: 'acesso' | 'comercial' | 'sistema'
+  severity: 'informativa' | 'importante' | 'acao_necessaria' | 'operacional'
   actionable: boolean
 }
 
-const COPY: Record<AccessNotificationKind, CommunicationCopy> = {
+const ACCESS_COPY: Record<AccessNotificationKind, CommunicationCopy> = {
   access_pending: {
     kind: 'access_pending',
     audience: 'staff',
@@ -51,12 +55,40 @@ const COPY: Record<AccessNotificationKind, CommunicationCopy> = {
   },
 }
 
+const QUOTE_COPY: Record<QuoteNotificationKind, CommunicationCopy> = {
+  quote_requested: {
+    kind: 'quote_requested',
+    audience: 'staff',
+    title: 'Nova cotação recebida',
+    body: 'Há uma solicitação de cotação na fila comercial.',
+    href: '/admin/pedidos/cotacoes',
+    category: 'comercial',
+    severity: 'acao_necessaria',
+    actionable: true,
+  },
+  quote_sent: {
+    kind: 'quote_sent',
+    audience: 'customer',
+    title: 'Cotação enviada',
+    body: 'Recebemos sua solicitação de cotação. O time comercial retorna em breve.',
+    href: '/conta/avisos',
+    category: 'comercial',
+    severity: 'informativa',
+    actionable: false,
+  },
+}
+
 export function isAccessNotificationKind(kind: string): kind is AccessNotificationKind {
   return kind === 'access_pending' || kind === 'access_granted' || kind === 'access_suspended'
 }
 
-export function communicationCopyForKind(kind: AccessNotificationKind): CommunicationCopy {
-  return COPY[kind]
+export function isQuoteNotificationKind(kind: string): kind is QuoteNotificationKind {
+  return kind === 'quote_requested' || kind === 'quote_sent'
+}
+
+export function communicationCopyForKind(kind: CommunicationKind): CommunicationCopy {
+  if (isAccessNotificationKind(kind)) return ACCESS_COPY[kind]
+  return QUOTE_COPY[kind]
 }
 
 export function kindForCustomerStatus(
@@ -67,8 +99,10 @@ export function kindForCustomerStatus(
   return 'access_pending'
 }
 
-/** Href do CTA no card (conta: Ver conta; staff: Clientes). */
-export function communicationCtaLabel(kind: AccessNotificationKind): string {
+/** Href do CTA no card. */
+export function communicationCtaLabel(kind: CommunicationKind): string {
   if (kind === 'access_pending') return 'Abrir clientes'
+  if (kind === 'quote_requested') return 'Abrir cotações'
+  if (kind === 'quote_sent') return 'Ver avisos'
   return 'Ver conta'
 }

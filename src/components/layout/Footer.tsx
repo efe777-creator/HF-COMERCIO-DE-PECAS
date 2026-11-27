@@ -90,7 +90,7 @@ export function Footer() {
             Falar com a HF
           </Link>
           <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/cotacao">
-            Solicitar cotação
+            Cotação
           </Link>
           <Link className="mb-2 block text-[13px] text-hf-muted hover:text-hf-red-bright" to="/seja-parceiro">
             Seja parceiro

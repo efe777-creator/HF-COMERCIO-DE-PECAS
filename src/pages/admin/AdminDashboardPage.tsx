@@ -9,7 +9,7 @@ const shortcuts = [
   { to: '/admin/produtos', title: 'Produtos', desc: 'Peça + aplicações (vínculo versão · motor · período)' },
   { to: '/admin/veiculos', title: 'Veículos', desc: 'Cadastro do carro (versão → motor → período)' },
   { to: '/admin/campanhas', title: 'Campanhas', desc: 'Destaques na home' },
-  { to: '/admin/cotacoes', title: 'Cotações (leads)', desc: 'Pedidos de cotação' },
+  { to: '/admin/pedidos', title: 'Central de Pedidos', desc: 'Cotações da cesta · pedidos depois' },
   { to: '/admin/clientes/listas', title: 'Listas B2B', desc: 'Visibilidade — dentro de Clientes' },
   { to: '/admin/clientes', title: 'Clientes B2B', desc: 'Cadastro, status e catálogos' },
   { to: '/admin/kits', title: 'Kits', desc: 'BOM + fotos dos itens' },
