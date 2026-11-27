@@ -1,7 +1,8 @@
 # HF — Central de Comunicação (Andar 1)
 
 **Data:** 2026-11-25  
-**Escopo:** só HF. Avisos **in-app** de acesso B2B e cotações da cesta. Sem WhatsApp Cloud, OTP, checkout ou FAL.
+**Escopo:** só HF. Avisos **in-app** de acesso B2B e cotações da cesta. Sem WhatsApp Cloud, OTP, checkout ou FAL.  
+**Jornada:** [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md) · [specs/HF_SPEC_E1_COMUNICACAO.md](./specs/HF_SPEC_E1_COMUNICACAO.md)
 
 ## Nome
 
@@ -31,6 +32,10 @@ CTA `wa.me` (`VITE_WHATSAPP_NUMBER`) permanece fora deste módulo.
 | `access_suspended` | customer | staff suspende | `/conta/avisos` |
 | `quote_requested` | staff | envio cesta `/cotacao` | `/admin/pedidos/cotacoes` (+ `?lead=`) |
 | `quote_sent` | customer | envio cesta (logado) | `/conta/avisos` |
+
+### Kinds planejados (jornada — in-app only)
+
+`request_received` · `request_complement` · `access_rejected` · `quote_forwarded` · `quote_closed` — ver spec E1.
 
 ## Nota UX
 

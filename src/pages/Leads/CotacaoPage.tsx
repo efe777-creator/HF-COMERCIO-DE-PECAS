@@ -16,7 +16,11 @@ import {
   type QuoteBasketItem,
 } from '@/lib/quoteBasket'
 import { buildQuoteRomaneioMessage } from '@/lib/quoteRomaneio'
-import { storeWhatsAppHref } from '@/lib/whatsapp'
+import { storeWhatsAppHref, whatsAppHref } from '@/lib/whatsapp'
+import {
+  listActiveSellersPublic,
+  type PublicSeller,
+} from '@/services/admin/adminSellerService'
 import { emitQuoteNotifications } from '@/services/communication/communicationService'
 import { createLead } from '@/services/leads/leadService'
 import { attachResolvedPrices } from '@/services/pricing/priceResolutionService'
@@ -48,6 +52,15 @@ export function CotacaoPage() {
   const [romaneio, setRomaneio] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
+  const [sellers, setSellers] = useState<PublicSeller[]>([])
+  const [sellerId, setSellerId] = useState('')
+  const [complementOpen, setComplementOpen] = useState(false)
+
+  useEffect(() => {
+    void listActiveSellersPublic()
+      .then(setSellers)
+      .catch(() => setSellers([]))
+  }, [])
 
   useEffect(() => {
     if (seeded) return
@@ -163,8 +176,16 @@ export function CotacaoPage() {
       setError('Adicione ao menos um item à cotação.')
       return
     }
+    const needsComplement = !contactName.trim() || !phone.trim()
+    if (needsComplement) {
+      setComplementOpen(true)
+      setError('Complete nome e telefone para enviar.')
+      return
+    }
     setSaving(true)
     try {
+      const selected = sellers.find((s) => s.id === sellerId) ?? null
+      const forwardedAt = selected ? new Date().toISOString() : null
       const { id } = await createLead({
         kind: 'quote',
         contactName,
@@ -173,6 +194,9 @@ export function CotacaoPage() {
         companyName,
         message,
         source: 'cotacao-cesta',
+        customerId: user?.customerId ?? null,
+        recipientSellerId: selected?.id ?? null,
+        forwardedAt,
         items: items.map((i) => ({
           productId: i.productId || null,
           skuSnapshot: i.sku || null,
@@ -216,8 +240,10 @@ export function CotacaoPage() {
       setItems([])
       setDoneId(id)
       setRomaneio(msg)
+      setComplementOpen(false)
 
-      const href = storeWhatsAppHref(msg)
+      const sellerPhone = selected?.whatsapp?.replace(/\D/g, '') || ''
+      const href = sellerPhone ? whatsAppHref(sellerPhone, msg) : storeWhatsAppHref(msg)
       if (href) window.open(href, '_blank', 'noopener,noreferrer')
     } catch (err) {
       const msg =
@@ -375,6 +401,23 @@ export function CotacaoPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+        {sellers.length > 0 ? (
+          <label className="block text-sm font-semibold text-hf-ink">
+            Vendedor preferencial (opcional)
+            <select
+              className="mt-1 w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
+              value={sellerId}
+              onChange={(e) => setSellerId(e.target.value)}
+            >
+              <option value="">Loja HF (padrão)</option>
+              {sellers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="block text-sm font-semibold text-hf-ink">
           Observações
           <textarea
@@ -384,6 +427,11 @@ export function CotacaoPage() {
             onChange={(e) => setMessage(e.target.value)}
           />
         </label>
+        {complementOpen ? (
+          <p className="m-0 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Complete seus dados de contato acima para finalizar o envio.
+          </p>
+        ) : null}
         {error ? <p className="text-sm text-hf-red">{error}</p> : null}
         <div className="flex flex-wrap gap-2 pt-2">
           <Button type="submit" variant="primary" disabled={saving || !items.length}>

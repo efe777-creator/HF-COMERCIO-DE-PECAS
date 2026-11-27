@@ -3,9 +3,15 @@ import { AdaptiveWorkspace } from '@/components/admin/workspace/AdaptiveWorkspac
 import { Button } from '@/components/common/Button'
 import { Loading } from '@/components/common/Loading'
 import { useIdSplitTabs } from '@/hooks/useIdSplitTabs'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  closeQuoteLead,
+  reopenQuoteLead,
+} from '@/services/leads/commercialLeadService'
 import {
   adminListLeadItems,
   adminListLeads,
+  adminUpdateLeadNotes,
   adminUpdateLeadStatus,
   type LeadRow,
   type LeadStatus,
@@ -13,7 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-const STATUS_OPTIONS: LeadStatus[] = ['new', 'in_progress', 'won', 'lost', 'spam']
+const STATUS_OPTIONS: LeadStatus[] = ['new', 'in_progress', 'spam']
 
 function statusLabel(s: LeadStatus): string {
   const map: Record<LeadStatus, string> = {
@@ -55,11 +61,17 @@ function QuoteGuide({
   lead: LeadRow
   onPatched: (row: LeadRow) => void
 }) {
+  const { user } = useAuth()
   const [items, setItems] = useState<LeadItemRow[]>([])
   const [loadingItems, setLoadingItems] = useState(true)
   const [notes, setNotes] = useState(lead.staff_notes ?? '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [closeReason, setCloseReason] = useState('')
+  const canReopen =
+    (user?.role ?? '').toLowerCase() === 'administrador' ||
+    (user?.role ?? '').toLowerCase() === 'gerente' ||
+    (user?.role ?? '').toLowerCase() === 'admin'
 
   useEffect(() => {
     setNotes(lead.staff_notes ?? '')
@@ -104,6 +116,54 @@ function QuoteGuide({
       setBusy(false)
     }
   }
+
+  async function encerrar(outcome: 'won' | 'lost') {
+    setBusy(true)
+    setErr(null)
+    try {
+      await closeQuoteLead({
+        leadId: lead.id,
+        outcome,
+        reason: closeReason,
+        actorProfileId: user?.id,
+      })
+      onPatched({
+        ...lead,
+        status: outcome,
+        close_reason: closeReason,
+        closed_at: new Date().toISOString(),
+        staff_notes: notes,
+      })
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Falha ao encerrar')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function reabrir() {
+    setBusy(true)
+    setErr(null)
+    try {
+      await reopenQuoteLead({
+        leadId: lead.id,
+        actorProfileId: user?.id,
+        actorRole: user?.role,
+      })
+      onPatched({
+        ...lead,
+        status: 'in_progress',
+        closed_at: null,
+        close_reason: null,
+      })
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Falha ao reabrir')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const isClosed = Boolean(lead.closed_at) || lead.status === 'won' || lead.status === 'lost'
 
   return (
     <div className="space-y-4 p-1" data-admin-cotacao-guide>
@@ -160,21 +220,28 @@ function QuoteGuide({
         )}
       </div>
 
-      <label className="block text-sm font-semibold">
-        Status
-        <select
-          className="mt-1 w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2"
-          value={lead.status}
-          disabled={busy}
-          onChange={(e) => void saveStatus(e.target.value as LeadStatus)}
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {statusLabel(s)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {!isClosed ? (
+        <label className="block text-sm font-semibold">
+          Status (fila)
+          <select
+            className="mt-1 w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2"
+            value={lead.status === 'won' || lead.status === 'lost' ? 'in_progress' : lead.status}
+            disabled={busy}
+            onChange={(e) => void saveStatus(e.target.value as LeadStatus)}
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <p className="m-0 text-sm font-semibold">
+          Encerrada · {statusLabel(lead.status)}
+          {lead.close_reason ? ` — ${lead.close_reason}` : ''}
+        </p>
+      )}
 
       <label className="block text-sm font-semibold">
         Notas internas
@@ -189,10 +256,44 @@ function QuoteGuide({
         type="button"
         variant="outline"
         disabled={busy}
-        onClick={() => void saveStatus(lead.status)}
+        onClick={() => {
+          setBusy(true)
+          setErr(null)
+          void adminUpdateLeadNotes(lead.id, notes)
+            .then(() => onPatched({ ...lead, staff_notes: notes }))
+            .catch((e) => setErr(e instanceof Error ? e.message : 'Falha ao salvar'))
+            .finally(() => setBusy(false))
+        }}
       >
         Salvar notas
       </Button>
+
+      {!isClosed ? (
+        <div className="space-y-2 rounded-[12px] border border-hf-line bg-hf-bg p-3">
+          <p className="m-0 text-sm font-extrabold">Encerrar cotação</p>
+          <label className="block text-xs font-semibold">
+            Motivo *
+            <textarea
+              className="mt-1 w-full rounded-[10px] border border-hf-line bg-hf-surface px-3 py-2 text-sm"
+              rows={2}
+              value={closeReason}
+              onChange={(e) => setCloseReason(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" disabled={busy} onClick={() => void encerrar('won')}>
+              Ganhou
+            </Button>
+            <Button type="button" variant="outline" disabled={busy} onClick={() => void encerrar('lost')}>
+              Perdeu
+            </Button>
+          </div>
+        </div>
+      ) : canReopen ? (
+        <Button type="button" variant="outline" disabled={busy} onClick={() => void reabrir()}>
+          Reabrir (admin/gerente)
+        </Button>
+      ) : null}
       {err ? <p className="m-0 text-sm text-hf-red">{err}</p> : null}
     </div>
   )

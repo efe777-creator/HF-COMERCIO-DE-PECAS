@@ -1,7 +1,8 @@
 # HF — Clientes B2B: cadastro estruturado (Andar 1)
 
-**Data:** 2026-11-25  
-**Escopo:** só HF. Adaptive lista+guia. Sem pedidos, NF-e, crédito liberado, multi-garagem UI, FAL.
+**Data:** 2026-11-26  
+**Escopo:** só HF. Adaptive lista+guia. Sem pedidos, NF-e, crédito liberado, multi-garagem UI, FAL.  
+**Jornada:** [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md) · [specs/HF_SPEC_C1_CLIENTES.md](./specs/HF_SPEC_C1_CLIENTES.md)
 
 ## Decisões
 
@@ -16,7 +17,11 @@
 | Crédito | pill Em breve |
 | Endereço | `customer_addresses` kind=`principal` (schema pronto para entrega/operacional) |
 | Lista B2B | `customers.assigned_price_list_id` → lista `scope=assigned` (Comercial) |
-| Condições | N:N `customer_payment_conditions`; **vazio = só À vista (AVISTA)** |
+| Condições | N:N `customer_payment_conditions`; **vazio = só À vista (AVISTA)** no uso da loja |
+| Vendedor padrão | **Planejado** — `default_seller_id`; obrigatório para `active` (jornada) |
+| Gate `active` | **Planejado** — lista + condição **explícita** (vazio não basta p/ ativar) + vendedor active; multi-path — ver [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md) §13 |
+
+> **Nota jornada:** o gate de ativação diverge do “vazio = AVISTA” histórico: para **tornar active** a condição deve estar registrada explicitamente (inclusive AVISTA). Clientes já active sem vendedor não são suspensos em massa.
 
 ## Comercial (guia)
 

@@ -54,4 +54,23 @@ describe('communicationCopy', () => {
       audience: 'customer',
     })
   })
+
+  it('maps jornada kinds', () => {
+    expect(communicationCopyForKind('request_received')).toMatchObject({
+      title: 'Nova solicitação comercial',
+      href: '/admin/pedidos/solicitacoes',
+    })
+    expect(communicationCopyForKind('request_complement')).toMatchObject({
+      title: 'Complete seus dados',
+    })
+    expect(communicationCopyForKind('access_rejected')).toMatchObject({
+      title: 'Solicitação não aprovada',
+    })
+    expect(communicationCopyForKind('quote_forwarded')).toMatchObject({
+      title: 'Cotação encaminhada',
+    })
+    expect(communicationCopyForKind('quote_closed')).toMatchObject({
+      title: 'Cotação encerrada',
+    })
+  })
 })

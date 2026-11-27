@@ -1,8 +1,9 @@
 # Modelo de dados — Andar 1 Catálogo Digital
 
-**Versão:** 1.1  
-**Data:** 2026-11-24  
+**Versão:** 1.2  
+**Data:** 2026-11-26  
 **PRD:** [PRD_FASE_01.md](./PRD_FASE_01.md) v1.1  
+**Jornada:** [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md)  
 **SoT schema:** `supabase/migrations_hf/*.sql`  
 **Auditoria:** [HF_AUDITORIA_TABELAS_RPCS.md](../../auditoria/runtime/HF_AUDITORIA_TABELAS_RPCS.md)
 
@@ -39,7 +40,23 @@ status (visibilidade) ≠ preço ≠ estoque ≠ pedido
 `imports`, `import_items`, `import_profiles` (+ RPCs `apply_*`)
 
 ### B2B (cadastro)
-`customers` (+ `assigned_price_list_id`, endereço principal), `customer_users`, `customer_groups`, `catalogs`, `catalog_products`, `customer_group_catalogs`, `customer_catalogs`, `customer_payment_conditions` (N:N; vazio = AVISTA), `payment_conditions` (+ installments/methods)
+`customers` (+ `assigned_price_list_id`, endereço principal), `customer_addresses`, `customer_users`, `customer_groups`, `catalogs`, `catalog_products`, `customer_group_catalogs`, `customer_catalogs`, `customer_payment_conditions` (N:N; vazio = AVISTA hoje), `payment_conditions` (+ installments/methods)  
+**Planejado (jornada):** `customers.default_seller_id` → `sellers` (FK); gate active multi-path — [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md) §12–§13
+
+### Leads / cotação (em uso)
+`leads` (`kind` quote\|partner\|contact; `status` new\|in_progress\|won\|lost\|spam), `lead_items`  
+Migrations: `18_leads.sql` + políticas insert públicas (**preservar**)  
+**Planejado:** `customer_id`, `recipient_seller_id`, `close_reason`, `closed_at`, `forwarded_at`, `rejected_*` (partner), `business_profile`, `interest`
+
+### Comunicação (em uso)
+`app_notifications`, `notification_deliveries`, catálogo de kinds (`access_*`, `quote_*`)  
+**Planejado:** `request_*`, `access_rejected`, `quote_forwarded`, `quote_closed` + idempotência
+
+### Vendedores (planejado — Andar 1 jornada)
+`sellers` + view/RPC pública (`id`, `name`, `whatsapp`) — **≠** `profiles` operadores; soft-inactivate  
+
+### Auditoria (planejado)
+`commercial_events` leve — [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md) §16
 
 ### Preço (staff only)
 `price_lists`, `price_list_items`, `price_change_history`
@@ -99,7 +116,8 @@ PRODUTO
 | Posições 3 eixos | Campos estruturados — não só texto livre |
 | Validação de aplicação | status + fonte + responsável |
 | Ano-modelo vs fabricação | Modelar sem quebrar busca |
-| Leads | Tabela mínima ou processo ops até existir |
+| Leads | **Em uso** — ver §2; evoluir FKs jornada |
+| Sellers | Nova entidade — ver jornada comercial |
 | Campanhas | Entidade campanha↔produtos (P1) |
 
 ---

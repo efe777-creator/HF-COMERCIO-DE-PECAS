@@ -14,6 +14,7 @@ import {
   adminSetCustomerUserPrimary,
   adminUnlinkUserFromCustomer,
   adminUpsertB2bCustomer,
+  assertCustomerCanActivate,
   type AdminB2bCustomer,
   type AdminCustomerGroup,
   type AdminCustomerUserLink,
@@ -35,6 +36,7 @@ import {
   type AdminPaymentCondition,
 } from '@/services/admin/adminPaymentConditionService'
 import { adminListPriceLists, type PriceList } from '@/services/admin/adminPriceListService'
+import { adminListSellers, type SellerRow } from '@/services/admin/adminSellerService'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -113,6 +115,7 @@ type Draft = {
   groupId: string
   assignedPriceListId: string
   paymentConditionIds: string[]
+  defaultSellerId: string
 }
 
 function emptyDraft(): Draft {
@@ -143,6 +146,7 @@ function emptyDraft(): Draft {
     groupId: '',
     assignedPriceListId: '',
     paymentConditionIds: [],
+    defaultSellerId: '',
   }
 }
 
@@ -175,6 +179,7 @@ function fromCustomer(c: AdminB2bCustomer): Draft {
     groupId: c.groupId ?? '',
     assignedPriceListId: c.assignedPriceListId ?? '',
     paymentConditionIds: c.paymentConditionIds ?? [],
+    defaultSellerId: c.defaultSellerId ?? '',
   }
 }
 
@@ -197,6 +202,8 @@ export function CustomerWorkSurface({ customerId, groups, onSaved, onClose }: Pr
   const [cnpjPreview, setCnpjPreview] = useState<BrasilApiCnpjLookup | null>(null)
   const [priceLists, setPriceLists] = useState<PriceList[]>([])
   const [paymentConditions, setPaymentConditions] = useState<AdminPaymentCondition[]>([])
+  const [sellers, setSellers] = useState<SellerRow[]>([])
+  const [gateHints, setGateHints] = useState<string[]>([])
   const [catalogs, setCatalogs] = useState<AdminCatalogList[]>([])
   const [assignedCatalogs, setAssignedCatalogs] = useState<string[]>([])
   const [catalogId, setCatalogId] = useState('')
@@ -226,18 +233,22 @@ export function CustomerWorkSurface({ customerId, groups, onSaved, onClose }: Pr
   }
 
   const loadAccess = useCallback(async (id: string) => {
-    const [cats, users, lists, allCats, conds] = await Promise.all([
+    const [cats, users, lists, allCats, conds, sellerRows, gate] = await Promise.all([
       adminListCustomerCatalogIds(id),
       adminListCustomerUsers(id),
       adminListPriceLists().catch(() => [] as PriceList[]),
       adminListCatalogs().catch(() => [] as AdminCatalogList[]),
       adminListPaymentConditions().catch(() => [] as AdminPaymentCondition[]),
+      adminListSellers().catch(() => [] as SellerRow[]),
+      assertCustomerCanActivate(id).catch(() => null),
     ])
     setAssignedCatalogs(cats)
     setLinkedUsers(users)
     setPriceLists(lists.filter((l) => l.scope === 'assigned'))
     setCatalogs(allCats)
     setPaymentConditions(conds.filter((c) => c.status === 'published' || c.status === 'draft'))
+    setSellers(sellerRows)
+    setGateHints(gate && !gate.ok ? gate.missing : [])
   }, [])
 
   useEffect(() => {
@@ -248,13 +259,15 @@ export function CustomerWorkSurface({ customerId, groups, onSaved, onClose }: Pr
         setCnpjPreview(null)
         setSavedId(null)
         setLoading(false)
-        const [lists, conds] = await Promise.all([
+        const [lists, conds, sellerRows] = await Promise.all([
           adminListPriceLists().catch(() => [] as PriceList[]),
           adminListPaymentConditions().catch(() => [] as AdminPaymentCondition[]),
+          adminListSellers().catch(() => [] as SellerRow[]),
         ])
         if (!cancelled) {
           setPriceLists(lists.filter((l) => l.scope === 'assigned'))
           setPaymentConditions(conds.filter((c) => c.status === 'published' || c.status === 'draft'))
+          setSellers(sellerRows)
           setCatalogs(await adminListCatalogs().catch(() => []))
         }
         return
@@ -387,6 +400,7 @@ export function CustomerWorkSurface({ customerId, groups, onSaved, onClose }: Pr
         groupId: draft.groupId || null,
         notes: draft.notes,
         assignedPriceListId: draft.assignedPriceListId || null,
+        defaultSellerId: draft.defaultSellerId || null,
         paymentConditionIds: draft.paymentConditionIds,
         address: {
           kind: 'principal',
@@ -706,6 +720,43 @@ export function CustomerWorkSurface({ customerId, groups, onSaved, onClose }: Pr
                   ]}
                 />
               </div>
+            </div>
+
+            {gateHints.length > 0 ? (
+              <div className="rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                <p className="m-0 font-extrabold">Incompleto para ativar</p>
+                <ul className="mb-0 mt-1 list-disc pl-4 text-xs">
+                  {gateHints.map((h) => (
+                    <li key={h}>{h}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="rounded-[10px] border border-hf-line bg-hf-bg p-3">
+              <h3 className="m-0 text-xs font-bold uppercase text-hf-muted">
+                Vendedor padrão
+              </h3>
+              <Select
+                label="Vendedor comercial"
+                value={draft.defaultSellerId}
+                onChange={(e) => patch({ defaultSellerId: e.target.value })}
+                options={[
+                  { value: '', label: '— selecione —' },
+                  ...sellers
+                    .filter((s) => s.status === 'active' || s.id === draft.defaultSellerId)
+                    .map((s) => ({
+                      value: s.id,
+                      label: `${s.name}${s.status !== 'active' ? ' (inativo)' : ''}`,
+                    })),
+                ]}
+              />
+              <p className="mb-0 mt-1 text-xs text-hf-muted">
+                Obrigatório para status active.{' '}
+                <Link to="/admin/vendedores" className="font-semibold underline">
+                  Gerir vendedores
+                </Link>
+              </p>
             </div>
 
             <div className="rounded-[10px] border border-hf-line bg-hf-bg p-3">

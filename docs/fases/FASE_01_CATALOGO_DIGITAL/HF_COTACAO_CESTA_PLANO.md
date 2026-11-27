@@ -1,7 +1,8 @@
 # HF — Cesta de cotação (Andar 1)
 
 **Data:** 2026-11-26  
-**Escopo:** só HF. Cesta multi-item + romaneio `wa.me` + avisos in-app. Sem checkout, pedido ou WhatsApp Cloud.
+**Escopo:** só HF. Cesta multi-item + romaneio `wa.me` + avisos in-app. Sem checkout, pedido ou WhatsApp Cloud.  
+**Jornada:** [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md) · [specs/HF_SPEC_A6_COTACAO.md](./specs/HF_SPEC_A6_COTACAO.md) · [specs/HF_SPEC_B3_COTACOES.md](./specs/HF_SPEC_B3_COTACOES.md)
 
 ## Nome
 
@@ -24,9 +25,15 @@ Não há “carrinho de compra” neste andar.
 
 ## Admin — Central de Pedidos
 
-Espelho Finanças: layout com menu Visão geral · **Cotações** (vivo) · Pedidos/Logística (em breve).  
+Espelho Finanças: layout com menu Visão geral · **Solicitações** (planejado) · **Cotações** (vivo) · Pedidos/Logística (em breve).  
 Fila Adaptive (`moduleKey=pedidos`): lista + guia (contato, itens via `adminListLeadItems`, status, notas, protocolo).  
 Redirect: `/admin/cotacoes` → `/admin/pedidos/cotacoes`.
+
+## Evolução jornada (docs)
+
+- Gate de complementação cadastral antes de encaminhar (cliente `active`).  
+- Escolha de **vendedor destinatário** (padrão do customer pré-selecionado); guest continua WA loja.  
+- Encerrar cotação com **motivo** obrigatório na Central.
 
 ## Preço
 

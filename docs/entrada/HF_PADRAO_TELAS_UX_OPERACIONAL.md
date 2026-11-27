@@ -68,10 +68,11 @@ Ficha completa (rota dedicada): abas — uma responsabilidade por aba
 **Vivo — hub Produtos:** `/admin/produtos` = lista + guia **full** (`AdaptiveWorkspace` + `GuideStackPanels` + `ProductWorkSurface`; prefs `hf-admin-workspace-v1` / `products`). Edição na guia: identidade, categoria, preços, aplicações, mídia, referências, kits usados. Ficha `/admin/produtos/:id` permanece para Novo e cadastro longo.  
 **Vivo — hub Kits:** shell Adaptive (`kits`).  
 **Vivo — Central de Finanças:** `/admin/financeiro` = menu (Visão geral · Condições · Entradas/Saídas/Ajustes em breve); condições em `/admin/financeiro/condicoes` (Adaptive: Identidade · Agenda · Meios · Disponibilidade · Simular + Liberar); sem ficha full nesta base.  
-**Vivo — Clientes B2B:** `/admin/clientes` Adaptive (`customers`); guia Identidade · Contato · Endereço · Comercial (lista assigned + condições) · Acesso · Crédito (placeholder); BrasilAPI CNPJ + ViaCEP; ver `HF_CLIENTES_CADASTRO_PLANO.md`.  
+**Vivo — Clientes B2B:** `/admin/clientes` Adaptive (`customers`); guia Identidade · Contato · Endereço · Comercial (lista assigned + condições; **vendedor padrão** no plano jornada) · Acesso · Crédito (placeholder); BrasilAPI CNPJ + ViaCEP; ver `HF_CLIENTES_CADASTRO_PLANO.md` · `HF_JORNADA_COMERCIAL_PLANO.md`.  
 **Vivo — Central de Comunicação:** `/admin/comunicacao` Adaptive (`comunicacao`); avisos in-app de acesso B2B + cotação; conta `/conta/avisos`; ver `HF_COMUNICACAO_PLANO.md`. WhatsApp Cloud fora deste ciclo.  
-**Vivo — Central de Pedidos:** `/admin/pedidos` (menu Visão · Cotações · Pedidos/Logística em breve); fila Adaptive de cotações (`moduleKey=pedidos`); redirect `/admin/cotacoes`. Pedidos/checkout depois.  
+**Vivo — Central de Pedidos:** `/admin/pedidos` (menu Visão · **Cotações** vivo · **Solicitações** planejado · Pedidos/Logística em breve); Adaptive `moduleKey=pedidos`; redirect `/admin/cotacoes`. Pedidos/checkout = Andar 2.  
 **Vivo — Cesta de cotação:** `/cotacao` multi-item (localStorage); card/ficha “Adicionar à cotação”; romaneio `wa.me` após envio; ver `HF_COTACAO_CESTA_PLANO.md`.  
+**Planejado — Jornada comercial:** cadastro inicial `/cadastro-comercial`, Solicitações, Vendedores (`/admin/vendedores`), gates de aprovação, destinatário da cotação; specs em `docs/fases/FASE_01_CATALOGO_DIGITAL/specs/` · mestre `HF_JORNADA_COMERCIAL_PLANO.md` · antirregress `HF_JORNADA_ANTIRREGRESS_SMOKE.md`.  
 **Vivo — Preços:** `/admin/precos` Adaptive (hub + ficha).  
 **Ainda a portar:** Veículos, Listas B2B de catálogo (visibilidade — distinto de lista de preço). **Não** copiar CSS/classes de terceiros.
 

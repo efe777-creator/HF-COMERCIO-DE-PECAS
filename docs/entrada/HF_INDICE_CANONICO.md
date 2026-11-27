@@ -55,6 +55,8 @@ A HF é produto **independente** (marca, regras, stack e dados próprios).
 | HF_VISAO_2036 | Visão / essência | CANÔNICO v1.0 |
 | HF_IDENTIDADE_VISUAL | Marca / tokens / voz | CANÔNICO v1.0 |
 | PRD_FASE_01 + satélites | Andar 1 (spec GPT×HF) | CANÔNICO v1.1 |
+| HF_JORNADA_COMERCIAL_PLANO + specs/ | Jornada comercial Andar 1 (telas) | CANÔNICO planejamento |
+| HF_JORNADA_ANTIRREGRESS_SMOKE | Checklist PR/deploy jornada (R/N + MCP) | CANÔNICO planejamento |
 | HF_PADRAO_TELAS_UX_OPERACIONAL | UX ops | CANÔNICO |
 | Arquitetura / SoT / Integrações | Tech | CANÔNICO |
 | Sidicom / Frete / Modelo ops / Runbooks | Operação | CANÔNICO |
