@@ -4,10 +4,22 @@ export type AccessNotificationKind =
   | 'access_pending'
   | 'access_granted'
   | 'access_suspended'
+  | 'access_rejected'
 
-export type QuoteNotificationKind = 'quote_requested' | 'quote_sent'
+export type QuoteNotificationKind =
+  | 'quote_requested'
+  | 'quote_sent'
+  | 'quote_forwarded'
+  | 'quote_closed'
 
-export type CommunicationKind = AccessNotificationKind | QuoteNotificationKind
+export type RequestNotificationKind =
+  | 'request_received'
+  | 'request_complement'
+
+export type CommunicationKind =
+  | AccessNotificationKind
+  | QuoteNotificationKind
+  | RequestNotificationKind
 
 export type CommunicationAudience = 'customer' | 'staff'
 
@@ -53,6 +65,16 @@ const ACCESS_COPY: Record<AccessNotificationKind, CommunicationCopy> = {
     severity: 'importante',
     actionable: true,
   },
+  access_rejected: {
+    kind: 'access_rejected',
+    audience: 'staff',
+    title: 'Solicitação não aprovada',
+    body: 'Uma solicitação comercial foi rejeitada. Contato HF registrado.',
+    href: '/admin/pedidos/solicitacoes',
+    category: 'acesso',
+    severity: 'operacional',
+    actionable: false,
+  },
 }
 
 const QUOTE_COPY: Record<QuoteNotificationKind, CommunicationCopy> = {
@@ -76,18 +98,76 @@ const QUOTE_COPY: Record<QuoteNotificationKind, CommunicationCopy> = {
     severity: 'informativa',
     actionable: false,
   },
+  quote_forwarded: {
+    kind: 'quote_forwarded',
+    audience: 'staff',
+    title: 'Cotação encaminhada',
+    body: 'Cotação encaminhada ao vendedor. Protocolo registrado.',
+    href: '/admin/pedidos/cotacoes',
+    category: 'comercial',
+    severity: 'operacional',
+    actionable: true,
+  },
+  quote_closed: {
+    kind: 'quote_closed',
+    audience: 'staff',
+    title: 'Cotação encerrada',
+    body: 'Cotação encerrada com resultado e protocolo.',
+    href: '/admin/pedidos/cotacoes',
+    category: 'comercial',
+    severity: 'informativa',
+    actionable: false,
+  },
+}
+
+const REQUEST_COPY: Record<RequestNotificationKind, CommunicationCopy> = {
+  request_received: {
+    kind: 'request_received',
+    audience: 'staff',
+    title: 'Nova solicitação comercial',
+    body: 'Empresa/CNPJ na fila de solicitações.',
+    href: '/admin/pedidos/solicitacoes',
+    category: 'comercial',
+    severity: 'acao_necessaria',
+    actionable: true,
+  },
+  request_complement: {
+    kind: 'request_complement',
+    audience: 'customer',
+    title: 'Complete seus dados',
+    body: 'A HF pediu complemento de dados comerciais.',
+    href: '/cadastro-comercial',
+    category: 'comercial',
+    severity: 'acao_necessaria',
+    actionable: true,
+  },
 }
 
 export function isAccessNotificationKind(kind: string): kind is AccessNotificationKind {
-  return kind === 'access_pending' || kind === 'access_granted' || kind === 'access_suspended'
+  return (
+    kind === 'access_pending' ||
+    kind === 'access_granted' ||
+    kind === 'access_suspended' ||
+    kind === 'access_rejected'
+  )
 }
 
 export function isQuoteNotificationKind(kind: string): kind is QuoteNotificationKind {
-  return kind === 'quote_requested' || kind === 'quote_sent'
+  return (
+    kind === 'quote_requested' ||
+    kind === 'quote_sent' ||
+    kind === 'quote_forwarded' ||
+    kind === 'quote_closed'
+  )
+}
+
+export function isRequestNotificationKind(kind: string): kind is RequestNotificationKind {
+  return kind === 'request_received' || kind === 'request_complement'
 }
 
 export function communicationCopyForKind(kind: CommunicationKind): CommunicationCopy {
   if (isAccessNotificationKind(kind)) return ACCESS_COPY[kind]
+  if (isRequestNotificationKind(kind)) return REQUEST_COPY[kind]
   return QUOTE_COPY[kind]
 }
 
@@ -102,7 +182,10 @@ export function kindForCustomerStatus(
 /** Href do CTA no card. */
 export function communicationCtaLabel(kind: CommunicationKind): string {
   if (kind === 'access_pending') return 'Abrir clientes'
-  if (kind === 'quote_requested') return 'Abrir cotações'
-  if (kind === 'quote_sent') return 'Ver avisos'
+  if (kind === 'quote_requested' || kind === 'quote_forwarded' || kind === 'quote_closed') {
+    return 'Abrir cotações'
+  }
+  if (kind === 'request_received' || kind === 'access_rejected') return 'Abrir solicitações'
+  if (kind === 'quote_sent' || kind === 'request_complement') return 'Ver avisos'
   return 'Ver conta'
 }

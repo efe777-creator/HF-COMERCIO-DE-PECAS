@@ -41,6 +41,11 @@ const CotacaoPage = lazy(() =>
 const SejaParceiroPage = lazy(() =>
   import('@/pages/Leads/SejaParceiroPage').then((m) => ({ default: m.SejaParceiroPage })),
 )
+const CadastroComercialPage = lazy(() =>
+  import('@/pages/Leads/CadastroComercialPage').then((m) => ({
+    default: m.CadastroComercialPage,
+  })),
+)
 const ProductPage = lazy(() =>
   import('@/pages/Product/ProductPage').then((m) => ({ default: m.ProductPage })),
 )
@@ -210,6 +215,16 @@ const AdminPedidosCotacoesPage = lazy(() =>
     default: m.AdminPedidosCotacoesPage,
   })),
 )
+const AdminPedidosSolicitacoesPage = lazy(() =>
+  import('@/pages/admin/pedidos/AdminPedidosSolicitacoesPage').then((m) => ({
+    default: m.AdminPedidosSolicitacoesPage,
+  })),
+)
+const AdminVendedoresPage = lazy(() =>
+  import('@/pages/admin/vendedores/AdminVendedoresPage').then((m) => ({
+    default: m.AdminVendedoresPage,
+  })),
+)
 const AdminFinanceiroLayout = lazy(() =>
   import('@/pages/admin/financeiro/AdminFinanceiroLayout').then((m) => ({
     default: m.AdminFinanceiroLayout,
@@ -269,6 +284,7 @@ const adminChildren = [
   { path: 'clientes', element: <AdminCustomersPage /> },
   { path: 'clientes/listas', element: <AdminCatalogsPage /> },
   { path: 'listas', element: <Navigate to="/admin/clientes/listas" replace /> },
+  { path: 'vendedores', element: <AdminVendedoresPage /> },
   { path: 'grupos', element: <AdminCustomerGroupsPage /> },
   { path: 'operadores', element: <AdminOperatorsPage /> },
   { path: 'aplicacoes', element: <Navigate to="/admin/produtos" replace /> },
@@ -286,6 +302,7 @@ const adminChildren = [
     element: <AdminPedidosLayout />,
     children: [
       { index: true, element: <AdminPedidosHomePage /> },
+      { path: 'solicitacoes', element: <AdminPedidosSolicitacoesPage /> },
       { path: 'cotacoes', element: <AdminPedidosCotacoesPage /> },
     ],
   },
@@ -418,6 +435,14 @@ const publicChildren = [
     element: (
       <Suspend>
         <SejaParceiroPage />
+      </Suspend>
+    ),
+  },
+  {
+    path: 'cadastro-comercial',
+    element: (
+      <Suspend>
+        <CadastroComercialPage />
       </Suspend>
     ),
   },

@@ -40,6 +40,7 @@ const commercialLinks: AdminNavLink[] = [
 
 const clientsLinks: AdminNavLink[] = [
   { to: '/admin/clientes', label: 'Clientes B2B' },
+  { to: '/admin/vendedores', label: 'Vendedores' },
   { to: '/admin/grupos', label: 'Grupos' },
 ]
 

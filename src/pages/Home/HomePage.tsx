@@ -15,15 +15,17 @@ import {
   type Campaign,
 } from '@/services/admin/adminCampaignService'
 import type { Product } from '@/types'
+import { captureUtmFromSearch } from '@/lib/utmAttribution'
 import { buildHomeWhatsAppMessage } from '@/lib/whatsapp'
 import { listActiveBrands } from '@/services/brands/brandService'
 import { getVehicleOptions } from '@/services/vehicles/vehicleService'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 
 export function HomePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const categories = useCategories()
   const featured = useFeaturedProducts(8)
   const [q, setQ] = useState('')
@@ -32,6 +34,10 @@ export function HomePage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaignProducts, setCampaignProducts] = useState<Product[]>([])
   const [campaignsLoading, setCampaignsLoading] = useState(true)
+
+  useEffect(() => {
+    captureUtmFromSearch(location.search)
+  }, [location.search])
 
   useEffect(() => {
     void listActiveCampaignHighlights(8)
@@ -107,8 +113,8 @@ export function HomePage() {
             <Link to="/cotacao">
               <Button variant="outline">Cotação</Button>
             </Link>
-            <Link to="/seja-parceiro">
-              <Button variant="outline">Seja parceiro</Button>
+            <Link to="/cadastro-comercial">
+              <Button variant="outline">Cadastro comercial</Button>
             </Link>
             {!loggedIn ? (
               <Link to="/login">
@@ -290,12 +296,12 @@ export function HomePage() {
             </Link>
           </div>
           <div className="rounded-[14px] border border-hf-line bg-hf-surface p-6 text-left">
-            <h2 className="m-0 text-xl font-black text-hf-ink">Seja parceiro</h2>
+            <h2 className="m-0 text-xl font-black text-hf-ink">Cadastro comercial</h2>
             <p className="mt-2 text-sm text-hf-muted">
               Oficinas, autocenters, lojas e distribuidores — cadastro analisado pela HF.
             </p>
-            <Link to="/seja-parceiro" className="mt-4 inline-block">
-              <Button variant="dark">Quero ser parceiro</Button>
+            <Link to="/cadastro-comercial" className="mt-4 inline-block">
+              <Button variant="dark">Quero me cadastrar</Button>
             </Link>
           </div>
         </Container>

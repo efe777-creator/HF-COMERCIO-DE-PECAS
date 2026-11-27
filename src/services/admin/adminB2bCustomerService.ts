@@ -43,6 +43,7 @@ export interface AdminB2bCustomer {
   assignedPriceListId: string | null
   /** Condições vinculadas. Vazio = só À vista no catálogo/site. */
   paymentConditionIds: string[]
+  defaultSellerId: string | null
   createdAt: string
   /** Endereço principal (lista / guia). */
   address: AdminCustomerAddress | null
@@ -178,6 +179,7 @@ function mapCustomerRow(
     notes: (c.notes as string | null) ?? null,
     assignedPriceListId: (c.assigned_price_list_id as string | null) ?? null,
     paymentConditionIds,
+    defaultSellerId: (c.default_seller_id as string | null) ?? null,
     createdAt: String(c.created_at),
     address: addr,
   }
@@ -187,14 +189,14 @@ function mapCustomerRow(
 const CUSTOMER_SELECT_CORE = `
   id, legal_name, trade_name, cnpj, email, phone, whatsapp, status, group_id, notes, created_at,
   contact_name, state_registration, ie_indicator,
-  cnpj_status, cnpj_checked_at, cnae_code,
+  cnpj_status, cnpj_checked_at, cnae_code, default_seller_id,
   customer_groups(name),
   customer_addresses(id, kind, postal_code, street, street_number, complement, district, city, state, ibge_code, macro_region, country)
 `
 
 const CUSTOMER_SELECT_WITH_PRICE = `
   id, legal_name, trade_name, cnpj, email, phone, whatsapp, status, group_id, notes, created_at,
-  assigned_price_list_id, contact_name, state_registration, ie_indicator,
+  assigned_price_list_id, default_seller_id, contact_name, state_registration, ie_indicator,
   cnpj_status, cnpj_checked_at, cnae_code,
   customer_groups(name),
   customer_addresses(id, kind, postal_code, street, street_number, complement, district, city, state, ibge_code, macro_region, country)
@@ -337,6 +339,7 @@ export type UpsertB2bCustomerInput = {
   groupId?: string | null
   notes?: string
   assignedPriceListId?: string | null
+  defaultSellerId?: string | null
   /** Substituir vínculos de condição. Omitir = não altera. */
   paymentConditionIds?: string[]
   address?: Partial<AdminCustomerAddress> | null
@@ -382,6 +385,9 @@ export async function adminUpsertB2bCustomer(
   }
   if (input.assignedPriceListId !== undefined) {
     payload.assigned_price_list_id = input.assignedPriceListId || null
+  }
+  if (input.defaultSellerId !== undefined) {
+    payload.default_seller_id = input.defaultSellerId || null
   }
 
   const sb = getSupabase()
@@ -449,6 +455,13 @@ export async function adminUpsertB2bCustomer(
 
   const mapped = mapCustomerRow(data as Record<string, unknown>, address, paymentConditionIds)
   const nextStatus = mapped.status
+  if (nextStatus === 'active' && (isCreate || previousStatus !== 'active')) {
+    const gate = await assertCustomerCanActivate(customerId)
+    if (!gate.ok) {
+      await sb.from('customers').update({ status: previousStatus ?? 'pending' }).eq('id', customerId)
+      throw new Error(`Não é possível ativar: ${gate.missing.join('; ')}`)
+    }
+  }
   const shouldEmitAccess =
     nextStatus === 'pending' || nextStatus === 'active' || nextStatus === 'suspended'
   if (
@@ -541,8 +554,66 @@ export async function adminUpsertPrincipalAddress(
   return mapAddressRow(data as Record<string, unknown>)
 }
 
+export type CustomerActivateGate = {
+  ok: boolean
+  missing: string[]
+  hasPriceList: boolean
+  hasPaymentCondition: boolean
+  hasActiveSeller: boolean
+}
+
+/** Gates §14: lista + condição + vendedor ativo — sem active parcial. */
+export async function assertCustomerCanActivate(
+  customerId: string,
+): Promise<CustomerActivateGate> {
+  const sb = getSupabase()
+  const missing: string[] = []
+  const { data: cust, error } = await sb
+    .from('customers')
+    .select('assigned_price_list_id, default_seller_id')
+    .eq('id', customerId)
+    .maybeSingle()
+  if (error) throw error
+
+  const hasPriceList = Boolean(cust?.assigned_price_list_id)
+  if (!hasPriceList) missing.push('Lista de preço não atribuída')
+
+  const conditionIds = await adminListCustomerPaymentConditionIds(customerId)
+  const hasPaymentCondition = conditionIds.length > 0
+  if (!hasPaymentCondition) missing.push('Nenhuma condição de pagamento vinculada')
+
+  let hasActiveSeller = false
+  const sellerId = cust?.default_seller_id ? String(cust.default_seller_id) : ''
+  if (!sellerId) {
+    missing.push('Vendedor padrão não definido')
+  } else {
+    const { data: seller } = await sb
+      .from('sellers')
+      .select('id, status')
+      .eq('id', sellerId)
+      .maybeSingle()
+    hasActiveSeller = seller?.status === 'active'
+    if (!hasActiveSeller) missing.push('Vendedor padrão inativo ou inexistente')
+  }
+
+  return {
+    ok: missing.length === 0,
+    missing,
+    hasPriceList,
+    hasPaymentCondition,
+    hasActiveSeller,
+  }
+}
+
 export async function adminSetCustomerStatus(id: string, status: CustomerStatus) {
   const sb = getSupabase()
+  if (status === 'active') {
+    const gate = await assertCustomerCanActivate(id)
+    if (!gate.ok) {
+      throw new Error(`Não é possível ativar: ${gate.missing.join('; ')}`)
+    }
+  }
+
   const { data: before } = await sb
     .from('customers')
     .select('legal_name, trade_name')

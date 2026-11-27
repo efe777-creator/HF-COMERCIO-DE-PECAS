@@ -10,6 +10,7 @@ type PedMenuItem = {
 
 const MENU: PedMenuItem[] = [
   { to: '/admin/pedidos', label: 'Visão geral', end: true },
+  { to: '/admin/pedidos/solicitacoes', label: 'Solicitações' },
   { to: '/admin/pedidos/cotacoes', label: 'Cotações' },
   {
     to: '/admin/pedidos/lista',

@@ -1,4 +1,5 @@
 import { getSupabase } from '@/lib/supabase'
+import type { UtmAttribution } from '@/lib/utmAttribution'
 
 export type LeadKind = 'quote' | 'partner' | 'contact'
 export type LeadStatus = 'new' | 'in_progress' | 'won' | 'lost' | 'spam'
@@ -23,6 +24,12 @@ export type CreateLeadInput = {
   message?: string
   source?: string
   businessType?: string
+  businessProfile?: string
+  interest?: string
+  attribution?: UtmAttribution | null
+  customerId?: string | null
+  recipientSellerId?: string | null
+  forwardedAt?: string | null
   items?: LeadItemInput[]
 }
 
@@ -35,22 +42,28 @@ export async function createLead(input: CreateLeadInput): Promise<{ id: string }
 
   // UUID no client: anon pode INSERT mas não SELECT (RLS) — evita .select() pós-insert.
   const leadId = crypto.randomUUID()
-  const { error } = await getSupabase()
-    .from('leads')
-    .insert({
-      id: leadId,
-      kind: input.kind,
-      status: 'new',
-      contact_name: name,
-      contact_email: input.contactEmail?.trim() || null,
-      contact_phone: input.contactPhone?.trim() || null,
-      company_name: input.companyName?.trim() || null,
-      document: input.document?.trim() || null,
-      city: input.city?.trim() || null,
-      state: input.state?.trim() || null,
-      message: messageParts.filter(Boolean).join('\n') || null,
-      source: input.source || 'site',
-    })
+  const row: Record<string, unknown> = {
+    id: leadId,
+    kind: input.kind,
+    status: 'new',
+    contact_name: name,
+    contact_email: input.contactEmail?.trim() || null,
+    contact_phone: input.contactPhone?.trim() || null,
+    company_name: input.companyName?.trim() || null,
+    document: input.document?.trim() || null,
+    city: input.city?.trim() || null,
+    state: input.state?.trim() || null,
+    message: messageParts.filter(Boolean).join('\n') || null,
+    source: input.source || 'site',
+    business_profile: input.businessProfile?.trim() || input.businessType?.trim() || null,
+    interest: input.interest?.trim() || null,
+    attribution: input.attribution && Object.keys(input.attribution).length ? input.attribution : null,
+    customer_id: input.customerId || null,
+    recipient_seller_id: input.recipientSellerId || null,
+    forwarded_at: input.forwardedAt || null,
+  }
+
+  const { error } = await getSupabase().from('leads').insert(row)
 
   if (error) throw error
 
@@ -88,6 +101,17 @@ export type LeadRow = {
   staff_notes: string | null
   source: string | null
   created_at: string
+  business_profile?: string | null
+  interest?: string | null
+  rejection_reason?: string | null
+  rejected_at?: string | null
+  rejected_by?: string | null
+  close_reason?: string | null
+  closed_at?: string | null
+  recipient_seller_id?: string | null
+  customer_id?: string | null
+  attribution?: Record<string, unknown> | null
+  forwarded_at?: string | null
 }
 
 export async function adminListLeads(kind?: LeadKind | 'all'): Promise<LeadRow[]> {
@@ -103,9 +127,20 @@ export async function adminUpdateLeadStatus(
   status: LeadStatus,
   staffNotes?: string,
 ): Promise<void> {
+  if (status === 'won' || status === 'lost') {
+    throw new Error('Use encerrar cotação com motivo (won/lost).')
+  }
   const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
   if (staffNotes !== undefined) patch.staff_notes = staffNotes
   const { error } = await getSupabase().from('leads').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+export async function adminUpdateLeadNotes(id: string, staffNotes: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('leads')
+    .update({ staff_notes: staffNotes, updated_at: new Date().toISOString() })
+    .eq('id', id)
   if (error) throw error
 }
 

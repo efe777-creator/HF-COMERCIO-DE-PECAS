@@ -1,10 +1,10 @@
 # Mapa de telas — Andar 1 Catálogo Digital
 
-**Versão:** 1.1  
-**Data:** 2026-11-24  
+**Versão:** 1.2  
+**Data:** 2026-11-26  
 **PRD:** [PRD_FASE_01.md](./PRD_FASE_01.md)  
-**Hierarquia admin:** [HF_AUDITORIA_ADMIN_HIERARQUIA.md](./HF_AUDITORIA_ADMIN_HIERARQUIA.md)  
-**Fonte runtime:** [HF_AUDITORIA_TELAS_FUNCOES.md](../../auditoria/runtime/HF_AUDITORIA_TELAS_FUNCOES.md)
+**Jornada:** [HF_JORNADA_COMERCIAL_PLANO.md](./HF_JORNADA_COMERCIAL_PLANO.md) · [specs/](./specs/)  
+**Hierarquia admin:** [HF_AUDITORIA_ADMIN_HIERARQUIA.md](./HF_AUDITORIA_ADMIN_HIERARQUIA.md) · [HF_PADRAO_TELAS_UX_OPERACIONAL.md](../../entrada/HF_PADRAO_TELAS_UX_OPERACIONAL.md)
 
 ---
 
@@ -23,13 +23,17 @@
 | `/veiculo` | VehiclePage | Sim | Sem placa obrigatória |
 | `/sobre` | SobrePage | Sim | Alinhar site |
 | `/atendimento` | AtendimentoPage | Sim | WA + contatos |
+| `/cotacao` | CotacaoPage | Sim | Cesta multi-item; ver jornada / cotação |
+| `/cadastro-comercial` | *(alvo)* / SejaParceiro | Sim | Interesse → lead partner |
+| `/seja-parceiro` | SejaParceiroPage | Sim | Alias → cadastro-comercial |
 | `/login` | LoginPage | Sim | |
-| `/cadastro` | RegisterPage | Sim | |
+| `/cadastro` | RegisterPage | Sim | Auth (≠ interesse comercial) |
 | `/recuperar-senha` | ForgotPasswordPage | Sim | |
 | `/conta` | AccountHomePage | Sim | Auth |
 | `/conta/perfil` | AccountProfilePage | Sim | |
-| `/conta/veiculos` | AccountVehiclesPage | Sim sob P0 | Schema ou off |
-| `/carrinho` `/checkout` `/pedido/*` | — | **Não** | Fora |
+| `/conta/veiculos` | AccountVehiclesPage | Sim | |
+| `/conta/avisos` | AccountAvisosPage | Sim | In-app |
+| `/carrinho` `/checkout` `/pedido/*` | — | **Não** | Andar 2 |
 
 ---
 
@@ -54,14 +58,21 @@
 | `aplicacoes` | → redirect `produtos` | Aplicações só na ficha do produto |
 | `fornecedores` (+ imports) | AdminSuppliers* | Cadastro; imports via hub |
 | `precos` (+ `:id`) | AdminPriceLists* | Catálogo staff (Adaptive) |
-| `clientes` | AdminCustomersPage | B2B; Comercial = lista assigned + condições |
+| `clientes` | AdminCustomersPage | B2B Adaptive; Comercial = lista + condições (+ vendedor no plano jornada) |
 | `clientes/listas` | AdminCatalogsPage | Catálogos de visibilidade; **sem** sidebar |
 | `listas` | → redirect `clientes/listas` | Compat |
 | `grupos` | AdminCustomerGroupsPage | Clientes |
-| `financeiro` | AdminFinanceiro* | Hub Finanças |
+| `financeiro` | AdminFinanceiro* | Central Finanças |
 | `financeiro/condicoes` | AdminPaymentConditionsPage | Condições (agenda + meios) |
-| `campanhas` / `leads` / `cotacoes` | Admin* | Comercial |
-| `operadores` | AdminOperatorsPage | Sistema |
+| `comunicacao` | AdminComunicacaoPage | Central Comunicação (in-app) |
+| `pedidos` | AdminPedidos* | Central Pedidos · Visão |
+| `pedidos/cotacoes` | AdminPedidosCotacoesPage | Cotações Adaptive |
+| `pedidos/solicitacoes` | *(planejado)* | Solicitações Adaptive — ver jornada |
+| `cotacoes` | → redirect `pedidos/cotacoes` | Compat |
+| `leads` | AdminLeadsPage | Inbox técnico legado (partner/contact/quote) |
+| `campanhas` | AdminCampaignsPage | Comercial |
+| `vendedores` | *(planejado)* | Cadastro vendedores Adaptive — ver jornada |
+| `operadores` | AdminOperatorsPage | Sistema (staff ≠ vendedor) |
 
 | Morto / limpar | Ação |
 |----------------|------|

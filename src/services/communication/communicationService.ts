@@ -1,8 +1,9 @@
 import {
   communicationCopyForKind,
+  isAccessNotificationKind,
   kindForCustomerStatus,
   type AccessNotificationKind,
-  type QuoteNotificationKind,
+  type CommunicationKind,
 } from '@/lib/communicationCopy'
 import { getSupabase } from '@/lib/supabase'
 
@@ -118,18 +119,49 @@ export async function emitAccessNotification(opts: EmitAccessOptions): Promise<A
 }
 
 async function insertNotificationWithDeliveries(opts: {
-  kind: AccessNotificationKind | QuoteNotificationKind
+  kind: CommunicationKind
   customerId?: string | null
   profileId?: string | null
   bodyOverride?: string | null
   hrefOverride?: string | null
+  sourceEventId?: string | null
 }): Promise<AppNotification> {
   const copy = communicationCopyForKind(opts.kind)
   const href = opts.hrefOverride?.trim() || copy.href
   const sb = getSupabase()
-  const sourceEventId = crypto.randomUUID()
+  const sourceEventId = opts.sourceEventId?.trim() || crypto.randomUUID()
   const notificationId = crypto.randomUUID()
   const createdAt = new Date().toISOString()
+
+  // Idempotência best-effort (staff); anon pode não ter SELECT — segue insert.
+  try {
+    const { data: existing } = await sb
+      .from('app_notifications')
+      .select('id')
+      .eq('source_event_id', sourceEventId)
+      .limit(1)
+      .maybeSingle()
+    if (existing?.id) {
+      return {
+        id: String(existing.id),
+        audience: copy.audience,
+        customerId: opts.customerId ?? null,
+        profileId: opts.profileId ?? null,
+        kind: copy.kind,
+        title: copy.title,
+        body: opts.bodyOverride?.trim() || copy.body,
+        href,
+        category: copy.category,
+        severity: copy.severity,
+        actionable: copy.actionable,
+        sourceEventId,
+        readAt: null,
+        createdAt,
+      }
+    }
+  } catch {
+    // ignore
+  }
 
   // UUID no client: emit de cotação pode ser anon (sem SELECT pós-insert).
   const { error } = await sb.from('app_notifications').insert({
@@ -218,6 +250,7 @@ export async function emitQuoteNotifications(opts: EmitQuoteOptions): Promise<vo
     customerId: opts.customerId ?? null,
     bodyOverride: staffBody,
     hrefOverride: `/admin/pedidos/cotacoes?lead=${opts.leadId}`,
+    sourceEventId: `quote_requested:${opts.leadId}`,
   })
 
   if (opts.customerId || opts.profileId) {
@@ -226,8 +259,84 @@ export async function emitQuoteNotifications(opts: EmitQuoteOptions): Promise<vo
       customerId: opts.customerId ?? null,
       profileId: opts.profileId ?? null,
       bodyOverride: `Recebemos sua cotação (protocolo ${proto}). O time comercial retorna em breve.`,
+      sourceEventId: `quote_sent:${opts.leadId}`,
     })
   }
+}
+
+export async function emitRequestReceivedNotification(opts: {
+  leadId: string
+  companyLabel?: string | null
+  document?: string | null
+}): Promise<void> {
+  const label = opts.companyLabel?.trim() || 'Empresa'
+  const doc = opts.document?.trim()
+  await insertNotificationWithDeliveries({
+    kind: 'request_received',
+    bodyOverride: doc
+      ? `${label} (${doc}) entrou na fila de solicitações.`
+      : `${label} entrou na fila de solicitações.`,
+    hrefOverride: `/admin/pedidos/solicitacoes?lead=${opts.leadId}`,
+    sourceEventId: `request_received:${opts.leadId}`,
+  })
+}
+
+export async function emitRequestComplementNotification(opts: {
+  leadId: string
+}): Promise<void> {
+  await insertNotificationWithDeliveries({
+    kind: 'request_complement',
+    bodyOverride: 'A HF pediu complemento dos seus dados comerciais.',
+    hrefOverride: '/cadastro-comercial',
+    sourceEventId: `request_complement:${opts.leadId}`,
+  })
+}
+
+export async function emitAccessRejectedNotification(opts: {
+  leadId: string
+  companyLabel?: string | null
+  reason?: string | null
+}): Promise<void> {
+  const label = opts.companyLabel?.trim() || 'Solicitação'
+  await insertNotificationWithDeliveries({
+    kind: 'access_rejected',
+    bodyOverride: opts.reason?.trim()
+      ? `${label}: ${opts.reason.trim()}`
+      : `${label} não aprovada. Contato HF.`,
+    hrefOverride: `/admin/pedidos/solicitacoes?lead=${opts.leadId}`,
+    sourceEventId: `access_rejected:${opts.leadId}`,
+  })
+}
+
+export async function emitQuoteForwardedNotification(opts: {
+  leadId: string
+  sellerId: string
+}): Promise<void> {
+  const proto = opts.leadId.slice(0, 8)
+  await insertNotificationWithDeliveries({
+    kind: 'quote_forwarded',
+    bodyOverride: `Cotação ${proto} encaminhada ao vendedor.`,
+    hrefOverride: `/admin/pedidos/cotacoes?lead=${opts.leadId}`,
+    sourceEventId: `quote_forwarded:${opts.leadId}:${opts.sellerId}`,
+  })
+}
+
+export async function emitQuoteClosedNotification(opts: {
+  leadId: string
+  outcome: 'won' | 'lost'
+  reason?: string | null
+  companyLabel?: string | null
+}): Promise<void> {
+  const proto = opts.leadId.slice(0, 8)
+  const result = opts.outcome === 'won' ? 'ganha' : 'perdida'
+  await insertNotificationWithDeliveries({
+    kind: 'quote_closed',
+    bodyOverride: opts.reason?.trim()
+      ? `Cotação ${proto} encerrada (${result}): ${opts.reason.trim()}`
+      : `Cotação ${proto} encerrada (${result}).`,
+    hrefOverride: `/admin/pedidos/cotacoes?lead=${opts.leadId}`,
+    sourceEventId: `quote_closed:${opts.leadId}`,
+  })
 }
 
 async function customerAudienceFilter() {
@@ -347,5 +456,5 @@ export async function countUnreadStaffNotifications(): Promise<number> {
 }
 
 export function isAccessKind(kind: string): kind is AccessNotificationKind {
-  return kind === 'access_pending' || kind === 'access_granted' || kind === 'access_suspended'
+  return isAccessNotificationKind(kind)
 }

@@ -54,6 +54,13 @@ export function AccountHomePage() {
         </p>
       ) : null}
 
+      {pending ? (
+        <p className="mt-3 rounded-[10px] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          Cadastro em análise. A liberação exige lista de preço, condição de pagamento e vendedor
+          padrão definidos pela HF.
+        </p>
+      ) : null}
+
       {user && user.emailConfirmed === false ? (
         <p className="mt-3 rounded-[10px] border border-[#f0d979]/40 bg-[#2a2410] p-3 text-sm text-hf-ink">
           <strong>Confirme seu e-mail</strong> — verifique a caixa de entrada e o spam.
