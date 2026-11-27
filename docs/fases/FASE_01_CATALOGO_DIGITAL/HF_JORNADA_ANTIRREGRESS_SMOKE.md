@@ -185,4 +185,4 @@ Context7 → código additive → Vitest críticos → Browser R*
 |------|------|-------|-----|-------|--------|-------|
 | 2026-11-27 | O1 schema | T1–T5 OK (migration 40+41) | — | tsc OK | remote apply | sellers + leads cols + kinds |
 | 2026-11-27 | O2–O6 app | R9/N3–N5/C*/Q*/K* no código | picker+close+kinds | tsc+Vitest copy/basket | O7 | Adaptive vendedores/solicitações/gates |
-| 2026-11-27 | O7 deploy | smoke doc + build | full suite | prod | Hostinger | pós-push |
+| 2026-11-27 | O7 deploy | R9 rotas/assets 200 | full suite | prod OK | Hostinger git+zip | `hostinger-static` adbde80 |
